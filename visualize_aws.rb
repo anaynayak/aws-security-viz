@@ -39,4 +39,4 @@ g = GraphViz::new( "G" )
 nodes.each {|n| g.add_node(n)}
 identify_group_ingress(groups) {|from, to, port_range| g.add_edge( from, to, :color => "blue", :style => "bold", :label => port_range )}
 identify_cidr_ingress(groups) {|from, to, port_range| g.add_edge( from, to, :color => "green", :style => "bold", :label => port_range )}
-g.output( :png => "#{$0}.png" )
+g.output( :png => "aws-security-viz.png" )
