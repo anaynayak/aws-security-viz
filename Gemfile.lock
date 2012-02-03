@@ -1,10 +1,35 @@
 GEM
   remote: http://rubygems.org/
   specs:
+    diff-lcs (1.1.3)
+    ffi (1.0.11)
+    guard (1.0.0)
+      ffi (>= 0.5.0)
+      thor (~> 0.14.6)
+    guard-rspec (0.6.0)
+      guard (>= 0.10.0)
+    libnotify (0.7.2)
+      ffi (~> 1.0.0)
+    right_aws (3.0.0)
+      right_http_connection (>= 1.2.5)
+    right_http_connection (1.3.0)
+    rspec (2.8.0)
+      rspec-core (~> 2.8.0)
+      rspec-expectations (~> 2.8.0)
+      rspec-mocks (~> 2.8.0)
+    rspec-core (2.8.0)
+    rspec-expectations (2.8.0)
+      diff-lcs (~> 1.1.2)
+    rspec-mocks (2.8.0)
     ruby-graphviz (1.0.0)
+    thor (0.14.6)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  guard-rspec
+  libnotify
+  right_aws
+  rspec
   ruby-graphviz
