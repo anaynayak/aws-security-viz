@@ -14,7 +14,7 @@ class VisualizeAws
     nodes = groups.collect {|group| group[:aws_group_name]}
     nodes.each {|n| g.add_node(n)}
     GroupIngress.new(groups).each {|from, to, port_range| g.add_edge( from, to, :color => "blue", :style => "bold", :label => port_range )}
-    CidrIngress.new(groups).each {|from, to, port_range| g.add_edge( from, to, :color => "green", :style => "bold", :label => port_range )}
+    CidrIngress.new(groups, CidrGroupMapping.new).each {|from, to, port_range| g.add_edge( from, to, :color => "green", :style => "bold", :label => port_range )}
     g
   end
 
@@ -37,21 +37,32 @@ class VisualizeAws
   end
 
   class CidrIngress
-    def initialize(groups)
+    def initialize(groups, filter)
       @groups = groups
+      @filter = filter
     end
 
     def each
-      seen = Set.new
       @groups.each do |group|
         group[:aws_perms].each do |perm|
           next if not perm[:cidr_ips] 
-          args = [mapping(perm[:cidr_ips]), group[:aws_group_name], [perm[:from_port], perm[:to_port]].uniq.join("-")]
-          yield args if not seen.include?(args)
-          seen.add(args)
+          args = [perm[:cidr_ips], group[:aws_group_name], [perm[:from_port], perm[:to_port]].uniq.join("-")]
+          @filter.map(args) { |mapped_args| yield mapped_args}
         end
       end
     end
+  end
+
+  class CidrGroupMapping 
+    def initialize
+      @seen = Set.new
+    end
+    def map args, &block
+      mapped_args = [mapping(args[0])] + args[1..-1]
+      return if @seen.include? mapped_args 
+      @seen.add(args)
+      block.call(mapped_args)
+    end 
     def mapping(val)
       USER_GROUPS[val]? USER_GROUPS[val] : val
     end
