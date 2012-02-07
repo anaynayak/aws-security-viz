@@ -62,7 +62,7 @@ class VisualizeAws
     def map args, &block
       mapped_args = [mapping(args[0])] + args[1..-1]
       return if @seen.include? mapped_args 
-      @seen.add(args)
+      @seen.add(mapped_args)
       block.call(mapped_args)
     end 
     def mapping(val)

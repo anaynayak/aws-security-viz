@@ -48,6 +48,7 @@ describe VisualizeAws do
   end
 
   context "cidr" do
+
     it "should add an edge for each cidr ingress" do 
       @ec2.should_receive(:describe_security_groups).and_return(
         [
@@ -59,6 +60,7 @@ describe VisualizeAws do
       graph.should have_edge('External' => 'Web', 'App'=> 'Db')
       graph.should have_edge('127.0.0.1/32' => 'Db' )
     end
+
     it "should add map edges for cidr ingress" do 
       @ec2.should_receive(:describe_security_groups).and_return(
         [
@@ -68,11 +70,24 @@ describe VisualizeAws do
       mapping = {'127.0.0.1/32' => 'Work'}
       mapping = VisualizeAws::CidrGroupMapping.new(mapping)
       VisualizeAws::CidrGroupMapping.should_receive(:new).and_return(mapping)
- 
+
       graph = @visualize_aws.parse()
       graph.each_edge.size.should == 3
       graph.should have_edge('External' => 'Web', 'App'=> 'Db')
       graph.should have_edge('Work' => 'Db' )
+    end
+    it "should group mapped duplicate edges for cidr ingress" do 
+      @ec2.should_receive(:describe_security_groups).and_return(
+        [
+          group('ssh', cidr_ingress('22', '192.168.0.1/32'), cidr_ingress('22', '127.0.0.1/32'))
+      ])
+      mapping = {'127.0.0.1/32' => 'Work', '192.168.0.1/32' => 'Work'}
+      mapping = VisualizeAws::CidrGroupMapping.new(mapping)
+      VisualizeAws::CidrGroupMapping.should_receive(:new).and_return(mapping)
+
+      graph = @visualize_aws.parse()
+      graph.each_edge.size.should == 1
+      graph.should have_edge('Work' => 'ssh' )
     end
   end
 end
