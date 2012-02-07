@@ -7,6 +7,7 @@ class VisualizeAws
   def initialize(access_key, secret_key)
     @ec2 = RightAws::Ec2.new(access_key, secret_key)
   end
+
   def parse
     groups = @ec2.describe_security_groups
     g = GraphViz::new( "G" )
@@ -16,6 +17,7 @@ class VisualizeAws
     identify_cidr_ingress(groups) {|from, to, port_range| g.add_edge( from, to, :color => "green", :style => "bold", :label => port_range )}
     g
   end
+
   def unleash
     g = parse
     g.output( :png => "aws-security-viz.png" )
