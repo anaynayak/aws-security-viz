@@ -13,6 +13,10 @@ def group name, *ingress
   }
 end
 
-def ingress port, name
-  {:from_port=>port, :to_port=>port, :protocol=>"tcp", :direction=>:ingress, :group_name=>name, :group_id=>"sg-123", :owner=>"own-123"}
+def group_ingress port, name
+  {:from_port=> port, :to_port=> port, :protocol=>"tcp", :direction=>:ingress, :group_name=>name, :group_id=>"sg-123", :owner=>"own-123"}
+end
+
+def cidr_ingress port, *cidr_ips
+  {:from_port=> port, :to_port=> port, :protocol=>"tcp", :direction=>:ingress, :cidr_ips=> cidr_ips}
 end

@@ -1,4 +1,4 @@
-Rspec::Matchers.define :have_edge do |edge|
+RSpec::Matchers.define :have_edge do |edge|
   match do |actual|
     edges = actual.each_edge
     edge.each do |k,v|
