@@ -1,6 +1,7 @@
 require 'right_aws'
 require 'graphviz'
-require './groups'
+require File.join(File.dirname(__FILE__), 'groups.rb')
+
 require 'set'
 
 class VisualizeAws
