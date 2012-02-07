@@ -59,5 +59,20 @@ describe VisualizeAws do
       graph.should have_edge('External' => 'Web', 'App'=> 'Db')
       graph.should have_edge('127.0.0.1/32' => 'Db' )
     end
+    it "should add map edges for cidr ingress" do 
+      @ec2.should_receive(:describe_security_groups).and_return(
+        [
+          group('Web', group_ingress('80', 'External')),
+          group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
+      ])
+      mapping = {'127.0.0.1/32' => 'Work'}
+      mapping = VisualizeAws::CidrGroupMapping.new(mapping)
+      VisualizeAws::CidrGroupMapping.should_receive(:new).and_return(mapping)
+ 
+      graph = @visualize_aws.parse()
+      graph.each_edge.size.should == 3
+      graph.should have_edge('External' => 'Web', 'App'=> 'Db')
+      graph.should have_edge('Work' => 'Db' )
+    end
   end
 end

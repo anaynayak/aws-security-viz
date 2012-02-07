@@ -55,8 +55,9 @@ class VisualizeAws
   end
 
   class CidrGroupMapping 
-    def initialize
+    def initialize user_groups = USER_GROUPS
       @seen = Set.new
+      @user_groups = user_groups
     end
     def map args, &block
       mapped_args = [mapping(args[0])] + args[1..-1]
@@ -65,7 +66,7 @@ class VisualizeAws
       block.call(mapped_args)
     end 
     def mapping(val)
-      USER_GROUPS[val]? USER_GROUPS[val] : val
+      @user_groups[val]? @user_groups[val] : val
     end
   end
 end
