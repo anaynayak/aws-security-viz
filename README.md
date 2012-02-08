@@ -14,5 +14,5 @@ aws-security-viz -- A tool to visualize aws security groups
 
 ## EXAMPLE
 
-[![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)]
+![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)
 
