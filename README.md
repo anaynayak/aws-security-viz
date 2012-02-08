@@ -2,7 +2,7 @@ aws-security-viz -- A tool to visualize aws security groups
 ============================================================
 
 ## DESCRIPTION
-  Need a quick way to visualize your current aws security group configuration? aws-security-viz does just that. Manipulate groups.rb to map multiple IP addresses to the same name.
+  Need a quick way to visualize your current aws/amazon ec2 security group configuration? aws-security-viz does just that based on the EC2 security group ingress configuration. 
 
 ## INSTALLATION 
 
@@ -11,3 +11,8 @@ aws-security-viz -- A tool to visualize aws security groups
 ## USAGE
 
   $ ruby visualize_aws.rb your_aws_key your_aws_secret_key  # would generate aws-security-viz.png in same directory
+
+## EXAMPLE
+
+[![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)]
+
