@@ -1,7 +1,6 @@
 require 'right_aws'
 require 'graphviz'
-require File.join(File.dirname(__FILE__), 'groups.rb')
-
+require_relative 'groups.rb'
 require 'set'
 
 class VisualizeAws
@@ -19,9 +18,10 @@ class VisualizeAws
     g
   end
 
-  def unleash
+  def unleash(output_file)
     g = parse
-    g.output( :png => "aws-security-viz.png" )
+    extension = File.extname(output_file)
+    g.output( extension[1..-1].to_sym => output_file )
   end
 
   class GroupIngress
@@ -74,5 +74,6 @@ end
 if __FILE__ == $0
   access_key = ARGV[0]
   secret_key = ARGV[1]
-  VisualizeAws.new(access_key, secret_key).unleash
+  output_file = ARGV[2] || "aws-security-viz.png"
+  VisualizeAws.new(access_key, secret_key).unleash(output_file)
 end
