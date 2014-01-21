@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe VisualizeAws do 
   before do
-    @ec2 = mock(RightAws::Ec2)
+    @ec2 = double(RightAws::Ec2)
     RightAws::Ec2.should_receive(:new).and_return(@ec2)
     @visualize_aws = VisualizeAws.new "key", "secret"
   end
