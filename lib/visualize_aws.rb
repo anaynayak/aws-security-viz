@@ -1,17 +1,17 @@
-require 'right_aws'
+require 'fog'
 require 'graphviz'
 require_relative 'groups.rb'
 require 'set'
 
 class VisualizeAws
   def initialize(access_key, secret_key)
-    @ec2 = RightAws::Ec2.new(access_key, secret_key)
+    @compute = Fog::Compute.new(:provider => 'AWS', :aws_access_key_id => access_key, :aws_secret_access_key => secret_key)
   end
 
   def parse
-    groups = @ec2.describe_security_groups
+    groups = @compute.security_groups
     g = GraphViz::new( "G" )
-    nodes = groups.collect {|group| group[:aws_group_name]}
+    nodes = groups.collect {|group| group.name}
     nodes.each {|n| g.add_node(n)}
     GroupIngress.new(groups).each {|from, to, port_range| g.add_edge( from, to, :color => "blue", :style => "bold", :label => port_range )}
     CidrIngress.new(groups, CidrGroupMapping.new).each {|from, to, port_range| g.add_edge( from, to, :color => "green", :style => "bold", :label => port_range )}
@@ -30,8 +30,10 @@ class VisualizeAws
     end
     def each
       @groups.each do |group|
-        group[:aws_perms].each do |perm|
-          yield perm[:group_name], group[:aws_group_name], [perm[:from_port], perm[:to_port]].uniq.join("-")  if perm[:group_name]
+        group.ip_permissions.each do |perm|
+          perm["groups"].each { |gp|
+            yield gp["groupName"], group.name, [perm["fromPort"], perm["toPort"]].uniq.join("-")
+          }
         end
       end
     end
@@ -45,10 +47,11 @@ class VisualizeAws
 
     def each
       @groups.each do |group|
-        group[:aws_perms].each do |perm|
-          next if not perm[:cidr_ips] 
-          args = [perm[:cidr_ips], group[:aws_group_name], [perm[:from_port], perm[:to_port]].uniq.join("-")]
-          @filter.map(args) { |mapped_args| yield mapped_args}
+        group.ip_permissions.each do |perm|
+          perm["ipRanges"].each { |ip|
+            args = [ip["cidrIp"], group.name, [perm["fromPort"], perm["toPort"]].uniq.join("-")]
+            @filter.map(args) { |mapped_args| yield mapped_args}
+          }
         end
       end
     end

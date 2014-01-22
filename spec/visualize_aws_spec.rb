@@ -2,13 +2,13 @@ require 'spec_helper'
 
 describe VisualizeAws do 
   before do
-    @ec2 = double(RightAws::Ec2)
-    RightAws::Ec2.should_receive(:new).and_return(@ec2)
+    @ec2 = double(Fog::Compute)
+    Fog::Compute.should_receive(:new).and_return(@ec2)
     @visualize_aws = VisualizeAws.new "key", "secret"
   end
 
   it "should add nodes for each security group" do
-    @ec2.should_receive(:describe_security_groups).and_return([group('Remote ssh', group_ingress('22', 'My machine')), group('My machine')])
+    @ec2.should_receive(:security_groups).and_return([group('Remote ssh', group_ingress('22', 'My machine')), group('My machine')])
     graph = @visualize_aws.parse()
     node1 = graph.get_node('Remote ssh')
     node2 = graph.get_node('My machine') 
@@ -19,14 +19,14 @@ describe VisualizeAws do
 
   context "groups" do
     it "should add an edge for each security ingress" do
-      @ec2.should_receive(:describe_security_groups).and_return([group('Remote ssh', group_ingress('22', 'My machine')), group('My machine')])
+      @ec2.should_receive(:security_groups).and_return([group('Remote ssh', group_ingress('22', 'My machine')), group('My machine')])
       graph = @visualize_aws.parse()
       graph.each_edge.size.should == 1
       graph.should have_edge "My machine" => 'Remote ssh'
     end
 
     it "should add nodes for external security groups defined through ingress" do
-      @ec2.should_receive(:describe_security_groups).and_return([group('Web', group_ingress('80', 'ELB'))])
+      @ec2.should_receive(:security_groups).and_return([group('Web', group_ingress('80', 'ELB'))])
       graph = @visualize_aws.parse()
       graph.get_node('Web').should_not be_nil
       #graph.get_node('ELB').should_not be_nil
@@ -35,7 +35,7 @@ describe VisualizeAws do
     end
 
     it "should add an edge for each security ingress" do
-      @ec2.should_receive(:describe_security_groups).and_return(
+      @ec2.should_receive(:security_groups).and_return(
         [
           group('App', group_ingress('80', 'Web'), group_ingress('8983', 'Internal')), 
           group('Web', group_ingress('80', 'External')),
@@ -50,7 +50,7 @@ describe VisualizeAws do
   context "cidr" do
 
     it "should add an edge for each cidr ingress" do 
-      @ec2.should_receive(:describe_security_groups).and_return(
+      @ec2.should_receive(:security_groups).and_return(
         [
           group('Web', group_ingress('80', 'External')),
           group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
@@ -62,7 +62,7 @@ describe VisualizeAws do
     end
 
     it "should add map edges for cidr ingress" do 
-      @ec2.should_receive(:describe_security_groups).and_return(
+      @ec2.should_receive(:security_groups).and_return(
         [
           group('Web', group_ingress('80', 'External')),
           group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
@@ -77,7 +77,7 @@ describe VisualizeAws do
       graph.should have_edge('Work' => 'Db' )
     end
     it "should group mapped duplicate edges for cidr ingress" do 
-      @ec2.should_receive(:describe_security_groups).and_return(
+      @ec2.should_receive(:security_groups).and_return(
         [
           group('ssh', cidr_ingress('22', '192.168.0.1/32'), cidr_ingress('22', '127.0.0.1/32'))
       ])

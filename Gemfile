@@ -1,7 +1,8 @@
 source 'http://rubygems.org'
 
 gem 'ruby-graphviz'
-gem 'right_aws'
+gem 'fog'
+gem 'unf'
 
 group :development do
   gem 'rspec'
