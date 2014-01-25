@@ -6,13 +6,20 @@ aws-security-viz -- A tool to visualize aws security groups
 ## DESCRIPTION
   Need a quick way to visualize your current aws/amazon ec2 security group configuration? aws-security-viz does just that based on the EC2 security group ingress configuration. 
 
+## FEATURES
+
+* Output to any of the formats that Graphviz supports. 
+* EC2 classic and VPC security groups
+
 ## INSTALLATION 
 
   $ bundle install ([more info](http://gembundler.com/bundle_install.html))
 
 ## USAGE
 
-  $ ruby visualize_aws.rb your_aws_key your_aws_secret_key  # would generate aws-security-viz.png in same directory
+```
+  $ ruby lib/visualize_aws.rb -a your_aws_key -s your_aws_secret_key -f viz.svg
+```
 
 ## EXAMPLE
 
