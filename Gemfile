@@ -7,6 +7,4 @@ gem 'trollop'
 
 group :development do
   gem 'rspec'
-  gem 'guard-rspec'
-  gem 'libnotify'
 end
