@@ -9,7 +9,9 @@ Dir[File.dirname(__FILE__) + "/support/**/*.rb"].each {|f| require f}
 def group name, *ingress
   group = double("Group")
   allow(group).to receive(:ip_permissions).and_return(ingress)
+  allow(group).to receive(:ip_permissions_egress).and_return([])
   allow(group).to receive(:name).and_return(name)
+  allow(group).to receive(:group_id).and_return('some group')
   group
 end
 

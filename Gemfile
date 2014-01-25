@@ -3,6 +3,7 @@ source 'http://rubygems.org'
 gem 'ruby-graphviz'
 gem 'fog'
 gem 'unf'
+gem 'trollop'
 
 group :development do
   gem 'rspec'
