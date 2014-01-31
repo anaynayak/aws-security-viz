@@ -15,6 +15,7 @@ GEM
       nokogiri (~> 1.5)
       ruby-hmac
     formatador (0.2.4)
+    json (1.8.1)
     mime-types (2.0)
     mini_portile (0.5.2)
     multi_json (1.8.4)
@@ -43,6 +44,7 @@ PLATFORMS
 
 DEPENDENCIES
   fog
+  json
   rspec
   ruby-graphviz
   trollop
