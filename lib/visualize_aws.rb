@@ -20,7 +20,11 @@ class VisualizeAws
     @security_groups.each { |group|
       g.add_node(group.name)
       group.traffic.each { |traffic|
-        g.add_edge(traffic.from, traffic.to, :color => traffic.ingress ? 'blue' : 'red', :style => 'bold', :label => traffic.port_range)
+        if traffic.ingress
+          g.add_edge(traffic.from, traffic.to, :color => 'blue', :style => 'bold', :label => traffic.port_range)
+        else
+          g.add_edge(traffic.to, traffic.from, :color => 'red', :style => 'bold', :label => traffic.port_range)
+        end
       }
     }
     g
@@ -28,7 +32,7 @@ class VisualizeAws
 
   def render(g, output_file)
     extension = File.extname(output_file)
-    g.output(extension[1..-1].to_sym => output_file)
+    g.output(extension[1..-1].to_sym => output_file, :use => 'circo')
   end
 end
 

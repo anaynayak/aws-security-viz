@@ -63,8 +63,8 @@ module Json
     end
 
     def groups
-      (@ip['Groups'] || []).collect { |gp|
-        Json::IpPermissionGroup.new(gp)
+      @ip['UserIdGroupPairs'].collect { |pair|
+        Json::IpPermissionGroup.new(pair)
       }
     end
 

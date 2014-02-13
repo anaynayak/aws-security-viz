@@ -44,7 +44,7 @@ class SecurityGroup
     all_traffic = permissions.collect { |permission|
       permission.traffic
     }.flatten.uniq
-    CidrGroupMapping.new(@all_groups).map(all_traffic).uniq
+    CidrGroupMapping.new(@all_groups).map(all_traffic)
   end
 end
 
@@ -55,9 +55,11 @@ class CidrGroupMapping
   end
 
   def map(all_traffic)
-    all_traffic.collect { |traffic|
+    traffic = all_traffic.collect { |traffic|
       traffic.copy(mapping(traffic.from), mapping(traffic.to))
     }
+    all = traffic.uniq.group_by {|t| [t.from, t.to, t.ingress]}.collect {|k,v| Traffic.grouped(v)}.uniq
+    p all
   end
 
   private
