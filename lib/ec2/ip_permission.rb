@@ -13,19 +13,18 @@ class IpPermission
 
   private
   def port_range
-    @ip['ipProtocol'] == '-1' ? '*' : [@ip['fromPort'], @ip['toPort']].uniq.join('-')
+    @ip.protocol == '-1' ? '*' : [@ip.from, @ip.to].uniq.join('-')
   end
 
   def cidr_traffic
-    @ip['ipRanges'].collect { |range|
-      Traffic.new(@ingress, range['cidrIp'], @group.name, port_range)
+    @ip.ip_ranges.collect { |range|
+      Traffic.new(@ingress, range.cidr_ip, @group.name, port_range)
     }
   end
 
   def group_traffic
-    @ip['groups'].collect { |gp|
-      groupName = gp['groupName'] || gp['groupId']
-      Traffic.new(@ingress, groupName, @group.name, port_range)
+    @ip.groups.collect { |gp|
+      Traffic.new(@ingress, gp.name, @group.name, port_range)
     }
   end
 end

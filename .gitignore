@@ -8,6 +8,7 @@
 /test/tmp/
 /test/version_tmp/
 /tmp/
+/data/
 
 ## Documentation cache and generated files:
 /.yardoc/

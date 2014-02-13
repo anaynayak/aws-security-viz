@@ -1,4 +1,3 @@
-require 'fog'
 require 'set'
 require_relative 'ip_permission.rb'
 require_relative 'groups.rb'
@@ -6,9 +5,8 @@ require_relative 'groups.rb'
 class SecurityGroups
   include Enumerable
 
-  def initialize(options)
-    compute = Fog::Compute.new(:provider => 'AWS', :aws_access_key_id => options[:access_key], :aws_secret_access_key => options[:secret_key])
-    @groups = compute.security_groups
+  def initialize(provider)
+    @groups = provider.security_groups
   end
 
   def each(&block)
