@@ -58,8 +58,7 @@ class CidrGroupMapping
     traffic = all_traffic.collect { |traffic|
       traffic.copy(mapping(traffic.from), mapping(traffic.to))
     }
-    all = traffic.uniq.group_by {|t| [t.from, t.to, t.ingress]}.collect {|k,v| Traffic.grouped(v)}.uniq
-    p all
+    traffic.uniq.group_by {|t| [t.from, t.to, t.ingress]}.collect {|k,v| Traffic.grouped(v)}.uniq
   end
 
   private

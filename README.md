@@ -17,8 +17,14 @@ aws-security-viz -- A tool to visualize aws security groups
 
 ## USAGE
 
+To generate the graph directly using AWS keys
 ```
   $ ruby lib/visualize_aws.rb -a your_aws_key -s your_aws_secret_key -f viz.svg
+```
+
+To generate the graph using an existing security_groups.json (created using aws-cli)
+```
+  $ ruby lib/visualize_aws.rb -o data/security_groups.json -f viz.svg
 ```
 
 ## EXAMPLE
