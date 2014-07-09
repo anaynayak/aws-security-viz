@@ -1,8 +1,8 @@
-require 'graphviz'
 require 'trollop'
 require_relative 'ec2/security_groups'
 require_relative 'provider/json'
 require_relative 'provider/ec2'
+require_relative 'graph'
 
 class VisualizeAws
   def initialize(options={})
@@ -16,7 +16,7 @@ class VisualizeAws
   end
 
   def build
-    g = GraphViz::new('G')
+    g = Graph.new
     @security_groups.each { |group|
       g.add_node(group.name)
       group.traffic.each { |traffic|
