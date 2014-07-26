@@ -12,8 +12,10 @@ aws-security-viz -- A tool to visualize aws security groups
 * EC2 classic and VPC security groups
 
 ## INSTALLATION 
-
-  $ bundle install ([more info](http://gembundler.com/bundle_install.html))
+```
+  $ bundle install
+```
+([more info](http://gembundler.com/bundle_install.html))
 
 ## USAGE
 
