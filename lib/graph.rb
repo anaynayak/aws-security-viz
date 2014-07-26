@@ -11,9 +11,17 @@ class Graph
     @g.add_node(name)
   end
 
+  def get_node(name, &block)
+    @g.get_node(name, &block)
+  end
+
   def add_edge(from, to, opts)
     log("edge: #{from} -> #{to}")
     @g.add_edge(from, to, opts)
+  end
+
+  def each_edge(&block)
+    @g.each_edge(&block)
   end
 
   def output(opts)
