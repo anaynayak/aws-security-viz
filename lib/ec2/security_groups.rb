@@ -1,4 +1,5 @@
 require 'set'
+require 'forwardable'
 require_relative 'ip_permission.rb'
 require_relative 'groups.rb'
 
