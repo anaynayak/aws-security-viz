@@ -8,7 +8,7 @@ class Graph
 
   def add_node(name)
     log("node: #{name}")
-    @g.add_node(name)
+    @g.add_node(name) if name
   end
 
   def get_node(name, &block)
