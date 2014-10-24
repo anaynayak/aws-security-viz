@@ -3,7 +3,7 @@ require 'fog'
 class Ec2Provider
 
   def initialize(options)
-    @compute = Fog::Compute.new(:provider => 'AWS', :aws_access_key_id => options[:access_key], :aws_secret_access_key => options[:secret_key])
+    @compute = Fog::Compute.new(:provider => 'AWS', :aws_access_key_id => options[:access_key], :aws_secret_access_key => options[:secret_key], :region => options[:region])
   end
 
   def security_groups

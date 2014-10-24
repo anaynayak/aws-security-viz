@@ -40,6 +40,7 @@ if __FILE__ == $0
   opts = Trollop::options do
     opt :access_key, 'AWS access key', :type => :string
     opt :secret_key, 'AWS secret key', :type => :string
+    opt :region, 'AWS region to query', :default => 'us-east-1', :type => :string
     opt :source_file, 'JSON source file containing security groups', :type => :string
     opt :filename, 'Output file name', :type => :string, :default => 'aws-security-viz.png'
   end
