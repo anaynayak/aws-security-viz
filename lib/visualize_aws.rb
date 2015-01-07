@@ -17,13 +17,14 @@ class VisualizeAws
 
   def build
     g = Graph.new
-    @security_groups.each { |group|
+    @security_groups.each_with_index { |group, index|
+      color = GraphViz::Utils::Colors::COLORS.keys[index]
       g.add_node(group.name)
       group.traffic.each { |traffic|
         if traffic.ingress
-          g.add_edge(traffic.from, traffic.to, :color => 'blue', :style => 'bold', :label => traffic.port_range)
+          g.add_edge(traffic.from, traffic.to, :color => color, :style => 'bold', :label => traffic.port_range)
         else
-          g.add_edge(traffic.to, traffic.from, :color => 'red', :style => 'bold', :label => traffic.port_range)
+          g.add_edge(traffic.to, traffic.from, :color => color, :style => 'bold', :label => traffic.port_range)
         end
       }
     }
@@ -32,7 +33,7 @@ class VisualizeAws
 
   def render(g, output_file)
     extension = File.extname(output_file)
-    g.output(extension[1..-1].to_sym => output_file, :use => 'circo')
+    g.output(extension[1..-1].to_sym => output_file, :use => 'fdp')
   end
 end
 

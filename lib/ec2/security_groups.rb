@@ -19,6 +19,10 @@ class SecurityGroups
       end
     }
   end
+  
+  def size
+    @groups.size
+  end
 end
 
 class SecurityGroup
