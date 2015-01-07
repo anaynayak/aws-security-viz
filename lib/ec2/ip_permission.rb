@@ -13,7 +13,7 @@ class IpPermission
 
   private
   def port_range
-    @ip.protocol == '-1' ? '*' : [@ip.from, @ip.to].uniq.join('-')
+    @ip.protocol == '-1' ? '*' : [@ip.from, @ip.to].uniq.join('-') + '/' + @ip.protocol
   end
 
   def cidr_traffic
