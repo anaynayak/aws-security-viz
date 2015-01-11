@@ -46,7 +46,7 @@ if __FILE__ == $0
     opt :region, 'AWS region to query', :default => 'us-east-1', :type => :string
     opt :source_file, 'JSON source file containing security groups', :type => :string
     opt :filename, 'Output file name', :type => :string, :default => 'aws-security-viz.png'
-    opt :color, 'colored output', :default => false
+    opt :color, 'Colored node edges', :default => false
   end
   if opts[:source_file].nil?
     Trollop::die :access_key, 'is required' if opts[:access_key].nil?
