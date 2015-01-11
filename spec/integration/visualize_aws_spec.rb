@@ -12,7 +12,7 @@ describe VisualizeAws do
     let(:expected_file) {File.join(File.dirname(__FILE__), 'dummy.dot')}
     let(:temp_file) { Tempfile.new(%w(aws .dot)) }
 
-    it 'should parse json input' do
+    it 'should parse json input', :integration => true do
       VisualizeAws.new(opts).unleash(temp_file.path)
 
       expect(File.read(expected_file)).to eq(temp_file.read)
