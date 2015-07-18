@@ -3,6 +3,7 @@ require_relative 'ec2/security_groups'
 require_relative 'provider/json'
 require_relative 'provider/ec2'
 require_relative 'graph'
+require_relative 'debug_graph'
 require_relative 'color_picker'
 
 class VisualizeAws
@@ -18,7 +19,7 @@ class VisualizeAws
   end
 
   def build
-    g = Graph.new
+    g = ENV["OBFUSCATE"] ? DebugGraph.new : Graph.new 
     @security_groups.each_with_index { |group, index|
       picker = ColorPicker.new(@options[:color])
       g.add_node(group.name)
