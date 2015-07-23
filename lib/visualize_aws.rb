@@ -3,6 +3,7 @@ require_relative 'ec2/security_groups'
 require_relative 'provider/json'
 require_relative 'provider/ec2'
 require_relative 'graph'
+require_relative 'exclusions'
 require_relative 'debug_graph'
 require_relative 'color_picker'
 
@@ -10,7 +11,7 @@ class VisualizeAws
   def initialize(options={})
     @options = options
     provider = options[:source_file].nil? ? Ec2Provider.new(options) : JsonProvider.new(options)
-    @security_groups = SecurityGroups.new(provider)
+    @security_groups = SecurityGroups.new(provider, Exclusions.new(options[:exclude]))
   end
 
   def unleash(output_file)
@@ -24,7 +25,7 @@ class VisualizeAws
       picker = ColorPicker.new(@options[:color])
       g.add_node(group.name)
       group.traffic.each { |traffic|
-        if traffic.ingress
+       if traffic.ingress
           g.add_edge(traffic.from, traffic.to, :color => picker.color(index, traffic.ingress), :style => 'bold', :label => traffic.port_range)
         else
           g.add_edge(traffic.to, traffic.from, :color => picker.color(index, traffic.ingress), :style => 'bold', :label => traffic.port_range)
@@ -36,7 +37,7 @@ class VisualizeAws
 
   def render(g, output_file)
     extension = File.extname(output_file)
-    g.output(extension[1..-1].to_sym => output_file, :use => 'fdp')
+    g.output(extension[1..-1].to_sym => output_file, :use => 'sfdp')
   end
 end
 
@@ -53,5 +54,6 @@ if __FILE__ == $0
     Trollop::die :access_key, 'is required' if opts[:access_key].nil?
     Trollop::die :secret_key, 'is required' if opts[:secret_key].nil?
   end
-  VisualizeAws.new(opts).unleash(opts[:filename])
+  config_opts = File.exist?('opts.yml') ? YAML.load_file('opts.yml') : {}
+  VisualizeAws.new(opts.merge(config_opts)).unleash(opts[:filename])
 end

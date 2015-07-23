@@ -1,10 +1,11 @@
 require_relative 'traffic.rb'
 
 class IpPermission
-  def initialize(group, ip, ingress)
+  def initialize(group, ip, ingress, exclusions)
     @group = group
     @ip = ip
     @ingress = ingress
+    @exclusions = exclusions
   end
 
   def traffic
@@ -23,7 +24,9 @@ class IpPermission
   end
 
   def group_traffic
-    @ip.groups.collect { |gp|
+    @ip.groups
+      .select { |gp| !@exclusions.match(gp.name)}
+      .collect { |gp|
       Traffic.new(@ingress, gp.name, @group.name, port_range)
     }
   end

@@ -98,4 +98,35 @@ describe VisualizeAws do
       expect(graph).to have_edge('Work' => 'ssh' )
     end
   end
+  context "filter" do
+    it 'include groups which do not match the pattern' do
+      expect(@ec2).to receive(:security_groups).and_return(
+        [
+          group('Web', group_ingress('80', 'External')),
+          group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
+      ])
+
+      opts = {:exclude => ['D.*b', 'App']}
+      graph = VisualizeAws.new(opts).build
+
+      expect(graph.each_edge.size).to eq(1)
+      expect(graph).to have_edge('External' => 'Web')
+    end
+
+    it 'include derived groups which do not match the pattern' do
+      expect(@ec2).to receive(:security_groups).and_return(
+        [
+          group('Web', group_ingress('80', 'External')),
+          group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
+      ])
+
+      opts = {:exclude => ['App']}
+      graph = VisualizeAws.new(opts).build
+
+      expect(graph.each_edge.size).to eq(2)
+      expect(graph).to have_edge('External' => 'Web')
+      expect(graph).to have_edge('127.0.0.1/32' => 'Db' )
+    end
+
+  end
 end
