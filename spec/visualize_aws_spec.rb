@@ -6,7 +6,7 @@ describe VisualizeAws do
     allow(Fog::Compute).to receive(:new).and_return(@ec2)
   end
 
-  let(:visualize_aws) {VisualizeAws.new}
+  let(:visualize_aws) {VisualizeAws.new(AwsConfig.new)}
 
   it 'should add nodes for each security group' do
     expect(@ec2).to receive(:security_groups).and_return([group('Remote ssh', group_ingress('22', 'My machine')), group('My machine')])
@@ -107,7 +107,7 @@ describe VisualizeAws do
       ])
 
       opts = {:exclude => ['D.*b', 'App']}
-      graph = VisualizeAws.new(opts).build
+      graph = VisualizeAws.new(AwsConfig.new(opts)).build
 
       expect(graph.each_edge.size).to eq(1)
       expect(graph).to have_edge('External' => 'Web')
@@ -121,7 +121,7 @@ describe VisualizeAws do
       ])
 
       opts = {:exclude => ['App']}
-      graph = VisualizeAws.new(opts).build
+      graph = VisualizeAws.new(AwsConfig.new(opts)).build
 
       expect(graph.each_edge.size).to eq(2)
       expect(graph).to have_edge('External' => 'Web')

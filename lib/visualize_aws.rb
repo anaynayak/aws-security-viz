@@ -6,12 +6,13 @@ require_relative 'graph'
 require_relative 'exclusions'
 require_relative 'debug_graph'
 require_relative 'color_picker'
+require_relative 'aws_config'
 
 class VisualizeAws
-  def initialize(options={})
+  def initialize(config, options={})
     @options = options
     provider = options[:source_file].nil? ? Ec2Provider.new(options) : JsonProvider.new(options)
-    @security_groups = SecurityGroups.new(provider, Exclusions.new(options[:exclude]))
+    @security_groups = SecurityGroups.new(provider, config)
   end
 
   def unleash(output_file)
@@ -54,6 +55,5 @@ if __FILE__ == $0
     Trollop::die :access_key, 'is required' if opts[:access_key].nil?
     Trollop::die :secret_key, 'is required' if opts[:secret_key].nil?
   end
-  config_opts = File.exist?('opts.yml') ? YAML.load_file('opts.yml') : {}
-  VisualizeAws.new(opts.merge(config_opts)).unleash(opts[:filename])
+  VisualizeAws.new(AwsConfig.load, opts).unleash(opts[:filename])
 end

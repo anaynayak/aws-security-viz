@@ -1,23 +1,22 @@
 require 'set'
 require 'forwardable'
 require_relative 'ip_permission.rb'
-require_relative 'groups.rb'
 
 class SecurityGroups
   include Enumerable
 
-  def initialize(provider, exclusions)
+  def initialize(provider, config)
     @groups = provider.security_groups
-    @exclusions = exclusions
+    @config = config
   end
 
   def each(&block)
-    groups = @groups.select { |sg| !@exclusions.match(sg.name) }
+    groups = @groups.select { |sg| !@config.exclusions.match(sg.name) }
     groups.each { |group|
       if block_given?
-        block.call SecurityGroup.new(@groups, group, @exclusions)
+        block.call SecurityGroup.new(@groups, group, @config)
       else
-        yield SecurityGroup.new(@groups, group, @exclusions)
+        yield SecurityGroup.new(@groups, group, @config)
       end
     }
   end
@@ -32,18 +31,18 @@ class SecurityGroup
 
   def_delegator :@group, :name
 
-  def initialize(all_groups, group, exclusions)
+  def initialize(all_groups, group, config)
     @all_groups = all_groups
     @group = group
-    @exclusions = exclusions
+    @config = config
   end
 
   def permissions
     ingress_permissions = @group.ip_permissions.collect { |ip|
-      IpPermission.new(@group, ip, true, @exclusions)
+      IpPermission.new(@group, ip, true, @config.exclusions)
     }
     egress_permissions = @group.ip_permissions_egress.collect { |ip|
-      IpPermission.new(@group, ip, false, @exclusions)
+      IpPermission.new(@group, ip, false, @config.exclusions)
     }
     ingress_permissions + egress_permissions
   end
@@ -52,12 +51,12 @@ class SecurityGroup
     all_traffic = permissions.collect { |permission|
       permission.traffic
     }.flatten.uniq
-    CidrGroupMapping.new(@all_groups).map(all_traffic)
+    CidrGroupMapping.new(@all_groups, @config.groups).map(all_traffic)
   end
 end
 
 class CidrGroupMapping
-  def initialize(all_groups, user_groups = USER_GROUPS)
+  def initialize(all_groups, user_groups)
     @all_groups = all_groups
     @user_groups = user_groups
   end
