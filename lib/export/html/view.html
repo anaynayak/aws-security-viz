@@ -1,0 +1,36 @@
+ <html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdn.rawgit.com/mountainstorm/jquery.graphviz.svg/master/css/graphviz.svg.css">
+    </head>
+    <body>
+        <div id="graph" style=""></div>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+        <script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-mousewheel/master/jquery.mousewheel.min.js"></script>
+        <script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-color/master/jquery.color.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="https://cdn.rawgit.com/mountainstorm/jquery.graphviz.svg/master/js/jquery.graphviz.svg.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function(){
+                $("#graph").graphviz({
+                    url: "demo.svg",
+                    ready: function() {
+                        var gv = this
+                        gv.nodes().click(function () {
+                            var $set = $()
+                            $set.push(this)
+                            $set = $set.add(gv.linkedFrom(this, true))
+                            gv.highlight($set, true)
+                            gv.bringToFront($set)
+                        })
+                        $(document).keydown(function (evt) {
+                            if (evt.keyCode == 27) {
+                                gv.highlight()
+                            }
+                        })
+                    }
+                });
+            });
+        </script>
+    </body>
+</html>

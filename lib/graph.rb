@@ -3,7 +3,12 @@ require 'logger'
 
 class Graph
   def initialize
-    @g = GraphViz::new('G')
+    @g = GraphViz::new('G', :type => 'strict digraph') { |g|
+      g[:overlap] = :false
+      g[:splines] = :true
+      g[:sep] = 1
+      g[:concentrate] = :true
+    }
   end
 
   def add_node(name)
