@@ -13,9 +13,14 @@ aws-security-viz -- A tool to visualize aws security groups
 
 ## INSTALLATION 
 ```
-  $ bundle install
+  $ bundle install 
 ```
 ([Bundler installation](http://gembundler.com/bundle_install.html))
+
+## DEPENDENCIES
+
+* graphviz with triangulation `brew install graphviz --with-gts`
+* libxml2 `brew install libxml2`* 
 
 ## USAGE
 
@@ -43,11 +48,18 @@ Options:
 ## DEBUGGING
 
 To generate the graph with debug statements, execute the following command 
+
 ```
 $ DEBUG=true bundle exec ruby lib/visualize_aws.rb -a your_aws_key -s your_aws_secret_key -f viz.svg
 ```
 
 If it doesn't indicate the problem, please share the generated json file with me @ whynospam-awsviz@yahoo.co.in
+
+You can send me an obfuscated version using the following command:
+
+```
+$ DEBUG=true OBFUSCATE=true bundle exec ruby lib/visualize_aws.rb -a your_aws_key -s your_aws_secret_key -f viz.svg
+```
 
 Execute the following command to generate the json. You will need [aws-cli](https://github.com/aws/aws-cli) to execute the command
 
