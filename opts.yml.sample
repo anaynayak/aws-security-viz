@@ -1,4 +1,5 @@
 --- 
+:format: dot
 :exclude: 
 - .*test.*
 - .*perf.*

@@ -11,6 +11,7 @@ require_relative 'aws_config'
 class VisualizeAws
   def initialize(config, options={})
     @options = options
+    @config = config
     provider = options[:source_file].nil? ? Ec2Provider.new(options) : JsonProvider.new(options)
     @security_groups = SecurityGroups.new(provider, config)
   end
@@ -38,7 +39,7 @@ class VisualizeAws
 
   def render(g, output_file)
     extension = File.extname(output_file)
-    g.output(extension[1..-1].to_sym => output_file, :use => 'sfdp')
+    g.output(extension[1..-1].to_sym => output_file, :use => @config.format)
   end
 end
 
