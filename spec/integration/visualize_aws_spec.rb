@@ -15,7 +15,6 @@ describe VisualizeAws do
 
     it 'should parse json input', :integration => true do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
-
       expect(File.read(expected_file)).to eq(temp_file.read)
     end
   end

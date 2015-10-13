@@ -7,15 +7,20 @@ def h(s)
   @oh.hash(s)
 end
 
-g = Graph.new
-File.readlines('debug-output.log').map do |l| 
-  type, left, right = l.split(/\W+/)
-  if type=="node"
+
+def debug
+  g = Graph.new
+  File.readlines('debug-output.log').map do |l| 
+    type, left, right = l.split(/\W+/)
+    if type=="node"
       g.add_node(h(left))
-  elsif type=="edge"
+    elsif type=="edge"
       g.add_edge(h(left), h(right), {})
+    end
   end
+  g.output(:svg => 'test.svg', :use => 'sfdp')
 end
-g.output(:svg => 'test.svg', :use => 'sfdp')
 
-
+if __FILE__ == $0
+  debug
+end
