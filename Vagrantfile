@@ -12,6 +12,6 @@ Vagrant.configure(2) do |config|
     git clone https://github.com/anaynayak/aws-security-viz.git
     cd aws-security-viz
     bundle install
-    bundle exec ruby lib/debug/parse_log.rb
+    # bundle exec ruby lib/visualize_aws.rb -a your_aws_key -s your_aws_secret_key -f viz.svg --color=true
   SHELL
 end
