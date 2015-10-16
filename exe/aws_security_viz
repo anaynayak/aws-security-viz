@@ -9,13 +9,22 @@ opts = Trollop::options do
   opt :region, 'AWS region to query', :default => 'us-east-1', :type => :string
   opt :source_file, 'JSON source file containing security groups', :type => :string
   opt :filename, 'Output file name', :type => :string, :default => 'aws-security-viz.png'
+  opt :config, 'Config file (opts.yml)', :type => :string, :default => 'opts.yml'
   opt :color, 'Colored node edges', :default => false
 end
+
+cmd = ARGV.shift
+if cmd=="setup"
+  AwsConfig.write(opts[:config])
+  puts "#{opts[:config]} created in current directory."
+  exit
+end
+
 if opts[:source_file].nil?
   Trollop::die :access_key, 'is required' if opts[:access_key].nil?
   Trollop::die :secret_key, 'is required' if opts[:secret_key].nil?
 end
 
-VisualizeAws.new(AwsConfig.load, opts).unleash(opts[:filename])
+VisualizeAws.new(AwsConfig.load(opts[:config]), opts).unleash(opts[:filename])
 
 

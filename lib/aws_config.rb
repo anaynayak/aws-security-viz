@@ -15,8 +15,12 @@ class AwsConfig
     @opts[:format] || 'dot'
   end
 
-  def self.load
-    config_opts = File.exist?('opts.yml') ? YAML.load_file('opts.yml') : {}
+  def self.load(file)
+    config_opts = File.exist?(file) ? YAML.load_file(file) : {}
     AwsConfig.new(config_opts)
+  end
+
+  def self.write(file)
+    FileUtils.cp(File.expand_path('../opts.yml.sample', __FILE__), file)
   end
 end
