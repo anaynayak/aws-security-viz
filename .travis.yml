@@ -1,15 +1,12 @@
 language: ruby
 
 rvm:
-- 1.9.3
 - 2.0.0
 - 2.1.2
 
 script: bundle exec rspec spec --tag '~integration'
 
 before_install: gem install bundler
-
-bundler_args: --without development --retry=3 --jobs=3
 
 cache: bundler
 
