@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Aws-security-viz : Visualize your aws security groups.">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Aws-security-viz</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/anaynayak/aws-security-viz">View on GitHub</a>
+
+          <h1 id="project_title">Aws-security-viz</h1>
+          <h2 id="project_tagline">Visualize your aws security groups.</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/anaynayak/aws-security-viz/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/anaynayak/aws-security-viz/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="aws-security-viz----a-tool-to-visualize-aws-security-groups-" class="anchor" href="#aws-security-viz----a-tool-to-visualize-aws-security-groups-" aria-hidden="true"><span class="octicon octicon-link"></span></a>aws-security-viz -- A tool to visualize aws security groups </h1>
+
+<p><a href="http://travis-ci.org/anaynayak/aws-security-viz"><img src="https://secure.travis-ci.org/anaynayak/aws-security-viz.png" alt="Build Status"></a> 
+<a href="https://badge.fury.io/rb/aws_security_viz"><img src="https://badge.fury.io/rb/aws_security_viz.svg" alt="Gem Version"></a>
+<a href="https://codeclimate.com/github/anaynayak/aws-security-viz"><img src="https://codeclimate.com/github/anaynayak/aws-security-viz.png" alt="Code Climate"></a> 
+<a href="https://gemnasium.com/anaynayak/aws-security-viz"><img src="https://gemnasium.com/anaynayak/aws-security-viz.png" alt="Dependency Status"></a></p>
+
+<h2>
+<a id="description" class="anchor" href="#description" aria-hidden="true"><span class="octicon octicon-link"></span></a>DESCRIPTION</h2>
+
+<p>Need a quick way to visualize your current aws/amazon ec2 security group configuration? aws-security-viz does just that based on the EC2 security group ingress configuration. </p>
+
+<h2>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span class="octicon octicon-link"></span></a>FEATURES</h2>
+
+<ul>
+<li>Output to any of the formats that Graphviz supports. </li>
+<li>EC2 classic and VPC security groups</li>
+</ul>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>INSTALLATION</h2>
+
+<pre><code>  $ gem install aws_security_viz
+  $ aws_security_viz --help
+</code></pre>
+
+<h2>
+<a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>DEPENDENCIES</h2>
+
+<ul>
+<li>graphviz with triangulation <code>brew install graphviz --with-gts</code>
+</li>
+<li>libxml2 <code>brew install libxml2</code>* </li>
+</ul>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>USAGE</h2>
+
+<p>To generate the graph directly using AWS keys</p>
+
+<pre><code>  $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f viz.svg --color=true
+</code></pre>
+
+<p>To generate the graph using an existing security_groups.json (created using aws-cli)</p>
+
+<pre><code>  $ aws_security_viz -o data/security_groups.json -f viz.svg --color
+</code></pre>
+
+<pre><code>$ aws_security_viz --help
+Options:
+  -a, --access-key=&lt;s&gt;     AWS access key
+  -s, --secret-key=&lt;s&gt;     AWS secret key
+  -r, --region=&lt;s&gt;         AWS region to query (default: us-east-1)
+  -o, --source-file=&lt;s&gt;    JSON source file containing security groups
+  -f, --filename=&lt;s&gt;       Output file name (default: aws-security-viz.png)
+  -c, --config=&lt;s&gt;         Config file (opts.yml) (default: opts.yml)
+  -l, --color              Colored node edges
+  -h, --help               Show this message
+</code></pre>
+
+<h4>
+<a id="advanced-configuration" class="anchor" href="#advanced-configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Advanced configuration</h4>
+
+<p>You can generate a configuration file using the following command:</p>
+
+<pre><code>  $ aws_security_viz setup [-c opts.yml]
+</code></pre>
+
+<p>The opts.yml file lets you define the following options:</p>
+
+<ul>
+<li>Grouping of CIDR ips </li>
+<li>Define exclusion patterns</li>
+<li>Change graphviz format (neato, dot, sfdp etc)</li>
+</ul>
+
+<h2>
+<a id="debugging" class="anchor" href="#debugging" aria-hidden="true"><span class="octicon octicon-link"></span></a>DEBUGGING</h2>
+
+<p>To generate the graph with debug statements, execute the following command </p>
+
+<pre><code>$ DEBUG=true aws_security_viz -a your_aws_key -s your_aws_secret_key -f viz.svg
+</code></pre>
+
+<p>If it doesn't indicate the problem, please share the generated json file with me @ <a href="mailto:whynospam-awsviz@yahoo.co.in">whynospam-awsviz@yahoo.co.in</a></p>
+
+<p>You can send me an obfuscated version using the following command:</p>
+
+<pre><code>$ DEBUG=true OBFUSCATE=true aws_security_viz -a your_aws_key -s your_aws_secret_key -f viz.svg
+</code></pre>
+
+<p>Execute the following command to generate the json. You will need <a href="https://github.com/aws/aws-cli">aws-cli</a> to execute the command</p>
+
+<p><code>aws ec2 describe-security-groups</code></p>
+
+<h2>
+<a id="example" class="anchor" href="#example" aria-hidden="true"><span class="octicon octicon-link"></span></a>EXAMPLE</h2>
+
+<p><img src="https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png" alt=""></p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Aws-security-viz maintained by <a href="https://github.com/anaynayak">anaynayak</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-68978068-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+
+  </body>
+</html>
