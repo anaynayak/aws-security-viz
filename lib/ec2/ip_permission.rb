@@ -18,7 +18,9 @@ class IpPermission
   end
 
   def cidr_traffic
-    @ip.ip_ranges.collect { |range|
+    @ip.ip_ranges
+      .select { |range| !@exclusions.match(range)}
+      .collect { |range|
       Traffic.new(@ingress, range.cidr_ip, @group.name, port_range)
     }
   end

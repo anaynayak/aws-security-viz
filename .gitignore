@@ -31,3 +31,4 @@
 opts.yml
 
 .vagrant
+Gemfile.lock

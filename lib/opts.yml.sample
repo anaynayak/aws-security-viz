@@ -1,10 +1,11 @@
 --- 
 :format: dot
-:exclude: 
-- .*test.*
-- .*perf.*
+#:exclude: 
+#- .*test.*
+#- .*perf.*
+#- .*0.0.0.0/32.*
 :groups:
-  '0.0.0.0/0': '*'
+#  '0.0.0.0/0': '*'
   'x.x.x.x/0': 'External'
   'y.y.y.y/0': 'External'
 

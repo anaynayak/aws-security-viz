@@ -99,6 +99,21 @@ describe VisualizeAws do
     end
   end
   context "filter" do
+    it 'include cidr which do not match the pattern' do
+      expect(@ec2).to receive(:security_groups).and_return(
+        [
+          group('Web', cidr_ingress('22', '127.0.0.1/32')),
+          group('Db', cidr_ingress('22', '192.0.1.1/32'))
+      ])
+
+      opts = {:exclude => ['127.*']}
+      graph = VisualizeAws.new(AwsConfig.new(opts)).build
+
+      expect(graph.each_edge.size).to eq(1)
+      expect(graph).to have_edge('192.0.1.1/32' => 'Db')
+      expect(graph).to_not have_edge('127.0.0.1/32' => 'Web')
+    end
+
     it 'include groups which do not match the pattern' do
       expect(@ec2).to receive(:security_groups).and_return(
         [

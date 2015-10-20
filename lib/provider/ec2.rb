@@ -72,6 +72,10 @@ module Ec2
     def cidr_ip
       @range['cidrIp']
     end
+
+    def to_str
+      cidr_ip
+    end
   end
 
   class IpPermissionGroup

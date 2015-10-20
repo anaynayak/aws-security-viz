@@ -78,6 +78,10 @@ module Json
     def cidr_ip
       @range['CidrIp']
     end
+
+    def to_str
+      cidr_ip
+    end
   end
 
   class IpPermissionGroup
