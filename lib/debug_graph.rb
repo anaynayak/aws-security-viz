@@ -1,8 +1,9 @@
 require 'digest'
+require_relative 'graph'
 
 class DebugGraph
-  def initialize
-    @g = Graph.new
+  def initialize(config)
+    @g = Graph.new(config)
   end
 
   def add_node(name)
@@ -13,8 +14,8 @@ class DebugGraph
     @g.add_edge(h(from), h(to), opts.update(label: h(opts[:label])))
   end
 
-  def output(opts)
-    @g.output(opts)
+  def output(renderer)
+    @g.output(renderer)
   end
 
   private

@@ -1,37 +1,27 @@
-require 'graphviz'
-require 'logger'
-
 class Graph
-  def initialize
-    @g = GraphViz::new('G', :type => 'strict digraph') { |g|
-      g[:overlap] = :false
-      g[:splines] = :true
-      g[:sep] = 1
-      g[:concentrate] = :true
-    }
+  attr_reader :ops
+
+  def initialize(config)
+    @config = config
+    @ops = []
   end
 
   def add_node(name)
     log("node: #{name}")
-    @g.add_node(name) if name
-  end
-
-  def get_node(name, &block)
-    @g.get_node(name, &block)
+    @ops << [:node, name] if name
   end
 
   def add_edge(from, to, opts)
     log("edge: #{from} -> #{to}")
-    @g.add_edge(from, to, opts)
+    @ops << [:edge, from, to, opts]
   end
 
-  def each_edge(&block)
-    @g.each_edge(&block)
-  end
-
-  def output(opts)
-    log("output: #{opts}")
-    @g.output(opts)
+  def output(renderer)
+    @ops.each { |op, *args|
+      renderer.add_node(*args) if op==:node
+      renderer.add_edge(*args) if op==:edge
+    }
+    renderer.output
   end
 
   def log(msg)
