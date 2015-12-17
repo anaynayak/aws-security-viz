@@ -1,36 +1,83 @@
- <html>
-    <head>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css">
-        <link rel="stylesheet" href="https://cdn.rawgit.com/mountainstorm/jquery.graphviz.svg/master/css/graphviz.svg.css">
-    </head>
-    <body>
-        <div id="graph" style=""></div>
-        <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
-        <script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-mousewheel/master/jquery.mousewheel.min.js"></script>
-        <script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-color/master/jquery.color.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
-        <script type="text/javascript" src="https://cdn.rawgit.com/mountainstorm/jquery.graphviz.svg/master/js/jquery.graphviz.svg.js"></script>
-        <script type="text/javascript">
-            $(document).ready(function(){
-                $("#graph").graphviz({
-                    url: "demo.svg",
-                    ready: function() {
-                        var gv = this
-                        gv.nodes().click(function () {
-                            var $set = $()
-                            $set.push(this)
-                            $set = $set.add(gv.linkedFrom(this, true))
-                            gv.highlight($set, true)
-                            gv.bringToFront($set)
-                        })
-                        $(document).keydown(function (evt) {
-                            if (evt.keyCode == 27) {
-                                gv.highlight()
-                            }
-                        })
-                    }
-                });
+<html>
+<head>
+    <style type="text/css">
+        #container {
+            max-width: 100%;
+            height: 100%;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+<script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/sigma.min.js"></script>
+<script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.parsers.json.min.js"></script>
+<script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.layouts.forceLink.min.js"></script>
+<script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.plugins.design.min.js"></script>
+<script>
+    sigma.classes.graph.addMethod('neighbors', function (nodeId) {
+        var k,
+                neighbors = {},
+                index = this.allNeighborsIndex[nodeId] || {};
+
+        for (k in index)
+            neighbors[k] = this.nodesIndex[k];
+
+        return neighbors;
+    });
+    sigma.parsers.json('/test.json', {
+        container: 'container',
+        settings: {
+            defaultNodeColor: '#ec5148'
+        }
+    }, function (s) {
+        s.graph.nodes().forEach(function (n) {
+            n.originalColor = n.color;
+            n.x = Math.random();
+            n.y = Math.random();
+            n.size = 1;
+            n.label = n.id
+        });
+        var fa = sigma.layouts.startForceLink(s, {autoStop: true, adjustSizes: true, randomize: true});
+
+        s.refresh();
+        s.graph.edges().forEach(function (e) {
+            e.originalColor = e.color;
+        });
+        s.bind('clickNode', function (e) {
+            var nodeId = e.data.node.id,
+                    toKeep = s.graph.neighbors(nodeId);
+            toKeep[nodeId] = e.data.node;
+
+            s.graph.nodes().forEach(function (n) {
+                if (toKeep[n.id])
+                    n.color = n.originalColor;
+                else
+                    n.color = '#eee';
             });
-        </script>
-    </body>
+
+            s.graph.edges().forEach(function (e) {
+                if (toKeep[e.source] && toKeep[e.target])
+                    e.color = e.originalColor;
+                else
+                    e.color = '#eee';
+            });
+
+            s.refresh();
+        });
+        s.bind('clickStage', function (e) {
+            s.graph.nodes().forEach(function (n) {
+                n.color = n.originalColor;
+            });
+
+            s.graph.edges().forEach(function (e) {
+                e.color = e.originalColor;
+            });
+
+            s.refresh();
+        });
+    });
+</script>
+</body>
 </html>
+

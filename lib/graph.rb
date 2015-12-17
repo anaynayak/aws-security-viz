@@ -4,16 +4,25 @@ class Graph
   def initialize(config)
     @config = config
     @ops = []
+    @nodes = Set.new
   end
 
   def add_node(name)
     log("node: #{name}")
-    @ops << [:node, name] if name
+    uniquely_add(@ops, :node, name) {
+      [:node, name]
+    }
   end
+  #TODO : Dedup edge labels ?
+  #TODO : Remove env dependencies
 
   def add_edge(from, to, opts)
     log("edge: #{from} -> #{to}")
-    @ops << [:edge, from, to, opts]
+    add_node(from)
+    add_node(to)
+    uniquely_add(@ops, :edge, from, to) {
+      [:edge, from, to, opts]
+    }
   end
 
   def output(renderer)
@@ -23,6 +32,14 @@ class Graph
     }
     renderer.output
   end
+
+  def uniquely_add(target, type, *opts, &block)
+    return if opts.compact.empty?
+    return if @nodes.include?([type, opts])
+    @nodes.add([type, opts])
+    target << yield
+  end
+
 
   def log(msg)
     puts msg if ENV["DEBUG"]

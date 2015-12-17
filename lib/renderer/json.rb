@@ -8,7 +8,7 @@ module Renderer
     end
 
     def add_node(name)
-      @nodes << {id: name}
+      @nodes << {id: name, label: name}
     end
 
     def add_edge(from, to, opts)
