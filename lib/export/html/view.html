@@ -15,6 +15,7 @@
 <script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.layouts.forceLink.min.js"></script>
 <script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.plugins.design.min.js"></script>
 <script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.plugins.colorbrewer.min.js"></script>
+<script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.renderers.edgeLabels.min.js"></script>
 <script>
     sigma.classes.graph.addMethod('neighbors', function (nodeId) {
         var k,
@@ -29,7 +30,29 @@
     sigma.classes.graph.addMethod('neighborCount', function (nodeId) {
         return this.allNeighborsCount[nodeId];
     });
-    sigma.parsers.json('/test.json', {container: 'container'}, function (s) {
+    var config = {
+        renderer: {
+            container: 'container',
+            type: 'canvas'
+        },
+        settings: {
+            animationsTime: 1000,
+            borderSize: 1,
+            outerBorderSize: 1,
+            defaultNodeOuterBorderColor: 'rgb(236, 81, 72)',
+            enableEdgeHovering: true,
+            edgeHoverHighlightNodes: 'circle',
+            sideMargin: 1,
+            edgeHoverColor: 'edge',
+            defaultEdgeHoverColor: '#000',
+            edgeHoverExtremities: true,
+            scalingMode: 'outside',
+            edgeLabelThreshold: 2,
+            edgeHoverSizeRatio: 2,
+            edgeLabelSize: 'proportional'
+        }
+    };
+    sigma.parsers.json('/aws.json', config, function (s) {
         s.graph.nodes().forEach(function (n) {
             n.x = Math.random();
             n.y = Math.random();
@@ -37,8 +60,6 @@
             n.label = n.id;
             n.data = {edgeCount: s.graph.neighborCount(n.id)};
         });
-        var fa = sigma.layouts.startForceLink(s, {autoStop: true, adjustSizes: true, randomize: true});
-
         var myStyles = {
             nodes: {
                 color: {
@@ -61,14 +82,19 @@
         };
         var design = sigma.plugins.design(s, {styles: myStyles, palette: myPalette});
         design.apply();
+
         s.graph.nodes().forEach(function (n) {
             n.originalColor = n.color;
         });
         s.graph.edges().forEach(function (e) {
+            e.size = 1;
             e.originalColor = e.color;
+            e.type = "arrow";
         });
+        var fa = sigma.layouts.startForceLink(s, {autoStop: true, adjustSizes: true, randomize: true});
+
         s.bind('clickNode', function (e) {
-          var nodeId = e.data.node.id,
+            var nodeId = e.data.node.id,
                     toKeep = s.graph.neighbors(nodeId);
             toKeep[nodeId] = e.data.node;
 

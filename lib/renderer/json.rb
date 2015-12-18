@@ -12,7 +12,7 @@ module Renderer
     end
 
     def add_edge(from, to, opts)
-      @edges << {id: "#{from}-#{to}", source: from, target: to}
+      @edges << {id: "#{from}-#{to}", source: from, target: to, label: opts[:label]}
     end
 
     def output

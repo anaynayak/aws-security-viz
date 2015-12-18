@@ -14,8 +14,8 @@ describe VisualizeAws do
 
     expect(graph.ops).to eq([
                 [:node, 'Remote ssh'],
-                [:edge, 'My machine', 'Remote ssh', {:color => :blue, :label => '22/tcp'}],
                 [:node, 'My machine'],
+                [:edge, 'My machine', 'Remote ssh', {:color => :blue, :label => '22/tcp'}],
             ])
   end
 
@@ -26,6 +26,7 @@ describe VisualizeAws do
 
       expect(graph.ops).to eq([
                   [:node, 'Web'],
+                  [:node, 'ELB'],
                   [:edge, 'ELB', 'Web', {:color => :blue, :label => '80/tcp'}],
               ])
     end
@@ -41,9 +42,11 @@ describe VisualizeAws do
 
       expect(graph.ops).to eq([
                   [:node, 'App'],
-                  [:edge, 'Web', 'App', {:color => :blue, :label => '80/tcp'}],
-                  [:edge, 'Internal', 'App', {:color => :blue, :label => '8983/tcp'}],
                   [:node, 'Web'],
+                  [:edge, 'Web', 'App', {:color => :blue, :label => '80/tcp'}],
+                  [:node, 'Internal'],
+                  [:edge, 'Internal', 'App', {:color => :blue, :label => '8983/tcp'}],
+                  [:node, 'External'],
                   [:edge, 'External', 'Web', {:color => :blue, :label => '80/tcp'}],
                   [:node, 'Db'],
                   [:edge, 'App', 'Db', {:color => :blue, :label => '7474/tcp'}],
@@ -64,9 +67,12 @@ describe VisualizeAws do
 
       expect(graph.ops).to eq([
                   [:node, 'Web'],
+                  [:node, 'External'],
                   [:edge, 'External', 'Web', {:color => :blue, :label => '80/tcp'}],
                   [:node, 'Db'],
+                  [:node, 'App'],
                   [:edge, 'App', 'Db', {:color => :blue, :label => '7474/tcp'}],
+                  [:node, '127.0.0.1/32'],
                   [:edge, '127.0.0.1/32', 'Db', {:color => :blue, :label => '22/tcp'}],
               ])
 
@@ -86,9 +92,12 @@ describe VisualizeAws do
 
       expect(graph.ops).to eq([
                   [:node, 'Web'],
+                  [:node, 'External'],
                   [:edge, 'External', 'Web', {:color => :blue, :label => '80/tcp'}],
                   [:node, 'Db'],
+                  [:node, 'App'],
                   [:edge, 'App', 'Db', {:color => :blue, :label => '7474/tcp'}],
+                  [:node, 'Work'],
                   [:edge, 'Work', 'Db', {:color => :blue, :label => '22/tcp'}],
               ])
 
@@ -107,6 +116,7 @@ describe VisualizeAws do
 
       expect(graph.ops).to eq([
                   [:node, 'ssh'],
+                  [:node, 'Work'],
                   [:edge, 'Work', 'ssh', {:color => :blue, :label => '22/tcp'}],
               ])
     end
@@ -126,6 +136,7 @@ describe VisualizeAws do
       expect(graph.ops).to eq([
                   [:node, 'Web'],
                   [:node, 'Db'],
+                  [:node, '192.0.1.1/32'],
                   [:edge, '192.0.1.1/32', 'Db', {:color => :blue, :label => '22/tcp'}],
               ])
     end
@@ -142,6 +153,7 @@ describe VisualizeAws do
 
       expect(graph.ops).to eq([
                   [:node, 'Web'],
+                  [:node, 'External'],
                   [:edge, 'External', 'Web', {:color => :blue, :label => '80/tcp'}],
               ])
     end
@@ -158,8 +170,10 @@ describe VisualizeAws do
 
       expect(graph.ops).to eq([
                   [:node, 'Web'],
+                  [:node, 'External'],
                   [:edge, 'External', 'Web', {:color => :blue, :label => '80/tcp'}],
                   [:node, 'Db'],
+                  [:node, '127.0.0.1/32'],
                   [:edge, '127.0.0.1/32', 'Db', {:color => :blue, :label => '22/tcp'}],
               ])
 
