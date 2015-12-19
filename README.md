@@ -38,6 +38,18 @@ To generate the graph using an existing security_groups.json (created using aws-
   $ aws_security_viz -o data/security_groups.json -f viz.svg --color
 ```
 
+To generate a web view
+
+```
+  $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json
+```
+
+* Generates two files: aws.json and view.html. 
+* The json file name needs to be passed in as a html fragment identifier. 
+* The generated graph can be viewed in a webserver e.g. http://localhost:3000/view.html?aws.json by using `python -m SimpleHTTPServer 3000`
+
+### Help
+
 ``` 
 $ aws_security_viz --help
 Options:
@@ -84,7 +96,12 @@ Execute the following command to generate the json. You will need [aws-cli](http
 
 `aws ec2 describe-security-groups`
 
-## EXAMPLE
+## EXAMPLES
+
+#### Graphviz export
 
 ![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)
+
+#### Web view
+![](https://cloud.githubusercontent.com/assets/416211/11912582/0e66cdbc-a669-11e5-82ab-1e26e3c6949b.png)
 
