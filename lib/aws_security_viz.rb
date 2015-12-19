@@ -19,8 +19,12 @@ class VisualizeAws
 
   def unleash(output_file)
     g = build
-    renderer = output_file.end_with?('json') ? Renderer::Json.new(output_file, @config) : Renderer::GraphViz.new(output_file, @config)
-    g.output(renderer)
+    if output_file.end_with?('json')
+      g.output(Renderer::Json.new(output_file, @config))
+      FileUtils.copy(File.expand_path('../export/html/view.html', __FILE__), 'view.html')
+    else
+      g.output(Renderer::GraphViz.new(output_file, @config))
+    end
   end
 
   def build

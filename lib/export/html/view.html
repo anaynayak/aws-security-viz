@@ -6,9 +6,19 @@
             height: 100%;
             margin: auto;
         }
+
+        #error {
+            color: #31708f;
+            background-color: #d9edf7;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
+<div id="error" style="display:none"></div>
 <div id="container"></div>
 <script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/sigma.min.js"></script>
 <script src="https://rawgit.com/Linkurious/linkurious.js/develop/dist/plugins/sigma.parsers.json.min.js"></script>
@@ -52,80 +62,101 @@
             edgeLabelSize: 'proportional'
         }
     };
-    sigma.parsers.json('/aws.json', config, function (s) {
-        s.graph.nodes().forEach(function (n) {
-            n.x = Math.random();
-            n.y = Math.random();
-            n.size = 1;
-            n.label = n.id;
-            n.data = {edgeCount: s.graph.neighborCount(n.id)};
-        });
-        var myStyles = {
-            nodes: {
-                color: {
-                    by: 'data.edgeCount',
-                    scheme: 'colorbrewer.nodes',
-                    bins: 3
-                },
-                size: {
-                    by: 'data.edgeCount',
-                    bins: 7,
-                    min: 2,
-                    max: 10
+    var graphUrl = function () {
+        return window.location.hash.replace(/^#/, '/');
+    };
+    var errorElement = document.getElementById("error");
+    window.onhashchange = function () {
+        loadGraph(graphUrl());
+    };
+
+    function loadGraph(url) {
+        errorElement.style.display = "none";
+        var initializeGraph = function (s) {
+            s.graph.nodes().forEach(function (n) {
+                n.x = Math.random();
+                n.y = Math.random();
+                n.size = 1;
+                n.label = n.id;
+                n.data = {edgeCount: s.graph.neighborCount(n.id)};
+            });
+            var myStyles = {
+                nodes: {
+                    color: {
+                        by: 'data.edgeCount',
+                        scheme: 'colorbrewer.nodes',
+                        bins: 3
+                    },
+                    size: {
+                        by: 'data.edgeCount',
+                        bins: 7,
+                        min: 2,
+                        max: 10
+                    }
                 }
-            }
-        };
-        var myPalette = {
-            colorbrewer: {
-                nodes: sigma.plugins.colorbrewer.Dark2
-            }
-        };
-        var design = sigma.plugins.design(s, {styles: myStyles, palette: myPalette});
-        design.apply();
-
-        s.graph.nodes().forEach(function (n) {
-            n.originalColor = n.color;
-        });
-        s.graph.edges().forEach(function (e) {
-            e.size = 1;
-            e.originalColor = e.color;
-            e.type = "arrow";
-        });
-        var fa = sigma.layouts.startForceLink(s, {autoStop: true, adjustSizes: true, randomize: true});
-
-        s.bind('clickNode', function (e) {
-            var nodeId = e.data.node.id,
-                    toKeep = s.graph.neighbors(nodeId);
-            toKeep[nodeId] = e.data.node;
+            };
+            var myPalette = {
+                colorbrewer: {
+                    nodes: sigma.plugins.colorbrewer.Dark2
+                }
+            };
+            var design = sigma.plugins.design(s, {styles: myStyles, palette: myPalette});
+            design.apply();
 
             s.graph.nodes().forEach(function (n) {
-                if (toKeep[n.id])
+                n.originalColor = n.color;
+            });
+            s.graph.edges().forEach(function (e) {
+                e.size = 1;
+                e.originalColor = e.color;
+                e.type = "arrow";
+            });
+            var fa = sigma.layouts.startForceLink(s, {autoStop: true, adjustSizes: true, randomize: true});
+
+            s.bind('clickNode', function (e) {
+                var nodeId = e.data.node.id,
+                        toKeep = s.graph.neighbors(nodeId);
+                toKeep[nodeId] = e.data.node;
+
+                s.graph.nodes().forEach(function (n) {
+                    if (toKeep[n.id])
+                        n.color = n.originalColor;
+                    else
+                        n.color = '#eee';
+                });
+
+                s.graph.edges().forEach(function (e) {
+                    if (toKeep[e.source] && toKeep[e.target])
+                        e.color = e.originalColor;
+                    else
+                        e.color = '#eee';
+                });
+
+                s.refresh();
+            });
+            s.bind('clickStage', function (e) {
+                s.graph.nodes().forEach(function (n) {
                     n.color = n.originalColor;
-                else
-                    n.color = '#eee';
-            });
+                });
 
-            s.graph.edges().forEach(function (e) {
-                if (toKeep[e.source] && toKeep[e.target])
+                s.graph.edges().forEach(function (e) {
                     e.color = e.originalColor;
-                else
-                    e.color = '#eee';
-            });
+                });
 
-            s.refresh();
-        });
-        s.bind('clickStage', function (e) {
-            s.graph.nodes().forEach(function (n) {
-                n.color = n.originalColor;
+                s.refresh();
             });
+        };
+        sigma.parsers.json(url, config, initializeGraph);
+    }
 
-            s.graph.edges().forEach(function (e) {
-                e.color = e.originalColor;
-            });
-
-            s.refresh();
-        });
-    });
+    var url = graphUrl();
+    if (url) {
+        loadGraph(graphUrl());
+    } else {
+        var link = '<a href="' + location.href + '#test.json">' + location.href + '#test.json</a>';
+        errorElement.innerHTML = "Please pass in a datasource via html fragment identifier. For e.g. " + link;
+        errorElement.style.display = "";
+    }
 </script>
 </body>
 </html>

@@ -25,6 +25,7 @@ describe VisualizeAws do
     let(:temp_file) { Tempfile.new(%w(aws .json)) }
 
     it 'should parse json input', :integration => true do
+      expect(FileUtils).to receive(:copy)
       VisualizeAws.new(config, opts).unleash(temp_file.path)
       expect(File.read(expected_file)).to eq(temp_file.read)
     end
