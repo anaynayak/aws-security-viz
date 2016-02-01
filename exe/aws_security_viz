@@ -25,6 +25,6 @@ if opts[:source_file].nil?
   Trollop::die :secret_key, 'is required' if opts[:secret_key].nil?
 end
 
-VisualizeAws.new(AwsConfig.load(opts[:config]), opts).unleash(opts[:filename])
-
+config = AwsConfig.load(opts[:config]).merge(obfuscate: ENV['OBFUSCATE'], debug: ENV['DEBUG'])
+VisualizeAws.new(config, opts).unleash(opts[:filename])
 

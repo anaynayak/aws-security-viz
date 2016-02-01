@@ -28,7 +28,7 @@ class VisualizeAws
   end
 
   def build
-    g = ENV["OBFUSCATE"] ? DebugGraph.new(@config) : Graph.new(@config)
+    g = @config.obfuscate? ? DebugGraph.new(@config) : Graph.new(@config)
     @security_groups.each_with_index { |group, index|
       picker = ColorPicker.new(@options[:color])
       g.add_node(group.name)

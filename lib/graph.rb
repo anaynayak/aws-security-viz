@@ -13,8 +13,6 @@ class Graph
       [:node, name]
     }
   end
-  #TODO : Dedup edge labels ?
-  #TODO : Remove env dependencies
 
   def add_edge(from, to, opts)
     log("edge: #{from} -> #{to}")
@@ -42,6 +40,6 @@ class Graph
 
 
   def log(msg)
-    puts msg if ENV["DEBUG"]
+    puts msg if @config.debug?
   end
 end

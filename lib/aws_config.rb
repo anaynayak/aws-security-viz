@@ -15,9 +15,21 @@ class AwsConfig
     @opts[:format] || 'dot'
   end
 
+  def debug?
+    @opts[:debug] || false
+  end
+
+  def obfuscate?
+    @opts[:obfuscate] || false
+  end
+
   def self.load(file)
     config_opts = File.exist?(file) ? YAML.load_file(file) : {}
     AwsConfig.new(config_opts)
+  end
+
+  def merge(opts)
+    AwsConfig.new(@opts.merge!(opts))
   end
 
   def self.write(file)
