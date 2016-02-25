@@ -3,7 +3,23 @@ require 'fog/aws'
 class Ec2Provider
 
   def initialize(options)
-    @compute = Fog::Compute.new(:provider => 'AWS', :aws_access_key_id => options[:access_key], :aws_secret_access_key => options[:secret_key], :region => options[:region])
+    conn_opts = {
+      region: options[:region]
+    }
+
+    if options[:access_key]
+      conn_opts[:aws_access_key_id] = options[:access_key]
+    elsif ENV['AWS_ACCESS_KEY']
+      conn_opts[:aws_access_key_id] = ENV['AWS_ACCESS_KEY']
+    end
+
+    if options[:secret_key]
+      conn_opts[:aws_secret_access_key] = options[:secret_key]
+    elsif ENV['AWS_SECRET_KEY']
+      conn_opts[:aws_secret_access_key] = ENV['AWS_SECRET_KEY']
+    end
+
+    @compute = Fog::Compute::AWS.new conn_opts
   end
 
   def security_groups
