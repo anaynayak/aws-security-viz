@@ -7,6 +7,10 @@ class AwsConfig
     @exclusions ||=Exclusions.new(@opts[:exclude])
   end
 
+  def egress?
+    @opts.key?(:egress) ? @opts[:egress] : true
+  end
+
   def groups
     @opts[:groups] || {}
   end

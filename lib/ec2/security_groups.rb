@@ -41,6 +41,7 @@ class SecurityGroup
     ingress_permissions = @group.ip_permissions.collect { |ip|
       IpPermission.new(@group, ip, true, @config.exclusions)
     }
+    return ingress_permissions unless @config.egress?
     egress_permissions = @group.ip_permissions_egress.collect { |ip|
       IpPermission.new(@group, ip, false, @config.exclusions)
     }
