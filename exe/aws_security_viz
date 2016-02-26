@@ -20,11 +20,6 @@ if cmd=="setup"
   exit
 end
 
-if opts[:source_file].nil?
-  Trollop::die :access_key, 'is required' if opts[:access_key].nil?
-  Trollop::die :secret_key, 'is required' if opts[:secret_key].nil?
-end
-
 config = AwsConfig.load(opts[:config]).merge(obfuscate: ENV['OBFUSCATE'], debug: ENV['DEBUG'])
 VisualizeAws.new(config, opts).unleash(opts[:filename])
 

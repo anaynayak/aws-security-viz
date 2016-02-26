@@ -3,7 +3,7 @@ require 'spec_helper'
 describe VisualizeAws do
   before do
     @ec2 = double(Fog::Compute)
-    allow(Fog::Compute).to receive(:new).and_return(@ec2)
+    allow(Fog::Compute::AWS).to receive(:new).and_return(@ec2)
   end
 
   let(:visualize_aws) { VisualizeAws.new(AwsConfig.new) }
