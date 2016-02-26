@@ -1,5 +1,6 @@
 --- 
 :format: dot
+#:egress: true
 #:exclude: 
 #- .*test.*
 #- .*perf.*
