@@ -21,7 +21,8 @@ class VisualizeAws
     g = build
     if output_file.end_with?('json')
       g.output(Renderer::Json.new(output_file, @config))
-      FileUtils.copy(File.expand_path('../export/html/view.html', __FILE__), 'view.html')
+      FileUtils.copy(File.expand_path('../export/html/view.html', __FILE__),
+                     File.expand_path('../view.html', output_file))
     else
       g.output(Renderer::GraphViz.new(output_file, @config))
     end
