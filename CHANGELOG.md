@@ -6,6 +6,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - CHANGELOG.md
 
+### Fixed
+- Issue with vagrant up not working due to older bundler version and missing dependencies
+
 ## [0.1.3] - 2015-03-20
 ### Changed
 - Removed ENV usage from the gem.
