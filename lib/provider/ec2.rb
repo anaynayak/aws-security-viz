@@ -11,12 +11,16 @@ class Ec2Provider
       conn_opts[:aws_access_key_id] = options[:access_key]
     elsif ENV['AWS_ACCESS_KEY']
       conn_opts[:aws_access_key_id] = ENV['AWS_ACCESS_KEY']
+    elsif ENV['AWS_ACCESS_KEY_ID']
+      conn_opts[:aws_access_key_id] = ENV['AWS_ACCESS_KEY_ID']
     end
 
     if options[:secret_key]
       conn_opts[:aws_secret_access_key] = options[:secret_key]
     elsif ENV['AWS_SECRET_KEY']
       conn_opts[:aws_secret_access_key] = ENV['AWS_SECRET_KEY']
+    elsif ENV['AWS_SECRET_ACCESS_KEY']
+      conn_opts[:aws_secret_access_key] = ENV['AWS_SECRET_ACCESS_KEY']
     end
 
     @compute = Fog::Compute::AWS.new conn_opts
