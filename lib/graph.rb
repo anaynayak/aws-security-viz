@@ -7,10 +7,10 @@ class Graph
     @nodes = Set.new
   end
 
-  def add_node(name)
-    log("node: #{name}")
-    uniquely_add(@ops, :node, name) {
-      [:node, name]
+  def add_node(name, labels={})
+    log("node: #{name} labels: #{labels}")
+    uniquely_add(@ops, :node, name, labels) {
+      [:node, name, labels]
     }
   end
 
