@@ -21,14 +21,14 @@ Gem::Specification.new do |s|
   s.test_files    = s.files.grep(%r{^(test|spec|features)/})
   s.require_paths = ["lib"]
 
-  s.add_development_dependency "bundler", "~> 1.9"
-  s.add_development_dependency "rake", "~> 10.5"
-  s.add_development_dependency "rspec", "~> 3.4.0"
+  s.add_development_dependency "bundler", "~> 1.12.5"
+  s.add_development_dependency "rake", "~> 11.2.2"
+  s.add_development_dependency "rspec", "~> 3.5.0"
 
   s.add_runtime_dependency 'ruby-graphviz', "~> 1.2.2"
-  s.add_runtime_dependency 'fog-aws', "~> 0.8.1"
+  s.add_runtime_dependency 'fog-aws', "~> 0.11.0"
   s.add_runtime_dependency 'unf', "~> 0.1.4"
-  s.add_runtime_dependency 'json', "~> 1.8.3"
+  s.add_runtime_dependency 'json', "~> 2.0.2"
   s.add_runtime_dependency 'trollop', "~> 2.1.2"
   s.add_runtime_dependency 'organic_hash', "~> 1.0.2"
 
