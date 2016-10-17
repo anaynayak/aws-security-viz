@@ -47,7 +47,7 @@ To generate a web view
 
 * Generates two files: aws.json and view.html. 
 * The json file name needs to be passed in as a html fragment identifier. 
-* The generated graph can be viewed in a webserver e.g. http://localhost:3000/view.html?aws.json by using `python -m SimpleHTTPServer 3000`
+* The generated graph can be viewed in a webserver e.g. http://localhost:3000/view.html#aws.json by using `python -m SimpleHTTPServer 3000` (python2) or `python -m http.server 3000` (python3)
 
 ### Help
 
