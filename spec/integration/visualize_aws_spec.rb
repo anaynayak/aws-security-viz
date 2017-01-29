@@ -30,4 +30,24 @@ describe VisualizeAws do
       expect(File.read(expected_file)).to eq(temp_file.read)
     end
   end
+
+  if ENV["TEST_ACCESS_KEY"]
+    context 'ec2 to json file' do
+      let(:expected_file) { File.join(File.dirname(__FILE__), 'aws_expected.json') }
+      let(:temp_file) { Tempfile.new(%w(aws .json)) }
+      let(:opts) {
+        {
+          :filename => temp_file,
+          :secret_key => ENV["TEST_SECRET_KEY"],
+          :access_key => ENV["TEST_ACCESS_KEY"]
+        }
+      }
+
+      it 'should read from ec2 account', :integration => true do
+        expect(FileUtils).to receive(:copy)
+        VisualizeAws.new(config, opts).unleash(temp_file.path)
+        expect(File.read(expected_file)).to eq(temp_file.read)
+      end
+    end
+  end
 end
