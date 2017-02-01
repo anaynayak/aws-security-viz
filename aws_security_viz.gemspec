@@ -31,6 +31,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'json', "~> 2.0.3"
   s.add_runtime_dependency 'trollop', "~> 2.1.2"
   s.add_runtime_dependency 'organic_hash', "~> 1.0.2"
+  s.add_runtime_dependency 'rgl', "~> 0.5.2"
 
   s.required_ruby_version = '>= 2.0.0'
 end

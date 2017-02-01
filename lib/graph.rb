@@ -1,45 +1,39 @@
+require 'rgl/adjacency'
+
 class Graph
-  attr_reader :ops
+  attr_reader :underlying
 
   def initialize(config)
     @config = config
-    @ops = []
-    @nodes = Set.new
+    @underlying = RGL::DirectedAdjacencyGraph.new
+    @edge_properties = {}
   end
 
   def add_node(name)
     log("node: #{name}")
-    uniquely_add(@ops, :node, name) {
-      [:node, name]
-    }
+    @underlying.add_vertex(name)
   end
 
   def add_edge(from, to, opts)
     log("edge: #{from} -> #{to}")
-    add_node(from)
-    add_node(to)
-    uniquely_add(@ops, :edge, from, to) {
-      [:edge, from, to, opts]
-    }
+    @underlying.add_edge(from, to)
+    @edge_properties[[from, to]] = opts
   end
 
   def output(renderer)
-    @ops.each { |op, *args|
-      renderer.add_node(*args) if op==:node
-      renderer.add_edge(*args) if op==:edge
+    @underlying.each_vertex { |v| renderer.add_node(v) }
+    @underlying.each_edge { |u, v|
+      renderer.add_edge(u, v, opts(u, v))
     }
     renderer.output
   end
 
-  def uniquely_add(target, type, *opts, &block)
-    return if opts.compact.empty?
-    return if @nodes.include?([type, opts])
-    @nodes.add([type, opts])
-    target << yield
-  end
-
-
   def log(msg)
     puts msg if @config.debug?
+  end
+
+  private
+  def opts(u, v)
+    @edge_properties[[u, v]]
   end
 end
