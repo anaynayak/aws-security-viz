@@ -14,6 +14,10 @@ class DebugGraph
     @g.add_edge(h(from), h(to), opts.update(label: h(opts[:label])))
   end
 
+  def filter(source, destination)
+    @g.filter(source, destination)
+  end
+
   def output(renderer)
     @g.output(renderer)
   end

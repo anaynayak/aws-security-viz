@@ -4,6 +4,7 @@ require_relative 'provider/ec2'
 require_relative 'renderer/graphviz'
 require_relative 'renderer/json'
 require_relative 'graph'
+require_relative 'graph_filter'
 require_relative 'exclusions'
 require_relative 'debug_graph'
 require_relative 'color_picker'
@@ -19,6 +20,7 @@ class VisualizeAws
 
   def unleash(output_file)
     g = build
+    g.filter(@options[:source_filter], @options[:target_filter])
     if output_file.end_with?('json')
       g.output(Renderer::Json.new(output_file, @config))
       FileUtils.copy(File.expand_path('../export/html/view.html', __FILE__),

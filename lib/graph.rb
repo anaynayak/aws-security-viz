@@ -3,9 +3,9 @@ require 'rgl/adjacency'
 class Graph
   attr_reader :underlying
 
-  def initialize(config)
+  def initialize(config, underlying=RGL::DirectedAdjacencyGraph.new)
     @config = config
-    @underlying = RGL::DirectedAdjacencyGraph.new
+    @underlying = underlying
     @edge_properties = {}
   end
 
@@ -18,6 +18,10 @@ class Graph
     log("edge: #{from} -> #{to}")
     @underlying.add_edge(from, to)
     @edge_properties[[from, to]] = opts
+  end
+
+  def filter(source, destination)
+    @underlying = GraphFilter.new(underlying).filter(source, destination)
   end
 
   def output(renderer)
