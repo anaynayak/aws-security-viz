@@ -3,13 +3,17 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [0.1.4] - 2017-02-03
 ### Added
 - CHANGELOG.md
+- Support for AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+- Capability to view filtered view by source or target.
 
 ### Fixed
 - Issue with vagrant up not working due to older bundler version and missing dependencies
 
-## [0.1.3] - 2015-03-20
+## [0.1.3] - 2016-03-20
 ### Changed
 - Removed ENV usage from the gem.
 
