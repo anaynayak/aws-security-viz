@@ -4,8 +4,8 @@ require 'aws_security_viz'
 require 'trollop'
 
 opts = Trollop::options do
-  opt :access_key, 'AWS access key', :type => :string
-  opt :secret_key, 'AWS secret key', :type => :string
+  opt :access_key, 'AWS access key', :default => ENV['AWS_ACCESS_KEY'] || ENV['AWS_ACCESS_KEY_ID'], :type => :string
+  opt :secret_key, 'AWS secret key', :default => ENV['AWS_SECRET_KEY'] || ENV['AWS_SECRET_ACCESS_KEY'], :type => :string
   opt :region, 'AWS region to query', :default => 'us-east-1', :type => :string
   opt :source_file, 'JSON source file containing security groups', :type => :string
   opt :filename, 'Output file name', :type => :string, :default => 'aws-security-viz.png'
@@ -29,4 +29,3 @@ rescue Exception => e
   puts "[ERROR] #{e.message}"
   exit 1
 end
-
