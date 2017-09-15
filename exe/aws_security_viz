@@ -7,6 +7,7 @@ opts = Trollop::options do
   opt :access_key, 'AWS access key', :default => ENV['AWS_ACCESS_KEY'] || ENV['AWS_ACCESS_KEY_ID'], :type => :string
   opt :secret_key, 'AWS secret key', :default => ENV['AWS_SECRET_KEY'] || ENV['AWS_SECRET_ACCESS_KEY'], :type => :string
   opt :region, 'AWS region to query', :default => 'us-east-1', :type => :string
+  opt :vpc_id, 'AWS VPC id to show', :type => :string
   opt :source_file, 'JSON source file containing security groups', :type => :string
   opt :filename, 'Output file name', :type => :string, :default => 'aws-security-viz.png'
   opt :config, 'Config file (opts.yml)', :type => :string, :default => 'opts.yml'
