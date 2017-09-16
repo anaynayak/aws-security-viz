@@ -3,6 +3,7 @@ require 'fog/aws'
 class Ec2Provider
 
   def initialize(options)
+    @options = options
     conn_opts = {
       region: options[:region]
     }
@@ -14,7 +15,9 @@ class Ec2Provider
   end
 
   def security_groups
-    @compute.security_groups.collect { |sg|
+    @compute.security_groups.reject { |sg|
+      @options[:vpc_id] && sg.vpc_id != @options[:vpc_id]
+    }.collect { |sg|
       Ec2::SecurityGroup.new(sg)
     }
   end
