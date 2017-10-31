@@ -11,6 +11,10 @@ class Ec2Provider
     conn_opts[:aws_access_key_id] = options[:access_key]
     conn_opts[:aws_secret_access_key] = options[:secret_key]
 
+    if options[:session_token]
+      conn_opts[:aws_session_token] = options[:session_token]
+    end
+
     @compute = Fog::Compute::AWS.new conn_opts
   end
 
