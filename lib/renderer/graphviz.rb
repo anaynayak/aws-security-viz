@@ -8,6 +8,7 @@ module Renderer
         g[:splines] = :true
         g[:sep] = 1
         g[:concentrate] = :true
+        g[:rankdir] = "LR"
       }
       @file_name = file_name
       @config = config
