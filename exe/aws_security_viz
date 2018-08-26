@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
 require 'aws_security_viz'
-require 'trollop'
+require 'optimist'
 
-opts = Trollop::options do
+opts = Optimist::options do
   opt :access_key, 'AWS access key', :default => ENV['AWS_ACCESS_KEY'] || ENV['AWS_ACCESS_KEY_ID'], :type => :string
   opt :secret_key, 'AWS secret key', :default => ENV['AWS_SECRET_KEY'] || ENV['AWS_SECRET_ACCESS_KEY'], :type => :string
   opt :session_token, 'AWS session token', :default => ENV['AWS_SESSION_TOKEN'] || nil, :type => :string

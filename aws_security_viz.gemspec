@@ -29,7 +29,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'fog-aws', '~> 2.0', '>= 2.0.1'
   s.add_runtime_dependency 'unf', '~> 0.1.4'
   s.add_runtime_dependency 'json', '~> 2.1', '>= 2.1.0'
-  s.add_runtime_dependency 'trollop', '~> 2.1', '>= 2.1.2'
+  s.add_runtime_dependency 'optimist', '~> 3.0.0'
   s.add_runtime_dependency 'organic_hash', '~> 1.0', '>= 1.0.2'
   s.add_runtime_dependency 'rgl', '~> 0.5.3'
 
