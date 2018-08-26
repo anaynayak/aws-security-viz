@@ -1,8 +1,10 @@
 language: ruby
 
 rvm:
-- 2.0.0
-- 2.1.2
+- 2.4.4
+- 2.3.4
+- 2.2.7
+- 2.5.1
 
 script: bundle exec rspec spec --tag '~integration'
 
