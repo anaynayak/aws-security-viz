@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'tempfile'
 
 describe VisualizeAws do
   let(:opts) {
