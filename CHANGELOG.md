@@ -4,6 +4,16 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2018-10-10
+### Added
+- Filter by VPC id
+- Support for AWS session token
+- Use rankdir with graphviz to improve layout
+
+### Changed
+- Dependent trollop gem renamed to optimist
+- Switched from ruby-graphviz to graphviz gem
+
 ## [0.1.4] - 2017-02-03
 ### Added
 - CHANGELOG.md
