@@ -26,7 +26,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec', '~> 3.5', '>= 3.5.0'
 
   s.add_runtime_dependency 'graphviz', '~> 1.1', '>= 1.1.0'
-  s.add_runtime_dependency 'fog-aws', '~> 2.0', '>= 2.0.1'
+  s.add_runtime_dependency 'fog-aws', '>= 2.0.1', '< 4'
   s.add_runtime_dependency 'unf', '~> 0.1.4'
   s.add_runtime_dependency 'json', '~> 2.1', '>= 2.1.0'
   s.add_runtime_dependency 'optimist', '~> 3.0.0'
