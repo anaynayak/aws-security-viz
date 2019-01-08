@@ -17,16 +17,11 @@ class DummyRenderer
 end
 
 describe VisualizeAws do
-  before do
-    @ec2 = double(Fog::Compute)
-    allow(Fog::Compute::AWS).to receive(:new).and_return(@ec2)
-  end
-
   let(:visualize_aws) { VisualizeAws.new(AwsConfig.new) }
   let(:renderer) { DummyRenderer.new }
 
-  it 'should add nodes, edges for each security group' do
-    expect(@ec2).to receive(:security_groups).and_return([group('Remote ssh', group_ingress('22', 'My machine')), group('My machine')])
+  it 'should add nodes, edges for each security group' do   
+    stub_security_groups([group('Remote ssh', group_ingress(22, 'My machine')), group('My machine')])
     graph = visualize_aws.build
 
     expect(graph.output(renderer)).to contain_exactly(
@@ -38,7 +33,7 @@ describe VisualizeAws do
 
   context 'groups' do
     it 'should add nodes for external security groups defined through ingress' do
-      expect(@ec2).to receive(:security_groups).and_return([group('Web', group_ingress('80', 'ELB'))])
+      stub_security_groups([group('Web', group_ingress(80, 'ELB'))])
       graph = visualize_aws.build
 
       expect(graph.output(renderer)).to contain_exactly(
@@ -49,11 +44,11 @@ describe VisualizeAws do
     end
 
     it 'should add an edge for each security ingress' do
-      expect(@ec2).to receive(:security_groups).and_return(
+      stub_security_groups(
           [
-              group('App', group_ingress('80', 'Web'), group_ingress('8983', 'Internal')),
-              group('Web', group_ingress('80', 'External')),
-              group('Db', group_ingress('7474', 'App'))
+              group('App', group_ingress(80, 'Web'), group_ingress(8983, 'Internal')),
+              group('Web', group_ingress(80, 'External')),
+              group('Db', group_ingress(7474, 'App'))
           ])
       graph = visualize_aws.build
 
@@ -75,10 +70,10 @@ describe VisualizeAws do
   context 'cidr' do
 
     it 'should add an edge for each cidr ingress' do
-      expect(@ec2).to receive(:security_groups).and_return(
+        stub_security_groups(
           [
-              group('Web', group_ingress('80', 'External')),
-              group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
+              group('Web', group_ingress(80, 'External')),
+              group('Db', group_ingress(7474, 'App'), cidr_ingress(22, '127.0.0.1/32'))
           ])
       graph = visualize_aws.build
 
@@ -96,10 +91,10 @@ describe VisualizeAws do
     end
 
     it 'should add map edges for cidr ingress' do
-      expect(@ec2).to receive(:security_groups).and_return(
+        stub_security_groups(
           [
-              group('Web', group_ingress('80', 'External')),
-              group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
+              group('Web', group_ingress(80, 'External')),
+              group('Db', group_ingress(7474, 'App'), cidr_ingress(22, '127.0.0.1/32'))
           ])
       mapping = {'127.0.0.1/32' => 'Work'}
       mapping = CidrGroupMapping.new([], mapping)
@@ -121,9 +116,9 @@ describe VisualizeAws do
     end
 
     it 'should group mapped duplicate edges for cidr ingress' do
-      expect(@ec2).to receive(:security_groups).and_return(
+    stub_security_groups(
           [
-              group('ssh', cidr_ingress('22', '192.168.0.1/32'), cidr_ingress('22', '127.0.0.1/32'))
+              group('ssh', cidr_ingress(22, '192.168.0.1/32'), cidr_ingress(22, '127.0.0.1/32'))
           ])
       mapping = {'127.0.0.1/32' => 'Work', '192.168.0.1/32' => 'Work'}
       mapping = CidrGroupMapping.new([], mapping)
@@ -141,10 +136,10 @@ describe VisualizeAws do
 
   context "filter" do
     it 'include cidr which do not match the pattern' do
-      expect(@ec2).to receive(:security_groups).and_return(
+        stub_security_groups(
           [
-              group('Web', cidr_ingress('22', '127.0.0.1/32')),
-              group('Db', cidr_ingress('22', '192.0.1.1/32'))
+              group('Web', cidr_ingress(22, '127.0.0.1/32')),
+              group('Db', cidr_ingress(22, '192.0.1.1/32'))
           ])
 
       opts = {:exclude => ['127.*']}
@@ -159,10 +154,10 @@ describe VisualizeAws do
     end
 
     it 'include groups which do not match the pattern' do
-      expect(@ec2).to receive(:security_groups).and_return(
+        stub_security_groups(
           [
-              group('Web', group_ingress('80', 'External')),
-              group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
+              group('Web', group_ingress(80, 'External')),
+              group('Db', group_ingress(7474, 'App'), cidr_ingress(22, '127.0.0.1/32'))
           ])
 
       opts = {:exclude => ['D.*b', 'App']}
@@ -176,10 +171,10 @@ describe VisualizeAws do
     end
 
     it 'include derived groups which do not match the pattern' do
-      expect(@ec2).to receive(:security_groups).and_return(
+        stub_security_groups(
           [
-              group('Web', group_ingress('80', 'External')),
-              group('Db', group_ingress('7474', 'App'), cidr_ingress('22', '127.0.0.1/32'))
+              group('Web', group_ingress(80, 'External')),
+              group('Db', group_ingress(7474, 'App'), cidr_ingress(22, '127.0.0.1/32'))
           ])
 
       opts = {:exclude => ['App']}

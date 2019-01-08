@@ -21,17 +21,15 @@ Gem::Specification.new do |s|
   s.test_files    = s.files.grep(%r{^(test|spec|features)/})
   s.require_paths = ['lib']
 
-  s.add_development_dependency 'bundler', '~> 1.15'
+  s.add_development_dependency 'bundler', '~> 2.0.1'
   s.add_development_dependency 'rake', '~> 12.0', '>= 12.0.0'
   s.add_development_dependency 'rspec', '~> 3.5', '>= 3.5.0'
 
   s.add_runtime_dependency 'graphviz', '~> 1.1', '>= 1.1.0'
-  s.add_runtime_dependency 'fog-aws', '~> 2.0', '>= 2.0.1'
-  s.add_runtime_dependency 'unf', '~> 0.1.4'
-  s.add_runtime_dependency 'json', '~> 2.1', '>= 2.1.0'
   s.add_runtime_dependency 'optimist', '~> 3.0.0'
   s.add_runtime_dependency 'organic_hash', '~> 1.0', '>= 1.0.2'
   s.add_runtime_dependency 'rgl', '~> 0.5.3'
+  s.add_runtime_dependency 'aws-sdk-ec2', '~> 1.65.0'
 
   s.required_ruby_version = '>= 2.0.0'
 end
