@@ -1,5 +1,3 @@
-require 'fog/aws'
-
 class Ec2Provider
 
   def initialize(options)
@@ -14,12 +12,11 @@ class Ec2Provider
     if options[:session_token]
       conn_opts[:aws_session_token] = options[:session_token]
     end
-
-    @compute = Fog::Compute::AWS.new conn_opts
+    @client = Aws::EC2::Client.new
   end
 
   def security_groups
-    @compute.security_groups.reject { |sg|
+    @client.describe_security_groups.security_groups.reject { |sg|
       @options[:vpc_id] && sg.vpc_id != @options[:vpc_id]
     }.collect { |sg|
       Ec2::SecurityGroup.new(sg)
@@ -33,6 +30,10 @@ module Ec2
     def_delegators :@sg, :name, :group_id
     def initialize(sg)
       @sg = sg
+    end
+
+    def name
+      @sg.group_name
     end
 
     def ip_permissions
@@ -54,25 +55,25 @@ module Ec2
     end
 
     def protocol
-      @ip['ipProtocol']
+      @ip['ip_protocol']
     end
 
     def from
-      @ip['fromPort']
+      @ip['from_port']
     end
 
     def to
-      @ip['toPort']
+      @ip['to_port']
     end
 
     def ip_ranges
-      @ip['ipRanges'].collect {|gp|
+      @ip['ip_ranges'].collect {|gp|
         Ec2::IpPermissionRange.new(gp)
       }
     end
 
     def groups
-      @ip['groups'].collect {|gp|
+      @ip['user_id_group_pairs'].collect {|gp|
         Ec2::IpPermissionGroup.new(gp)
       }
     end
@@ -84,7 +85,7 @@ module Ec2
     end
 
     def cidr_ip
-      @range['cidrIp']
+      @range['cidr_ip']
     end
 
     def to_str
@@ -98,7 +99,7 @@ module Ec2
     end
 
     def name
-      @gp['groupName'] || @gp['groupId']
+      @gp['group_name'] || @gp['group_id']
     end
   end
 
