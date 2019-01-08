@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'aws-sdk-ec2'
 
 class DummyRenderer
   attr_reader :output

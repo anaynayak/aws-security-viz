@@ -1,18 +1,17 @@
+require 'aws-sdk-ec2'
+
 class Ec2Provider
 
   def initialize(options)
     @options = options
     conn_opts = {
-      region: options[:region]
-    }
+      region: options[:region],
+      access_key_id: options[:access_key],
+      secret_access_key: options[:secret_key],
+      session_token: options[:session_token]
+    }.delete_if {|k,v| v.nil?}
 
-    conn_opts[:aws_access_key_id] = options[:access_key]
-    conn_opts[:aws_secret_access_key] = options[:secret_key]
-
-    if options[:session_token]
-      conn_opts[:aws_session_token] = options[:session_token]
-    end
-    @client = Aws::EC2::Client.new
+    @client = Aws::EC2::Client.new(conn_opts)
   end
 
   def security_groups
