@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Upgrade bundler to 2.x
 - Removed unused dependencies
 
+### Fixed
+- Issue with --color=true failing with exception due to change in Graphviz library.
+
 ## [0.1.5] - 2018-10-10
 ### Added
 - Filter by VPC id
