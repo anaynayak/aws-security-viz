@@ -57,7 +57,7 @@ If you don't want to install the dependencies and ruby libs you can execute aws-
 2. Build the docker container: `sudo docker build -t sec-viz .`
 3. Run the container: `sudo docker run -i --rm -t -p 3000:3000 --name sec-viz sec-viz` (Description: `-i` interactive shell, `--rm` remove the container after usage, `-t` attach this terminal to it, `-p 3000:3000` we expose port 3000 for the HTTP server, `-name sec-viz` the container will have the same name as the image we will start)
 4. Now you can use the tool as described in [usage](#USAGE). Make sure that you use the commands with `bundler exec ` as prefix. For example: `bundler exec aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json`.
-5. The web view can be generated executing `python -m SimpleHTTPServer 3000` in the container. You can open it with you local browser at `http://0.0.0.0:3000/`. There you can view the generated images and the graph. Use `Ctrl+C` to close the HTTP server.
+5. To start the web view, execute `python -m SimpleHTTPServer 3000` in the container. You can open it with your local browser at `http://0.0.0.0:3000/`. There you can view the generated images and the graph. Use `Ctrl+C` to close the HTTP server.
 6. Terminate the docker container by typing `exit` in the console.
 
 ### Help
