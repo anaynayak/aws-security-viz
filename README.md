@@ -4,6 +4,7 @@ aws-security-viz -- A tool to visualize aws security groups
 [![Gem Version](https://badge.fury.io/rb/aws_security_viz.svg)](https://badge.fury.io/rb/aws_security_viz)
 [![License](https://img.shields.io/github/license/anaynayak/aws-security-viz.svg?maxAge=2592000)]()
 [![Code Climate](https://codeclimate.com/github/anaynayak/aws-security-viz.png)](https://codeclimate.com/github/anaynayak/aws-security-viz)
+[![Docker image](https://images.microbadger.com/badges/image/anay/aws-security-viz.svg)](https://microbadger.com/images/anay/aws-security-viz)
 [![Dependency Status](https://img.shields.io/librariesio/github/anaynayak/aws-security-viz.png?maxAge=259200)](https://libraries.io/github/anaynayak/aws-security-viz)
 
 ## DESCRIPTION
@@ -23,7 +24,6 @@ aws-security-viz -- A tool to visualize aws security groups
 ## DEPENDENCIES
 
 * graphviz with triangulation `brew install graphviz --with-gts`
-* libxml2 `brew install libxml2`*
 
 ## USAGE
 
@@ -47,7 +47,7 @@ To generate a web view
 
 * Generates two files: aws.json and view.html.
 * The json file name needs to be passed in as a html fragment identifier.
-* The generated graph can be viewed in a webserver e.g. http://localhost:3000/view.html#aws.json by using `python -m SimpleHTTPServer 3000` (python2) or `python -m http.server 3000` (python3)
+* The generated graph can be viewed in a webserver e.g. http://localhost:3000/view.html#aws.json by using `ruby -run -e httpd -- -p 3000`
 
 ## DOCKER USAGE
 
@@ -55,7 +55,7 @@ If you don't want to install the dependencies and ruby libs you can execute aws-
 
 1. Clone this repository, open it in a console.
 2. Build the docker container: `docker build -t sec-viz .`
-3. Run the container: `docker run -i --rm -t -p 3000:3000 -v $(pwd)/tmp:/aws-security-viz  --name sec-viz sec-viz` (Description: `-i` interactive shell, `--rm` remove the container after usage, `-t` attach this terminal to it, `-p 3000:3000` we expose port 3000 for the HTTP server, `-v $(pwd)/tmp:aws-security-viz` mount tmp directory for generated artifacts, `-name sec-viz` the container will have the same name as the image we will start)
+3. Run the container: `docker run -i --rm -t -p 3000:3000 -v $(pwd)/aws-viz:/aws-security-viz  --name sec-viz sec-viz` (Description: `-i` interactive shell, `--rm` remove the container after usage, `-t` attach this terminal to it, `-p 3000:3000` we expose port 3000 for the HTTP server, `-v $(pwd)/aws-viz:aws-security-viz` mount tmp directory for generated artifacts, `-name sec-viz` the container will have the same name as the image we will start)
 4. Now you can use the tool as described in [usage](#USAGE). Make sure that you use the commands with `bundler exec ` as prefix. For example: `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json`.
 5. To start the web view, execute `ruby -run -e httpd -- -p 3000` in the container. You can open it with your local browser at `http://0.0.0.0:3000/`. There you can view the generated images and the graph. Use `Ctrl+C` to close the HTTP server.
 6. Terminate the docker container by typing `exit` in the console.
