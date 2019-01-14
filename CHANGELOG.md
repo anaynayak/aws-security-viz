@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [0.1.6] - 2019-01-14
+### Added
+- Dockerfile
+
 ### Changed
 - Replaced fog gem with aws-sdk-ec2
 - Upgrade bundler to 2.x
