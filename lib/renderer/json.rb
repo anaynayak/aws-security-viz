@@ -17,7 +17,7 @@ module Renderer
 
     def output
       IO.write(@file_name, {nodes: @nodes, edges: @edges}.to_json)
+      Renderer.copy_asset('view.html', @file_name)
     end
-
   end
 end

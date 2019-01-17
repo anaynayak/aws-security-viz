@@ -13,6 +13,7 @@ opts = Optimist::options do
   opt :filename, 'Output file name', :type => :string, :default => 'aws-security-viz.png'
   opt :config, 'Config file (opts.yml)', :type => :string, :default => 'opts.yml'
   opt :color, 'Colored node edges', :default => false
+  opt :renderer, 'Renderer (graphviz|json)', :default => 'graphviz'
   opt :source_filter, 'Source filter', :default => nil, :type => :string
   opt :target_filter, 'Target filter', :default => nil, :type => :string
 end

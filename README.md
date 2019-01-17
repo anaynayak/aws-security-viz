@@ -42,7 +42,7 @@ To generate the graph using an existing security_groups.json (created using aws-
 To generate a web view
 
 ```
-  $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json
+  $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer json
 ```
 
 * Generates two files: aws.json and view.html.

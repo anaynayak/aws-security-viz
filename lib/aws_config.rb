@@ -1,3 +1,5 @@
+require 'yaml'
+
 class AwsConfig
   def initialize(opts={})
     @opts = opts
