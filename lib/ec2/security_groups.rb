@@ -29,7 +29,7 @@ end
 class SecurityGroup
   extend Forwardable
 
-  def_delegator :@group, :name
+  def_delegators :@group, :name, :vpc_id, :group_id
 
   def initialize(all_groups, group, config)
     @all_groups = all_groups

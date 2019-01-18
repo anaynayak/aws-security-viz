@@ -7,7 +7,7 @@ class DummyRenderer
     @output = []
   end
 
-  def add_node(name)
+  def add_node(name, opts)
     @output << [:node, name]
   end
 

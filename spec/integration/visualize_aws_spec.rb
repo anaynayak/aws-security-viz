@@ -34,6 +34,17 @@ describe VisualizeAws do
     end
   end
 
+  context 'json to navigator file' do
+    let(:expected_file) { File.join(File.dirname(__FILE__), 'navigator.json') }
+    let(:temp_file) { Tempfile.new(%w(aws .json)) }
+
+    it 'should parse json input', :integration => true do
+      expect(FileUtils).to receive(:copy)
+      VisualizeAws.new(config, opts.merge(:renderer => 'navigator')).unleash(temp_file.path)
+      expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
+    end
+  end
+
   if ENV['TEST_ACCESS_KEY']
     context 'ec2 to json file' do
       let(:expected_file) { File.join(File.dirname(__FILE__), 'aws_expected.json') }

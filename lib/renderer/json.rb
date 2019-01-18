@@ -7,7 +7,7 @@ module Renderer
       @config = config
     end
 
-    def add_node(name)
+    def add_node(name, opts)
       @nodes << {id: name, label: name}
     end
 

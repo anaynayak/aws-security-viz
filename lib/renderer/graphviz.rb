@@ -14,7 +14,7 @@ module Renderer
       @config = config
     end
 
-    def add_node(name)
+    def add_node(name, opts)
       @g.add_node(name, label: name)
     end
 
@@ -27,7 +27,7 @@ module Renderer
 
     def create_if_missing(name)
       n = @g.get_node(name).first
-      n.nil? ? add_node(name) : n
+      n.nil? ? add_node(name, {}) : n
     end
     
     def output

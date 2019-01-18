@@ -6,8 +6,8 @@ class DebugGraph
     @g = Graph.new(config)
   end
 
-  def add_node(name)
-    @g.add_node(h(name)) if name
+  def add_node(name, opts)
+    @g.add_node(h(name), opts) if name
   end
 
   def add_edge(from, to, opts)

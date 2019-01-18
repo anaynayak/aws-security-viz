@@ -27,7 +27,7 @@ class VisualizeAws
     g = @config.obfuscate? ? DebugGraph.new(@config) : Graph.new(@config)
     @security_groups.each_with_index { |group, index|
       picker = ColorPicker.new(@options[:color])
-      g.add_node(group.name)
+      g.add_node(group.name, {vpc_id: group.vpc_id, group_id: group.group_id})
       group.traffic.each { |traffic|
         if traffic.ingress
           g.add_edge(traffic.from, traffic.to, :color => picker.color(index, traffic.ingress), :label => traffic.port_range)

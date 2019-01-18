@@ -22,6 +22,14 @@ module Json
       @sg['GroupName']
     end
 
+    def group_id
+      @sg['GroupId']
+    end
+
+    def vpc_id
+      @sg['VpcId']
+    end
+
     def ip_permissions
       @sg['IpPermissions'].collect { |ip|
         Json::IpPermission.new(ip)

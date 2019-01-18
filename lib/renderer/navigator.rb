@@ -1,3 +1,5 @@
+require 'set'
+
 module Renderer
     class Navigator
       def initialize(file_name, config)
@@ -5,10 +7,13 @@ module Renderer
         @edges = []
         @file_name = file_name
         @config = config
+        @categories = Set.new()
       end
   
-      def add_node(name)
-        @nodes << {id: name, label: name}
+      def add_node(name, opts)
+        vpc = opts[:vpc_id] || 'default'
+        @nodes << {id: name, label: name, categories: [vpc]}
+        @categories.add(vpc)
       end
   
       def add_edge(from, to, opts)
@@ -16,7 +21,10 @@ module Renderer
       end
   
       def output
-        IO.write(@file_name, {data: {nodes: @nodes, edges: @edges}}.to_json)
+        IO.write(@file_name, {
+          data: {nodes: @nodes, edges: @edges}, 
+          categories: Hash[@categories.map{|c| [c, c]}]
+        }.to_json)
         Renderer.copy_asset('navigator.html', @file_name)
       end
     end

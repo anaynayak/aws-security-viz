@@ -7,11 +7,13 @@ class Graph
     @config = config
     @underlying = underlying
     @edge_properties = {}
+    @node_properties = {}
   end
 
-  def add_node(name)
-    log("node: #{name}")
+  def add_node(name, opts)
+    log("node: #{name}, opts: #{opts}")
     @underlying.add_vertex(name)
+    @node_properties[name] = opts
   end
 
   def add_edge(from, to, opts)
@@ -25,7 +27,7 @@ class Graph
   end
 
   def output(renderer)
-    @underlying.each_vertex { |v| renderer.add_node(v) }
+    @underlying.each_vertex { |v| renderer.add_node(v, @node_properties[v] || {}) }
     @underlying.each_edge { |u, v|
       renderer.add_edge(u, v, opts(u, v))
     }

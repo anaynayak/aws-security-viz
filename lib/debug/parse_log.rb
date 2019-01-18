@@ -13,7 +13,7 @@ def debug
   File.readlines('debug-output.log').map do |l| 
     type, left, right = l.split(/\W+/)
     if type=="node"
-      g.add_node(h(left))
+      g.add_node(h(left), {})
     elsif type=="edge"
       g.add_edge(h(left), h(right), {})
     end

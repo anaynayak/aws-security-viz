@@ -23,6 +23,19 @@
             height: 100%;
             border: 1px solid lightgray;
         }
+        div.vis-configuration.vis-config-item.vis-config-s3, div.vis-configuration.vis-config-item.vis-config-s2,div.vis-configuration.vis-config-item.vis-config-s0 {
+            background-color: #f7f8fa
+        }
+        .configure {
+            padding: 4px;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: #f7f8fa;
+            width: 520px;
+            box-shadow: rgba(116, 112, 112, .555) 1px 1px 10px;
+            z-index: 900
+        }
     </style>
 
 </head>
@@ -30,9 +43,17 @@
 <body>
     <div style="height:100%">
         <div id="graphArea"></div>
+        <div class="configure">
+            <span class="fa fa-cogs"></span>
+            <a href="#" class="toggle-config">Configure</a>
+            <div id="configOptions" style="display:none"></div>
+        </div>
     </div>
 
     <script type="text/javascript">
+        $('.toggle-config').click(function () {
+            $('#configOptions').slideToggle('slow');
+        });
         function trackAndNavigate(e) {
             e.nodes.forEach(element => {
                 var deleted = window.nodes.delete(element)
@@ -48,6 +69,13 @@
         var file = location.hash.replace(/^#/, '/');
         var app = new igraph.GraphNavigator(document.getElementById('graphArea'));
         app.loadGson(file);
+        app._frame._networkOptions.configure = {
+            filter: (option, path) => path.indexOf('physics') !== -1,
+            container: document.getElementById('configOptions'),
+            showButton: false
+        }
+        app._frame.updateNetworkOptions(app._frame._networkOptions)
+
         window.nodes = new Set();
         app._frame.on('NETWORK_DBLCLICK', trackAndNavigate);
     </script>

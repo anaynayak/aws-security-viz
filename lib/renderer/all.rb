@@ -11,4 +11,8 @@ module Renderer
         FileUtils.copy(File.expand_path("../../export/html/#{asset}", __FILE__),
         File.expand_path(asset, @file_name))
     end
+
+    def self.all
+        ALL.keys
+    end
 end
