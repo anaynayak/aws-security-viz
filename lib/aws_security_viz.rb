@@ -1,8 +1,6 @@
 require_relative 'ec2/security_groups'
 require_relative 'provider/json'
 require_relative 'provider/ec2'
-require_relative 'renderer/graphviz'
-require_relative 'renderer/json'
 require_relative 'renderer/all'
 require_relative 'graph'
 require_relative 'graph_filter'
