@@ -26,7 +26,7 @@ end
 module Ec2
   class SecurityGroup
     extend Forwardable
-    def_delegators :@sg, :name, :group_id
+    def_delegators :@sg, :name, :group_id, :vpc_id
     def initialize(sg)
       @sg = sg
     end

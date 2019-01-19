@@ -1,8 +1,7 @@
 require_relative 'ec2/security_groups'
 require_relative 'provider/json'
 require_relative 'provider/ec2'
-require_relative 'renderer/graphviz'
-require_relative 'renderer/json'
+require_relative 'renderer/all'
 require_relative 'graph'
 require_relative 'graph_filter'
 require_relative 'exclusions'
@@ -21,20 +20,14 @@ class VisualizeAws
   def unleash(output_file)
     g = build
     g.filter(@options[:source_filter], @options[:target_filter])
-    if output_file.end_with?('json')
-      g.output(Renderer::Json.new(output_file, @config))
-      FileUtils.copy(File.expand_path('../export/html/view.html', __FILE__),
-                     File.expand_path('../view.html', output_file))
-    else
-      g.output(Renderer::GraphViz.new(output_file, @config))
-    end
+    g.output(Renderer.pick(@options[:renderer], output_file, @config))
   end
 
   def build
     g = @config.obfuscate? ? DebugGraph.new(@config) : Graph.new(@config)
     @security_groups.each_with_index { |group, index|
       picker = ColorPicker.new(@options[:color])
-      g.add_node(group.name)
+      g.add_node(group.name, {vpc_id: group.vpc_id, group_id: group.group_id})
       group.traffic.each { |traffic|
         if traffic.ingress
           g.add_edge(traffic.from, traffic.to, :color => picker.color(index, traffic.ingress), :label => traffic.port_range)

@@ -1,0 +1,84 @@
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>GraphNavigator</title>
+    <script type="text/javascript" src="https://rawcdn.githack.com/grapheco/InteractiveGraph/0.1.1/dist/igraph/interactive-graph.min.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://rawcdn.githack.com/grapheco/InteractiveGraph/0.1.1/dist/igraph/interactive-graph.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css" integrity="sha256-p6xU9YulB7E2Ic62/PX+h59ayb3PBJ0WFTEQxq0EjHw="
+        crossorigin="anonymous" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" integrity="sha256-KM512VNnjElC30ehFwehXjx1YCHPiQkOPmqnrWtpccM="
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+        integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+    <style type="text/css">
+        body {
+            margin: 0px;
+            font-size: 14px;
+        }
+
+        #graphArea {
+            height: 100%;
+            border: 1px solid lightgray;
+        }
+        div.vis-configuration.vis-config-item.vis-config-s3, div.vis-configuration.vis-config-item.vis-config-s2,div.vis-configuration.vis-config-item.vis-config-s0 {
+            background-color: #f7f8fa
+        }
+        .configure {
+            padding: 4px;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: #f7f8fa;
+            width: 520px;
+            box-shadow: rgba(116, 112, 112, .555) 1px 1px 10px;
+            z-index: 900
+        }
+    </style>
+
+</head>
+
+<body>
+    <div style="height:100%">
+        <div id="graphArea"></div>
+        <div class="configure">
+            <span class="fa fa-cogs"></span>
+            <a href="#" class="toggle-config">Configure</a>
+            <div id="configOptions" style="display:none"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        $('.toggle-config').click(function () {
+            $('#configOptions').slideToggle('slow');
+        });
+        function trackAndNavigate(e) {
+            e.nodes.forEach(element => {
+                var deleted = window.nodes.delete(element)
+                if (!deleted) {
+                    window.nodes.add(element);
+                }
+            });
+            if (window.nodes.size >= 2) {
+                var [from, to] = window.nodes;
+                window.location.search = `from=${from}&to=${to}`;
+            }
+        }
+        var file = location.hash.replace(/^#/, '/');
+        var app = new igraph.GraphNavigator(document.getElementById('graphArea'));
+        app.loadGson(file);
+        app._frame._networkOptions.configure = {
+            filter: (option, path) => path.indexOf('physics') !== -1,
+            container: document.getElementById('configOptions'),
+            showButton: false
+        }
+        app._frame.updateNetworkOptions(app._frame._networkOptions)
+
+        window.nodes = new Set();
+        app._frame.on('NETWORK_DBLCLICK', trackAndNavigate);
+    </script>
+</body>
+
+</html>
