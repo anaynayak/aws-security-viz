@@ -1,8 +1,13 @@
+require 'simplecov'
+
+SimpleCov.start do
+  add_filter '/spec/' 
+end
+
 require 'bundler'
 Bundler.require
 require 'rspec'
 require 'rubygems'
-
 require File.expand_path(File.dirname(__FILE__) + "/../config/boot")
 Dir[File.dirname(__FILE__) + "/support/**/*.rb"].each {|f| require f}
 
