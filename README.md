@@ -45,9 +45,9 @@ To generate a web view
   $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer navigator
 ```
 
-* Generates two files: aws.json and view.html.
+* Generates two files: aws.json and navigator.html.
 * The json file name needs to be passed in as a html fragment identifier.
-* The generated graph can be viewed in a webserver e.g. http://localhost:3000/view.html#aws.json by using `ruby -run -e httpd -- -p 3000`
+* The generated graph can be viewed in a webserver e.g. http://localhost:3000/navigator.html#aws.json by using `ruby -run -e httpd -- -p 3000`
 
 ## DOCKER USAGE
 
@@ -118,6 +118,11 @@ Execute the following command to generate the json. You will need [aws-cli](http
 
 ![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)
 
-#### Web view
+#### Navigator view 
+Via navigator renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer navigator`
+![](https://user-images.githubusercontent.com/416211/51426583-bb5e0180-1c12-11e9-903b-7b2a2d354ede.png)
+
+#### JSON view
+Via json renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer json`
 ![](https://cloud.githubusercontent.com/assets/416211/11912582/0e66cdbc-a669-11e5-82ab-1e26e3c6949b.png)
 
