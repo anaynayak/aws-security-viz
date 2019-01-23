@@ -23,9 +23,13 @@
             height: 100%;
             border: 1px solid lightgray;
         }
-        div.vis-configuration.vis-config-item.vis-config-s3, div.vis-configuration.vis-config-item.vis-config-s2,div.vis-configuration.vis-config-item.vis-config-s0 {
+
+        div.vis-configuration.vis-config-item.vis-config-s3,
+        div.vis-configuration.vis-config-item.vis-config-s2,
+        div.vis-configuration.vis-config-item.vis-config-s0 {
             background-color: #f7f8fa
         }
+
         .configure {
             padding: 4px;
             position: absolute;
@@ -42,6 +46,9 @@
 
 <body>
     <div style="height:100%">
+        <div id="error" style="display:none">
+            Please pass in a datasource via html fragment identifier. For e.g. <a href="#test.json">#test.json</a>
+        </div>
         <div id="graphArea"></div>
         <div class="configure">
             <span class="fa fa-cogs"></span>
@@ -66,18 +73,30 @@
                 window.location.search = `from=${from}&to=${to}`;
             }
         }
-        var file = location.hash.replace(/^#/, '/');
-        var app = new igraph.GraphNavigator(document.getElementById('graphArea'));
-        app.loadGson(file);
-        app._frame._networkOptions.configure = {
-            filter: (option, path) => path.indexOf('physics') !== -1,
-            container: document.getElementById('configOptions'),
-            showButton: false
-        }
-        app._frame.updateNetworkOptions(app._frame._networkOptions)
+        function load() {
+            var file = location.hash.replace(/^#/, '/');
+            if (!file) {
+                $('#error').dialog('open');
+                return;
+            } else {
+                $('#error').dialog('close');
+            }
+            var app = new igraph.GraphNavigator(document.getElementById('graphArea'));
+            app.loadGson(file);
+            app._frame._networkOptions.configure = {
+                filter: (option, path) => path.indexOf('physics') !== -1,
+                container: document.getElementById('configOptions'),
+                showButton: false
+            }
+            app._frame.updateNetworkOptions(app._frame._networkOptions)
 
-        window.nodes = new Set();
-        app._frame.on('NETWORK_DBLCLICK', trackAndNavigate);
+            window.nodes = new Set();
+            app._frame.on('NETWORK_DBLCLICK', trackAndNavigate);
+        }
+
+        $('#error').dialog({ autoOpen: false });
+        $(window).on('hashchange', load);
+        load();
     </script>
 </body>
 
