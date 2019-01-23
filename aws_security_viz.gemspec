@@ -24,13 +24,15 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'bundler', '~> 2.0.1'
   s.add_development_dependency 'rake', '~> 12.0', '>= 12.0.0'
   s.add_development_dependency 'rspec', '~> 3.5', '>= 3.5.0'
+  if ENV["COVERAGE"]
+    s.add_development_dependency "simplecov"
+  end
 
   s.add_runtime_dependency 'graphviz', '~> 1.1', '>= 1.1.0'
   s.add_runtime_dependency 'optimist', '~> 3.0.0'
   s.add_runtime_dependency 'organic_hash', '~> 1.0', '>= 1.0.2'
   s.add_runtime_dependency 'rgl', '~> 0.5.3'
   s.add_runtime_dependency 'aws-sdk-ec2', '>= 1.65', '< 1.68'
-  s.add_development_dependency "simplecov"
 
   s.required_ruby_version = '>= 2.0.0'
 end
