@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+
+## [0.2.0] - 2019-01-24
 ### Added
 - Add graph navigator renderer using https://grapheco.github.io/InteractiveGraph/
 
