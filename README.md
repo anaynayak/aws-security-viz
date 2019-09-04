@@ -2,7 +2,8 @@ aws-security-viz -- A tool to visualize aws security groups
 ============================================================
 [![Build Status](https://secure.travis-ci.org/anaynayak/aws-security-viz.png)](http://travis-ci.org/anaynayak/aws-security-viz)
 [![Gem Version](https://badge.fury.io/rb/aws_security_viz.svg)](https://badge.fury.io/rb/aws_security_viz)
-[![License](https://img.shields.io/github/license/anaynayak/aws-security-viz.svg?maxAge=2592000)]()
+[![License](https://img.shields.io/github/license/anaynayak/aws-security-viz.svg?maxAge=2592000)][![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fanaynayak%2Faws-security-viz.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fanaynayak%2Faws-security-viz?ref=badge_shield)
+()
 [![Code Climate](https://codeclimate.com/github/anaynayak/aws-security-viz.png)](https://codeclimate.com/github/anaynayak/aws-security-viz)
 [![Docker image](https://images.microbadger.com/badges/image/anay/aws-security-viz.svg)](https://microbadger.com/images/anay/aws-security-viz)
 [![Dependency Status](https://img.shields.io/librariesio/github/anaynayak/aws-security-viz.png?maxAge=259200)](https://libraries.io/github/anaynayak/aws-security-viz)
@@ -126,3 +127,7 @@ Via navigator renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key 
 Via json renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer json`
 ![](https://cloud.githubusercontent.com/assets/416211/11912582/0e66cdbc-a669-11e5-82ab-1e26e3c6949b.png)
 
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fanaynayak%2Faws-security-viz.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fanaynayak%2Faws-security-viz?ref=badge_large)
