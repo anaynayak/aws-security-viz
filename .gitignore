@@ -32,3 +32,9 @@ opts.yml
 
 .vagrant
 Gemfile.lock
+
+# in case you run the sample commands in this directory..
+viz.svg
+aws.json
+navigator.html
+.DS_Store
