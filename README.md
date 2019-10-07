@@ -23,7 +23,7 @@ aws-security-viz -- A tool to visualize aws security groups
 
 ## DEPENDENCIES
 
-* graphviz with triangulation `brew install graphviz`
+* graphviz `brew install graphviz`
 
 ## USAGE
 
