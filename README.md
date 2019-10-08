@@ -23,7 +23,7 @@ aws-security-viz -- A tool to visualize aws security groups
 
 ## DEPENDENCIES
 
-* graphviz with triangulation `brew install graphviz --with-gts`
+* graphviz `brew install graphviz`
 
 ## USAGE
 
@@ -118,7 +118,7 @@ Execute the following command to generate the json. You will need [aws-cli](http
 
 ![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)
 
-#### Navigator view 
+#### Navigator view
 Via navigator renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer navigator`
 ![](https://user-images.githubusercontent.com/416211/51426583-bb5e0180-1c12-11e9-903b-7b2a2d354ede.png)
 
