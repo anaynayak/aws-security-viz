@@ -37,4 +37,7 @@ Gemfile.lock
 viz.svg
 aws.json
 navigator.html
+*.png
+*.dot
+*.svg
 .DS_Store
