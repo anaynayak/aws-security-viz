@@ -27,10 +27,18 @@ cache: bundler
 
 sudo: false
 
+services:
+  - docker
+
 deploy:
-  provider: rubygems
-  api_key:
-    secure: FolEBkQI4oiqjZMzuZ/ELSJFxwCrUTmVhew+tr8yrDONOgphjvbOkDFMdPKnM48nMBekz0lS/yh6Ib5JXe0gxk6+fUq/37eNVF7eFc9poTJhJ2I6zkYOunxSTDInLy/Hxl90RXjKNnL+PFNPPZjLSXrUWeUxLViI00Dkfa9iT6s=
-  gem: aws_security_viz
-  on:
-    repo: anaynayak/aws-security-viz
+  - provider: rubygems
+    api_key:
+      secure: YCC4KmUL1dzcpNq2QzZGl+favvFqfX5o2q1zcxIhmMCi53kxjjy7cjYw8xWacDtKKiS0dVDdZ6PckxoIK97qlMpBRupxvhvLUOAAhYfumuIr4tGP5vptaXG3hGKgc39wIs7tlbc8JWEehsZ2kBTE9nms4+Fu9e8+WGslN70OUFw=
+    gem: aws_security_viz
+    on:
+      repo: anaynayak/aws-security-viz
+      branch: master
+  - provider: script
+    script: rake docker:push
+    on:
+      branch: master
