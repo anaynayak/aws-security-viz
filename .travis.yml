@@ -30,15 +30,22 @@ sudo: false
 services:
   - docker
 
+before_deploy: gem install rake
+
 deploy:
   - provider: rubygems
     api_key:
       secure: YCC4KmUL1dzcpNq2QzZGl+favvFqfX5o2q1zcxIhmMCi53kxjjy7cjYw8xWacDtKKiS0dVDdZ6PckxoIK97qlMpBRupxvhvLUOAAhYfumuIr4tGP5vptaXG3hGKgc39wIs7tlbc8JWEehsZ2kBTE9nms4+Fu9e8+WGslN70OUFw=
     gem: aws_security_viz
+    skip_cleanup: true
     on:
       repo: anaynayak/aws-security-viz
       branch: master
+      rvm: 2.6.0
   - provider: script
-    script: rake docker:push
+    script: rvm use $TRAVIS_RUBY_VERSION do bundle exec rake docker:push
+    skip_cleanup: true
     on:
       branch: master
+      repo: anaynayak/aws-security-viz
+      rvm: 2.6.0
