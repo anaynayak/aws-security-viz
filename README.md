@@ -25,7 +25,7 @@ aws-security-viz -- A tool to visualize aws security groups
 
 * graphviz `brew install graphviz`
 
-## USAGE
+## USAGE (See Examples section below for more)
 
 To generate the graph directly using AWS keys
 
@@ -51,6 +51,8 @@ To generate a web view
 
 ## DOCKER USAGE
 
+
+## Cleanup + add Docker from off the shelf image
 If you don't want to install the dependencies and ruby libs you can execute aws-security-viz inside a docker container. To do so, follow these steps:
 
 1. Clone this repository, open it in a console.
@@ -112,13 +114,14 @@ Execute the following command to generate the json. You will need [aws-cli](http
 
 `aws ec2 describe-security-groups`
 
+
 ## EXAMPLES
 
 #### Graphviz export
 
 ![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)
 
-#### Navigator view
+#### Navigator view (useful with very large number of nodes)
 Via navigator renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer navigator`
 ![](https://user-images.githubusercontent.com/416211/51426583-bb5e0180-1c12-11e9-903b-7b2a2d354ede.png)
 
@@ -126,3 +129,26 @@ Via navigator renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key 
 Via json renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer json`
 ![](https://cloud.githubusercontent.com/assets/416211/11912582/0e66cdbc-a669-11e5-82ab-1e26e3c6949b.png)
 
+## Additional examples
+
+#### Generate `aws-security-viz.png` image for `us-west-1` region
+
+```
+  $ aws_security_viz --region us-west-1 -f aws-security-viz.png
+```
+
+#### Generate visualization for `us-west-1` with target filter as `sec-group-1`. This will display all routes through which we can arrive at `sec-group-1`
+
+```
+  $ aws_security_viz --region us-west-1 --target-filter=sec-group-1
+```
+
+#### Generate visualization for `us-west-1` restricted to vpc-id `vpc-12345`
+```
+  $ aws_security_viz --region us-west-1 --vpc-id=vpc-12345
+```
+
+#### Generate visualization for `us-west-1` restricted to vpc-id `vpc-12345`
+```
+  $ aws_security_viz --region us-west-1 --vpc-id=vpc-12345
+```
