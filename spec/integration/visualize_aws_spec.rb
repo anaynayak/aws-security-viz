@@ -1,6 +1,12 @@
 require 'spec_helper'
 require 'tempfile'
 
+RSpec::Matchers.define :be_graph_with do |nodes|
+  match do |graphv|
+    graphv.nodes.keys == nodes
+  end
+end
+
 describe VisualizeAws do
   let(:opts) {
     {
@@ -21,24 +27,38 @@ describe VisualizeAws do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
       expect(expected_content).to eq(actual_content)
     end
+    
+    it 'should parse json input with stubbed out graphviz' do
+      nodes = ["app", "8.8.8.8/32", "amazon-elb-sg", "*", "db"]
+      allow(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
+      VisualizeAws.new(config, opts).unleash(temp_file.path)
+    end
   end
 
   context 'json to json file' do
     let(:expected_file) { File.join(File.dirname(__FILE__), 'expected.json') }
     let(:temp_file) { Tempfile.new(%w(aws .json)) }
 
-    it 'should parse json input', :integration => true do
+    it 'should parse json input' do
       expect(FileUtils).to receive(:copy)
       VisualizeAws.new(config, opts.merge(:renderer => 'json')).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
+
+    it 'should parse json input with obfuscation' do
+      config = AwsConfig.new({groups: {'0.0.0.0/0' => '*'}, obfuscate: true})
+      expect(FileUtils).to receive(:copy)
+      VisualizeAws.new(config, opts.merge(:renderer => 'json')).unleash(temp_file.path)
+      expect(actual_content).not_to include('"amazon-elb-sg"', '"app"', '"db"')
+    end
+
   end
 
   context 'json to navigator file' do
     let(:expected_file) { File.join(File.dirname(__FILE__), 'navigator.json') }
     let(:temp_file) { Tempfile.new(%w(aws .json)) }
 
-    it 'should parse json input', :integration => true do
+    it 'should parse json input' do
       expect(FileUtils).to receive(:copy)
       VisualizeAws.new(config, opts.merge(:renderer => 'navigator')).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
@@ -53,7 +73,8 @@ describe VisualizeAws do
         {
             :filename => temp_file,
             :secret_key => ENV['TEST_SECRET_KEY'],
-            :access_key => ENV['TEST_ACCESS_KEY']
+            :access_key => ENV['TEST_ACCESS_KEY'],
+            :region => 'us-east-1'
         }
       }
 
