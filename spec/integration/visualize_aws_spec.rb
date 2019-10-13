@@ -27,6 +27,7 @@ describe VisualizeAws do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
       expect(expected_content).to eq(actual_content)
     end
+    
     it 'should parse json input with stubbed out graphviz' do
       nodes = ["app", "8.8.8.8/32", "amazon-elb-sg", "*", "db"]
       allow(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
@@ -43,6 +44,14 @@ describe VisualizeAws do
       VisualizeAws.new(config, opts.merge(:renderer => 'json')).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
+
+    it 'should parse json input with obfuscation' do
+      config = AwsConfig.new({groups: {'0.0.0.0/0' => '*'}, obfuscate: true})
+      expect(FileUtils).to receive(:copy)
+      VisualizeAws.new(config, opts.merge(:renderer => 'json')).unleash(temp_file.path)
+      expect(actual_content).not_to include('"amazon-elb-sg"', '"app"', '"db"')
+    end
+
   end
 
   context 'json to navigator file' do
