@@ -1,6 +1,12 @@
 require 'spec_helper'
 require 'tempfile'
 
+RSpec::Matchers.define :be_graph_with do |nodes|
+  match do |graphv|
+    graphv.nodes.keys == nodes
+  end
+end
+
 describe VisualizeAws do
   let(:opts) {
     {
@@ -20,6 +26,11 @@ describe VisualizeAws do
     it 'should parse json input', :integration => true do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
       expect(expected_content).to eq(actual_content)
+    end
+    it 'should parse json input with stubbed out graphviz' do
+      nodes = ["app", "8.8.8.8/32", "amazon-elb-sg", "*", "db"]
+      allow(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
+      VisualizeAws.new(config, opts).unleash(temp_file.path)
     end
   end
 
