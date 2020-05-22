@@ -81,6 +81,27 @@ Options:
   -h, --help                 Show this message
 ```
 
+#### Configuration 
+
+aws-security-viz only uses the `ec2:DescribeSecurityGroups` api so a minimal IAM policy which grants only `ec2:DescribeSecurityGroups` access should be enough.
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "ec2:DescribeSecurityGroups",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+Alternatively you can use [aws-vault](https://github.com/99designs/aws-vault/) and run it using short lived temporary credentials.
+
+`$ aws-vault exec <profile> -- aws_security_viz -f aws.json --renderer navigator`
+
 #### Advanced configuration
 
 You can generate a configuration file using the following command:
