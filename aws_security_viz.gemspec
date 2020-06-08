@@ -32,7 +32,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'optimist', '~> 3.0.0'
   s.add_runtime_dependency 'organic_hash', '~> 1.0', '>= 1.0.2'
   s.add_runtime_dependency 'rgl', '~> 0.5.3'
-  s.add_runtime_dependency 'aws-sdk-ec2', '>= 1.65', '< 1.112'
+  s.add_runtime_dependency 'aws-sdk-ec2', '>= 1.65', '< 1.166'
 
   s.required_ruby_version = '>= 2.0.0'
 end
