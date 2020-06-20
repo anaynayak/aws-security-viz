@@ -3,7 +3,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- Provide a webserver using a --serve PORT which provides a link to the navigator view
 
+### Changed
+- Bumped InteractiveGraph to v0.3.2
+
+### Fixed
+- Empty InfoPanel in navigator view now shows vpc, security group name.
 
 ## [0.2.0] - 2019-01-24
 ### Added

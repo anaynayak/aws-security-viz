@@ -3,8 +3,8 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>GraphNavigator</title>
-    <script type="text/javascript" src="https://rawcdn.githack.com/grapheco/InteractiveGraph/0.1.1/dist/igraph/interactive-graph.min.js"></script>
-    <link type="text/css" rel="stylesheet" href="https://rawcdn.githack.com/grapheco/InteractiveGraph/0.1.1/dist/igraph/interactive-graph.min.css">
+    <script type="text/javascript" src="https://rawcdn.githack.com/grapheco/InteractiveGraph/0.3.2/dist/igraph/interactive-graph.min.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://rawcdn.githack.com/grapheco/InteractiveGraph/0.3.2/dist/igraph/interactive-graph.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
         crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css" integrity="sha256-p6xU9YulB7E2Ic62/PX+h59ayb3PBJ0WFTEQxq0EjHw="
@@ -23,56 +23,48 @@
             height: 100%;
             border: 1px solid lightgray;
         }
-
-        div.vis-configuration.vis-config-item.vis-config-s3,
-        div.vis-configuration.vis-config-item.vis-config-s2,
-        div.vis-configuration.vis-config-item.vis-config-s0 {
-            background-color: #f7f8fa
-        }
-
-        .configure {
-            padding: 4px;
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: #f7f8fa;
-            width: 520px;
-            box-shadow: rgba(116, 112, 112, .555) 1px 1px 10px;
-            z-index: 900
-        }
     </style>
 
 </head>
 
 <body>
     <div style="height:100%">
-        <div id="error" style="display:none">
-            Please pass in a datasource via html fragment identifier. For e.g. <a href="#test.json">#test.json</a>
-        </div>
         <div id="graphArea"></div>
-        <div class="configure">
-            <span class="fa fa-cogs"></span>
-            <a href="#" class="toggle-config">Configure</a>
-            <div id="configOptions" style="display:none"></div>
-        </div>
     </div>
-
+    <!--all UI controls-->
+    <div>
+        <!--toolbar-->
+        <div class="toolbarPanel igraph-dockable igraph-draggable" igraph-control-role="ToolbarCtrl"
+            igraph-dock-position="B:-6,0">
+            <div class="toolbar"></div>
+        </div>
+        <!--info box-->
+        <div class="infoPanel igraph-dockable igraph-draggable" igraph-control-role="InfoBoxCtrl" igraph-dock-position="A:10,200">
+            <div>
+                <div class="infoPanel1"></div>
+                <div class="infoPanel2"><span align="center" class="fa fa-close fa-lg btnCloseInfoPanel"></span></div>
+            </div>
+            <div class="infoBox"></div>
+        </div>
+        <!--search box-->
+        <div class="searchPanel igraph-dockable igraph-draggable" igraph-control-role="SearchBoxCtrl"
+            igraph-dock-position="A:10,20">
+            <div class="searchPanel1">
+                <input class="igraph-searchbox" type="text" size="16" placeholder="input keyword">
+            </div>
+            <div class="searchPanel2 igraph-searchbox-image">
+                <span align="center" class="fa fa-photo fa-lg" />
+            </div>
+        </div>
+        <!--status bar-->
+        <div class="statusPanel igraph-dockable" igraph-control-role="StatusBarCtrl" igraph-dock-position="C:-100,0">
+            <div class="statusBar"></div>
+        </div>
+        <!--image upload box-->
+        <div class="imageUploadPanel" igraph-control-role="ImageUploadCtrl"></div>
+        <div class="ResultListPanel igraph-dockable igraph-draggable" igraph-control-role="ResultListCtrl" igraph-dock-position="A:10,70"></div>
+    </div>
     <script type="text/javascript">
-        $('.toggle-config').click(function () {
-            $('#configOptions').slideToggle('slow');
-        });
-        function trackAndNavigate(e) {
-            e.nodes.forEach(element => {
-                var deleted = window.nodes.delete(element)
-                if (!deleted) {
-                    window.nodes.add(element);
-                }
-            });
-            if (window.nodes.size >= 2) {
-                var [from, to] = window.nodes;
-                window.location.search = `from=${from}&to=${to}`;
-            }
-        }
         function load() {
             var file = location.hash.replace(/^#/, '/');
             if (!file) {
@@ -81,23 +73,12 @@
             } else {
                 $('#error').dialog('close');
             }
-            var app = new igraph.GraphNavigator(document.getElementById('graphArea'));
+            var app = new igraph.GraphNavigator(document.getElementById('graphArea'), 'LIGHT');
             app.loadGson(file);
-            app._frame._networkOptions.configure = {
-                filter: (option, path) => path.indexOf('physics') !== -1,
-                container: document.getElementById('configOptions'),
-                showButton: false
-            }
-            app._frame.updateNetworkOptions(app._frame._networkOptions)
-
-            window.nodes = new Set();
-            app._frame.on('NETWORK_DBLCLICK', trackAndNavigate);
         }
-
-        $('#error').dialog({ autoOpen: false });
         $(window).on('hashchange', load);
         load();
-    </script>
+        </script>
 </body>
 
 </html>
