@@ -23,9 +23,16 @@ describe VisualizeAws do
     let(:expected_file) { File.join(File.dirname(__FILE__), 'dummy.dot') }
     let(:temp_file) { Tempfile.new(%w(aws .dot)) }
 
+    def without_pos(data)
+      return data
+        .gsub(/pos=\"[a-z,0-9\.\s]*\"/, '')
+        .gsub(/\s{2,}/, ' ') # trim spaces
+        .gsub(/\t/, ' ') # remove tabs
+    end
+
     it 'should parse json input', :integration => true do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
-      expect(expected_content).to eq(actual_content)
+      expect(without_pos(expected_content)).to eq(without_pos(actual_content))
     end
     
     it 'should parse json input with stubbed out graphviz' do
