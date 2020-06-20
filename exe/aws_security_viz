@@ -2,6 +2,7 @@
 
 require 'aws_security_viz'
 require 'optimist'
+require 'webrick'
 
 opts = Optimist::options do
   opt :access_key, 'AWS access key', :default => ENV['AWS_ACCESS_KEY'] || ENV['AWS_ACCESS_KEY_ID'], :type => :string
@@ -16,6 +17,7 @@ opts = Optimist::options do
   opt :renderer, "Renderer (#{Renderer.all.join('|')})", :default => 'graphviz'
   opt :source_filter, 'Source filter', :default => nil, :type => :string
   opt :target_filter, 'Target filter', :default => nil, :type => :string
+  opt :serve, 'Serve a HTTP serve', :default => nil, :type => :integer
 end
 
 cmd = ARGV.shift
@@ -28,6 +30,10 @@ end
 config = AwsConfig.load(opts[:config]).merge(obfuscate: ENV['OBFUSCATE'], debug: ENV['DEBUG'])
 begin
   VisualizeAws.new(config, opts).unleash(opts[:filename])
+  if opts[:serve]
+    puts "Navigate to http://localhost:#{opts[:serve]}/navigator.html##{opts[:filename]}"
+    WEBrick::HTTPServer.new({Port: opts[:serve], DocumentRoot: '.'}).start
+  end
 rescue Exception => e
   puts "[ERROR] #{e.message}"
   raise e if config.debug?
