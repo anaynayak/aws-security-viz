@@ -17,7 +17,7 @@ opts = Optimist::options do
   opt :renderer, "Renderer (#{Renderer.all.join('|')})", :default => 'graphviz'
   opt :source_filter, 'Source filter', :default => nil, :type => :string
   opt :target_filter, 'Target filter', :default => nil, :type => :string
-  opt :serve, 'Serve a HTTP serve', :default => nil, :type => :integer
+  opt :serve, 'Serve a HTTP server', :default => nil, :type => :integer
 end
 
 cmd = ARGV.shift

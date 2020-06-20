@@ -78,6 +78,7 @@ Options:
   -l, --color                Colored node edges
   -u, --source-filter=<s>    Source filter
   -t, --target-filter=<s>    Target filter
+  --serve=<i>                Serve a HTTP server at specified port
   -h, --help                 Show this message
 ```
 
@@ -173,3 +174,9 @@ Via json renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aw
 ```
   $ aws_security_viz --region us-west-1 --vpc-id=vpc-12345
 ```
+
+#### Serve webserver for the navigator view at port 3000
+```
+  $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer navigator --serve 3000
+```
+The browser link to the view is printed on the CLI
