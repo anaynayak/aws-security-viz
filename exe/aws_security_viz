@@ -3,8 +3,10 @@
 require 'aws_security_viz'
 require 'optimist'
 require 'webrick'
+require 'version'
 
 opts = Optimist::options do
+  version "aws_security_viz v#{AwsSecurityViz::VERSION}"
   opt :access_key, 'AWS access key', :default => ENV['AWS_ACCESS_KEY'] || ENV['AWS_ACCESS_KEY_ID'], :type => :string
   opt :secret_key, 'AWS secret key', :default => ENV['AWS_SECRET_KEY'] || ENV['AWS_SECRET_ACCESS_KEY'], :type => :string
   opt :session_token, 'AWS session token', :default => ENV['AWS_SESSION_TOKEN'] || nil, :type => :string
