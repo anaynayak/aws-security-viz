@@ -4,6 +4,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- --version option which prints aws-security-viz version
+
+## [0.2.1] - 2020-06-20
+### Added
 - Provide a webserver using a --serve PORT which provides a link to the navigator view
 
 ### Changed
