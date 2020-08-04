@@ -1,0 +1,7 @@
+.git
+.bundle
+*.svg
+*.dot
+*.png
+.DS_Store
+navigator.html
