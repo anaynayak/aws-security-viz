@@ -51,16 +51,32 @@ To generate a web view
 
 ## DOCKER USAGE
 
-
-## Cleanup + add Docker from off the shelf image
 If you don't want to install the dependencies and ruby libs you can execute aws-security-viz inside a docker container. To do so, follow these steps:
 
 1. Clone this repository, open it in a console.
 2. Build the docker container: `docker build -t sec-viz .`
-3. Run the container: `docker run -i --rm -t -p 3000:3000 -v $(pwd)/aws-viz:/aws-security-viz  --name sec-viz sec-viz` (Description: `-i` interactive shell, `--rm` remove the container after usage, `-t` attach this terminal to it, `-p 3000:3000` we expose port 3000 for the HTTP server, `-v $(pwd)/aws-viz:aws-security-viz` mount tmp directory for generated artifacts, `-name sec-viz` the container will have the same name as the image we will start)
-4. Now you can use the tool as described in [usage](#USAGE). Make sure that you use the commands with `bundler exec ` as prefix. For example: `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json`.
-5. To start the web view, execute `ruby -run -e httpd -- -p 3000` in the container. You can open it with your local browser at `http://0.0.0.0:3000/`. There you can view the generated images and the graph. Use `Ctrl+C` to close the HTTP server.
-6. Terminate the docker container by typing `exit` in the console.
+
+3.a With aws-vault (Recommended):
+
+```aws-vault exec tldev -- docker run -i -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_SECURITY_TOKEN --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz --renderer navigator --serve 3000``` . 
+
+You can open it with your local browser at `http://localhost:3000/navigator.html#aws-security-viz.png`. 
+
+3.b With AWS credentials passed as parameters:
+
+```docker run -i --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz -a REPLACE_AWS_ACCESS_KEY_ID -s REPLACE_SECRET --renderer navigator --serve 3000```. 
+
+You can open it with your local browser at `http://localhost:3000/navigator.html#aws-security-viz.png`. 
+
+Parameters passed to the docker command:
+* `-v $(pwd)/aws-viz:aws-security-viz` local directory where output will be generated.
+* `-i` interactive shell
+* `--rm` remove the container after usage
+* `-t` attach this terminal to it
+* `-p 3000:3000` we expose port 3000 for the HTTP server
+* `-name sec-viz` the container will have the same name as the image we will start
+
+You can also use other parameters as specified in [usage](#USAGE)
 
 ### Help
 
