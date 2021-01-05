@@ -2,9 +2,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [0.2.2] - 2021-01-05
 ### Added
 - --version option which prints aws-security-viz version
+- Switchover to github actions from travis
 
 ## [0.2.1] - 2020-06-20
 ### Added
