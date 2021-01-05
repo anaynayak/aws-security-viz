@@ -5,7 +5,7 @@ require 'version'
 Gem::Specification.new do |s|
   s.name        = 'aws_security_viz'
   s.version     = AwsSecurityViz::VERSION
-  s.version     = "#{s.version}-alpha-#{ENV['TRAVIS_BUILD_NUMBER']}" if ENV['TRAVIS']
+  s.version     = "#{s.version}-alpha-#{ENV['ALPHA_BUILD_NUMBER']}" if ENV['ALPHA_BUILD_NUMBER']
   s.date        = Time.now.strftime('%Y-%m-%d')
   s.summary     = 'Visualize your aws security groups'
   s.description = 'Provides a quick mechanism to visualize your EC2 security groups in multiple formats'
