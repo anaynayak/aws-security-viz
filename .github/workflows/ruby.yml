@@ -8,14 +8,25 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.os}}-latest
+    strategy:
+      matrix:
+        os:
+          - ubuntu
+          - macos
+
+        ruby:
+          - 2.5
+          - 2.6
+          - 2.7
+          - 3.0
 
     steps:
       - uses: actions/checkout@v2
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 2.6
+          ruby-version: ${{matrix.ruby}}
       - name: Install dependencies
         run: bundle install
       - name: Run tests
