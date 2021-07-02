@@ -31,3 +31,9 @@ jobs:
         run: bundle install
       - name: Run tests
         run: bundle exec rspec spec --tag '~integration'
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron:  '0 0 * * SAT'
