@@ -27,7 +27,7 @@ Gem::Specification.new do |s|
   if ENV["COVERAGE"]
     s.add_development_dependency "simplecov"
   end
-
+  s.add_runtime_dependency 'rexml', '~> 3.2', '>= 3.2.2'
   s.add_runtime_dependency 'graphviz', '~> 1.1', '>= 1.1.0'
   s.add_runtime_dependency 'optimist', '~> 3.0.0'
   s.add_runtime_dependency 'organic_hash', '~> 1.0', '>= 1.0.2'
