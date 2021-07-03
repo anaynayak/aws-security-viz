@@ -2,9 +2,9 @@ name: Ruby
 
 on:
   push:
-    branches: [master]
   pull_request:
-    branches: [master]
+  schedule:
+    - cron:  '0 0 * * SAT'
 
 jobs:
   test:
@@ -32,8 +32,3 @@ jobs:
       - name: Run tests
         run: bundle exec rspec spec --tag '~integration'
 
-on:
-  push:
-  pull_request:
-  schedule:
-    - cron:  '0 0 * * SAT'
