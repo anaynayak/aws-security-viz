@@ -3,7 +3,7 @@ require 'graphviz'
 module Renderer
   class GraphViz
     def initialize(file_name, config)
-      @g = Graphviz::Graph.new('G', {
+      @g = Graphviz::Graph.new('G', **{
         overlap: false,
         splines: true,
         sep: 1,
