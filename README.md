@@ -157,7 +157,7 @@ Execute the following command to generate the json. You will need [aws-cli](http
 
 #### Graphviz export
 
-![](https://github.com/anaynayak/aws-security-viz/raw/master/images/sample.png)
+![](https://github.com/anaynayak/aws-security-viz/raw/main/images/sample.png)
 
 #### Navigator view (useful with very large number of nodes)
 Via navigator renderer `aws_security_viz -a your_aws_key -s your_aws_secret_key -f aws.json --renderer navigator`
