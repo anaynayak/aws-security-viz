@@ -6,6 +6,7 @@ aws-security-viz -- A tool to visualize aws security groups
 [![Code Climate](https://codeclimate.com/github/anaynayak/aws-security-viz.png)](https://codeclimate.com/github/anaynayak/aws-security-viz)
 [![Docker image](https://images.microbadger.com/badges/image/anay/aws-security-viz.svg)](https://microbadger.com/images/anay/aws-security-viz)
 [![Dependency Status](https://img.shields.io/librariesio/github/anaynayak/aws-security-viz.png?maxAge=259200)](https://libraries.io/github/anaynayak/aws-security-viz)
+[![kandi X-Ray](https://kandi.openweaver.com/badges/xray.svg)](https://kandi.openweaver.com/ruby/anaynayak/aws-security-viz)
 
 ## DESCRIPTION
   Need a quick way to visualize your current aws/amazon ec2 security group configuration? aws-security-viz does just that based on the EC2 security group ingress configuration.
