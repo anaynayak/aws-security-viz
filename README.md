@@ -58,7 +58,7 @@ If you don't want to install the dependencies and ruby libs you can execute aws-
 
 3.a With aws-vault (Recommended):
 
-```aws-vault exec tldev -- docker run -i -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_SECURITY_TOKEN --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz --renderer navigator --serve 3000``` . 
+```aws-vault exec <profile_name> -- docker run -i -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_SECURITY_TOKEN --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz --renderer navigator --serve 3000``` . 
 
 You can open it with your local browser at `http://localhost:3000/navigator.html#aws-security-viz.png`. 
 
