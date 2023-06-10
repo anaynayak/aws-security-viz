@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.2.4] - 2023-06-10
+- Matrix builds for Ruby v3.0 onwards only
+- Remove support for Ruby v2.x
+
 ## [0.2.3] - 2021-07-03
 ### Added
 - Support for Ruby v3

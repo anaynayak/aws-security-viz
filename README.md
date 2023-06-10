@@ -117,7 +117,7 @@ aws-security-viz only uses the `ec2:DescribeSecurityGroups` api so a minimal IAM
 
 Alternatively you can use [aws-vault](https://github.com/99designs/aws-vault/) and run it using short lived temporary credentials.
 
-`$ aws-vault exec <profile> -- aws_security_viz -f aws.json --renderer navigator`
+`$ aws-vault exec <profile> -- aws_security_viz -f aws.json --renderer navigator --serve 9091`
 
 #### Advanced configuration
 
