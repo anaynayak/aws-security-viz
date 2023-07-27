@@ -34,6 +34,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'webrick', '~> 1.8.1'
   s.add_runtime_dependency 'aws-sdk-ec2', '>= 1.65', '< 1.199'
 
-  s.required_ruby_version = '>= 2.0.0'
+  s.required_ruby_version = '>= 3.0.0'
 end
 
