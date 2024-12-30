@@ -1,4 +1,4 @@
-FROM ruby:3.2-alpine
+FROM ruby:3.4-alpine
 RUN apk add --update \
         build-base \
         graphviz \
