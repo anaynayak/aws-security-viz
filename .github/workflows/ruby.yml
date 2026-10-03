@@ -15,20 +15,14 @@ jobs:
   test:
     name: ${{ matrix.os }} / ruby ${{ matrix.ruby }}
     runs-on: ${{ matrix.os }}-latest
-    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu]
         ruby: ["3.3", "3.4", "4.0"]
-        experimental: [false]
         include:
           - os: macos
             ruby: "4.0"
-            experimental: false
-          - os: ubuntu
-            ruby: head
-            experimental: true
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -47,3 +41,27 @@ jobs:
         run: bundle exec standardrb
       - name: Run tests
         run: bundle exec rspec
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build image (amd64, not pushed)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: aws-security-viz:ci
+      - name: Smoke test
+        run: |
+          mkdir -p out && cp spec/integration/dummy.json out/
+          docker run --rm aws-security-viz:ci --version
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/out:/work" aws-security-viz:ci -o dummy.json -f viz.svg
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/out:/work" aws-security-viz:ci -o dummy.json -f viz.html
+          grep -q "<svg" out/viz.svg
+          grep -q "cytoscape" out/viz.html
