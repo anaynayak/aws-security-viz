@@ -3,10 +3,11 @@
 require "spec_helper"
 
 class DummyRenderer
-  attr_reader :output
+  attr_reader :output, :edge_keys
 
   def initialize
     @output = []
+    @edge_keys = []
     @labels = {}
   end
 
@@ -17,6 +18,7 @@ class DummyRenderer
   end
 
   def add_edge(from, to, opts)
+    @edge_keys << [from, to]
     @output << [:edge, @labels.fetch(from, from), @labels.fetch(to, to), opts]
   end
 end
@@ -34,6 +36,39 @@ describe VisualizeAws do
       [:node, "My machine"],
       [:edge, "My machine", "Remote ssh", {color: :blue, label: "22/tcp"}]
     )
+  end
+
+  it "should key nodes and edges by group id, not name" do
+    stub_security_groups([group("Remote ssh", group_ingress(22, "My machine")), group("My machine")])
+    visualize_aws.build.output(renderer)
+
+    expect(renderer.edge_keys).to eq([["sg-My machine", "sg-Remote ssh"]])
+  end
+
+  it "should apply the groups name mapping to groups outside the described set" do
+    stub_security_groups([group("Web", group_ingress(80, "ELB"))])
+    graph = VisualizeAws.new(AwsConfig.new(groups: {"ELB" => "Edge"})).build
+
+    expect(graph.output(renderer)).to contain_exactly(
+      [:node, "Web"],
+      [:node, "Edge"],
+      [:edge, "Edge", "Web", {color: :blue, label: "80/tcp"}]
+    )
+  end
+
+  context "obfuscated filter" do
+    let(:groups) { [group("Web", group_ingress(80, "ELB")), group("Db", group_ingress(7474, "Web"))] }
+
+    ["Web", "sg-Web"].each do |source|
+      it "matches source filter #{source} by name or id" do
+        stub_security_groups(groups)
+        graph = VisualizeAws.new(AwsConfig.new(obfuscate: true)).build
+        graph.filter(source, nil)
+        graph.output(renderer)
+
+        expect(renderer.edge_keys.size).to eq(1)
+      end
+    end
   end
 
   context "groups" do

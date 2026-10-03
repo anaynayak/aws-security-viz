@@ -21,7 +21,7 @@ class DebugGraph
   end
 
   def filter(source, destination)
-    @g.filter(source, destination)
+    @g.filter(source && h(source), destination && h(destination))
   end
 
   def output(renderer)

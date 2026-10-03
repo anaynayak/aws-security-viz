@@ -57,14 +57,15 @@ class SecurityGroup
     all_traffic = permissions.collect { |permission|
       permission.traffic
     }.flatten.uniq
-    CidrGroupMapping.new(@all_groups, @config.groups).map(all_traffic)
+    CidrGroupMapping.new(@all_groups, @config.groups, peer_names).map(all_traffic)
   end
 end
 
 class CidrGroupMapping
-  def initialize(all_groups, user_groups)
+  def initialize(all_groups, user_groups, peer_names = {})
     @all_groups = all_groups
     @user_groups = user_groups
+    @peer_names = peer_names
   end
 
   def map(all_traffic)
@@ -78,6 +79,7 @@ class CidrGroupMapping
 
   def mapping(val)
     group = @all_groups.find { |g| g.group_id == val }
-    @user_groups[val] || (group && @user_groups[group.name]) || val
+    name = group ? group.name : @peer_names[val]
+    @user_groups[val] || (name && @user_groups[name]) || val
   end
 end
