@@ -55,4 +55,47 @@ describe AwsSecurityViz::VisualizeAws do
   it "rejects a filter name shared by several groups" do
     expect { render("json", source_filter: "default") }.to raise_error(ArgumentError, /sg-default-a.*sg-default-b/)
   end
+
+  it "rejects a filter that matches no group or peer" do
+    expect { render("json", source_filter: "nope") }.to raise_error(ArgumentError, "no group or peer matches 'nope'")
+    expect { render("json", target_filter: "nope") }.to raise_error(ArgumentError, "no group or peer matches 'nope'")
+  end
+
+  it "shows hashed ids, not real ones, in the ambiguous filter error under obfuscation" do
+    config = AwsSecurityViz::AwsConfig.new({egress: true, obfuscate: true})
+    expect {
+      AwsSecurityViz::VisualizeAws.new(config, source_file: fixture, renderer: "json", source_filter: "default")
+        .unleash("#{out_file}.json")
+    }.to raise_error(ArgumentError) { |e|
+      expect(e.message).to match(/matches several groups/)
+      expect(e.message).not_to match(/sg-default/)
+      expect(e.message).to include(AwsSecurityViz::Obfuscation.hash("sg-default-a"))
+    }
+  end
+end
+
+describe AwsSecurityViz::Graph, "filters on degenerate shapes" do
+  let(:graph) {
+    described_class.new(AwsSecurityViz::AwsConfig.new({})).tap { |g|
+      %w[a b c].each { |n| g.add_node(n, {label: n}) }
+      g.add_edge("a", "b", label: "80/tcp")
+      g.add_edge("b", "b", label: "22/tcp")
+      g.add_edge("b", "c", label: "443/tcp")
+    }
+  }
+
+  it "keeps only the node itself when source == target and no cycle returns to it" do
+    expect(graph.filter("a", "a").vertices).to eq(["a"])
+    expect(graph.underlying.edges).to be_empty
+  end
+
+  it "keeps a self-loop edge when source == target is the looping node" do
+    filtered = graph.filter("b", "b")
+    expect(filtered.vertices).to eq(["b"])
+    expect(filtered.edges.map { |e| [e.source, e.target] }).to eq([%w[b b]])
+  end
+
+  it "retains a self-loop on an intermediate node" do
+    expect(graph.filter("a", "c").edges.map { |e| [e.source, e.target] }).to include(%w[b b])
+  end
 end

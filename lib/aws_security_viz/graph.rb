@@ -61,8 +61,11 @@ module AwsSecurityViz
     def resolve(filter)
       return filter if filter.nil? || @underlying.has_vertex?(filter)
       keys = @underlying.vertices.select { |v| @node_properties.dig(v, :label) == filter }
-      raise ArgumentError, "'#{filter}' matches several groups (#{keys.join(", ")}); use a group id" if keys.size > 1
-      keys.first || filter
+      raise ArgumentError, "no group or peer matches '#{filter}'" if keys.empty?
+      if keys.size > 1
+        raise ArgumentError, "'#{filter}' matches several groups (#{keys.map { |k| loggable(k) }.join(", ")}); use a group id"
+      end
+      keys.first
     end
 
     # Rules from several groups (or egress and ingress) can map to one edge: union the
