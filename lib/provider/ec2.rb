@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "aws-sdk-ec2"
 
 class Ec2Provider

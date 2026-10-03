@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Renderer
   class Json
     def initialize(file_name, config)

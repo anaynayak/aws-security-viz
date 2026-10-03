@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ColorPicker
   def initialize(colored)
     @picker = colored ? NodeColors.new : DefaultColors.new

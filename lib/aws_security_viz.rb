@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "ec2/security_groups"
 require_relative "provider/json"
 require_relative "provider/ec2"

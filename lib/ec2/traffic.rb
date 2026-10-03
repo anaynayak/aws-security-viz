@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Traffic
   attr_accessor :from, :to, :port_range, :ingress
 
