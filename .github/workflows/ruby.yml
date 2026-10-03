@@ -31,6 +31,8 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+      # Graphviz comes from the runner's distro/Homebrew repositories and is deliberately unpinned: the specs only
+      # need a working `dot`, and pinning a distro version would break when the package index rotates.
       - name: Install Graphviz (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y graphviz
