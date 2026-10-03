@@ -2,7 +2,7 @@ aws-security-viz -- A tool to visualize aws security groups
 ============================================================
 [![Build Status](https://github.com/anaynayak/aws-security-viz/workflows/Ruby/badge.svg)](https://github.com/anaynayak/aws-security-viz/actions?query=workflow%3ARuby)
 [![License](https://img.shields.io/github/license/anaynayak/aws-security-viz.svg?maxAge=2592000)]()
-[![Docker Pulls](https://img.shields.io/docker/pulls/anay/aws-security-viz)](https://hub.docker.com/r/anay/aws-security-viz/)
+[![Docker image](https://img.shields.io/badge/ghcr.io-aws--security--viz-blue)](https://github.com/anaynayak/aws-security-viz/pkgs/container/aws-security-viz)
 [![Dependency Status](https://img.shields.io/librariesio/github/anaynayak/aws-security-viz.png?maxAge=259200)](https://libraries.io/github/anaynayak/aws-security-viz)
 ![Gem Downloads (for latest version)](https://img.shields.io/gem/dtv/aws_security_viz)
 
@@ -51,32 +51,35 @@ To generate a web view
 
 ## DOCKER USAGE
 
-If you don't want to install the dependencies and ruby libs you can execute aws-security-viz inside a docker container. To do so, follow these steps:
+Run aws-security-viz from the published image instead of installing Ruby and Graphviz. The image's entrypoint is
+`aws_security_viz`, so everything after the image name is a normal CLI argument. It runs as a non-root user with
+`/work` as the working directory; mount a local directory there to get the output files.
 
-1. Clone this repository, open it in a console.
-2. Build the docker container: `docker build -t sec-viz .`
+1. With aws-vault (recommended):
 
-3.a With aws-vault (Recommended):
+```
+aws-vault exec <profile_name> -- docker run --rm --user $(id -u):$(id -g) \
+  -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_SECURITY_TOKEN \
+  -v "$(pwd)/aws-viz:/work" ghcr.io/anaynayak/aws-security-viz -f /work/aws.svg
+```
 
-```aws-vault exec <profile_name> -- docker run -i -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_SECURITY_TOKEN --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz --renderer navigator --serve 3000``` . 
+2. With AWS credentials passed as parameters:
 
-You can open it with your local browser at `http://localhost:3000/navigator.html#aws-security-viz.png`. 
+```
+docker run --rm --user $(id -u):$(id -g) -v "$(pwd)/aws-viz:/work" ghcr.io/anaynayak/aws-security-viz \
+  -a REPLACE_AWS_ACCESS_KEY_ID -s REPLACE_SECRET -r REPLACE_REGION -f /work/aws.svg
+```
 
-3.b With AWS credentials passed as parameters:
-
-```docker run -i --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz -a REPLACE_AWS_ACCESS_KEY_ID -s REPLACE_SECRET -r REPLACE_REGION --renderer navigator --serve 3000```. 
-
-You can open it with your local browser at `http://localhost:3000/navigator.html#aws-security-viz.png`. 
+3. To build the image from a checkout instead: `docker build -t sec-viz .` and use `sec-viz` in place of the ghcr.io name.
 
 The region comes from `-r/--region`, or otherwise from the AWS SDK chain (`AWS_REGION`, a profile); there is no built-in default, so a missing region fails with `MissingRegionError`.
 
-Parameters passed to the docker command:
-* `-v $(pwd)/aws-viz:aws-security-viz` local directory where output will be generated.
-* `-i` interactive shell
-* `--rm` remove the container after usage
-* `-t` attach this terminal to it
-* `-p 3000:3000` we expose port 3000 for the HTTP server
-* `-name sec-viz` the container will have the same name as the image we will start
+Notes:
+* `-v "$(pwd)/aws-viz:/work"` is the local directory where output is written. Create it first (`mkdir aws-viz`).
+* `--user $(id -u):$(id -g)` matters on Linux: bind mounts keep the host's ownership, so the container's non-root
+  user cannot write to a directory owned by you and the run fails with "Permission denied". Running as your own
+  uid/gid fixes that and leaves the output files owned by you. Docker Desktop on macOS does not need it.
+* `--rm` removes the container after the run.
 
 You can also use other parameters as specified in [usage](#USAGE)
 

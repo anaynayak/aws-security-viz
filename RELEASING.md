@@ -16,6 +16,9 @@ is no API key stored in GitHub.
    reviewers so each publish needs an approval click.
 3. Once a trusted-publisher release has succeeded, delete the old `RUBYGEMS_AUTH_TOKEN` repository secret and revoke
    the matching API key on rubygems.org.
+4. After the first image push, make the GHCR package public so `docker pull` works without logging in: GitHub ->
+   your profile -> Packages -> `aws-security-viz` -> Package settings -> Change visibility -> Public. New packages
+   are private by default; this is a one-time step.
 
 ## Cutting a release
 

@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     permissions:
-      contents: write # release-gem pushes the tag if missing
+      contents: write # kept: release-gem's `rake release` contacts origin to push the tag (documented as required)
       id-token: write # RubyGems trusted publishing (OIDC)
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          persist-credentials: true
+          persist-credentials: false # release-gem authenticates git itself via its token input
       - name: Set up Ruby
         uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
@@ -45,6 +45,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
