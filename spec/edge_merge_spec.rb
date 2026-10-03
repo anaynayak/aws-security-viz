@@ -5,9 +5,9 @@ require "digest"
 require "tmpdir"
 
 # Several rules can map to one edge; the merged label and colour must not depend on rule order.
-describe Graph do
-  let(:config) { AwsConfig.new({}) }
-  let(:graph) { Graph.new(config) }
+describe AwsSecurityViz::Graph do
+  let(:config) { AwsSecurityViz::AwsConfig.new({}) }
+  let(:graph) { AwsSecurityViz::Graph.new(config) }
   let(:renderer) do
     Class.new {
       attr_reader :edges
@@ -59,7 +59,7 @@ describe Graph do
 
   it "merges hashed port tokens and collapses the hashed wildcard" do
     h = ->(t) { Digest::SHA256.hexdigest(t) }
-    obfuscated = DebugGraph.new(AwsConfig.new({}))
+    obfuscated = AwsSecurityViz::DebugGraph.new(AwsSecurityViz::AwsConfig.new({}))
     obfuscated.add_edge("a", "b", color: :blue, label: "22/tcp,80/tcp")
     obfuscated.add_edge("a", "b", color: :red, label: "22/tcp")
     obfuscated.output(renderer)
@@ -72,8 +72,8 @@ describe Graph do
   end
 end
 
-describe VisualizeAws do
-  let(:config) { AwsConfig.new({egress: true}) }
+describe AwsSecurityViz::VisualizeAws do
+  let(:config) { AwsSecurityViz::AwsConfig.new({egress: true}) }
   let(:out_dir) { Dir.mktmpdir }
 
   after { FileUtils.remove_entry(out_dir) }
@@ -90,7 +90,7 @@ describe VisualizeAws do
   def edges_for(groups, extra = {})
     source = File.join(out_dir, "in.json")
     File.write(source, {"SecurityGroups" => groups}.to_json)
-    graph = VisualizeAws.new(config, {source_file: source}.merge(extra)).build
+    graph = AwsSecurityViz::VisualizeAws.new(config, {source_file: source}.merge(extra)).build
     recorded = {}
     recorder = Struct.new(:edges) {
       def add_node(*)

@@ -4,9 +4,9 @@ require "spec_helper"
 require "tmpdir"
 
 # Nodes are keyed by security group id, labelled with the group name, and grouped by VPC.
-describe VisualizeAws do
+describe AwsSecurityViz::VisualizeAws do
   let(:fixture) { File.expand_path("fixtures/graph_bugs.json", __dir__) }
-  let(:config) { AwsConfig.new({egress: true}) }
+  let(:config) { AwsSecurityViz::AwsConfig.new({egress: true}) }
   let(:out_dir) { Dir.mktmpdir }
   let(:out_file) { File.join(out_dir, "out") }
 
@@ -15,7 +15,7 @@ describe VisualizeAws do
   def render(renderer, extra = {})
     path = "#{out_file}.json"
     allow(FileUtils).to receive(:copy)
-    VisualizeAws.new(config, {source_file: fixture, renderer: renderer}.merge(extra)).unleash(path)
+    AwsSecurityViz::VisualizeAws.new(config, {source_file: fixture, renderer: renderer}.merge(extra)).unleash(path)
     JSON.parse(File.read(path))
   end
 
@@ -32,7 +32,7 @@ describe VisualizeAws do
 
   it "draws one dot cluster per vpc with separate default nodes" do
     dot = out_file + ".dot"
-    VisualizeAws.new(config, source_file: fixture, renderer: "graphviz").unleash(dot)
+    AwsSecurityViz::VisualizeAws.new(config, source_file: fixture, renderer: "graphviz").unleash(dot)
     content = File.read(dot)
     expect(content.scan(/subgraph "?cluster_vpc-[ab]"?/).size).to eq(2)
     expect(content).to match(/subgraph "cluster_vpc-a".*"sg-default-a"\s*\[.*?label=default/m)

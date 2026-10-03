@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-describe Ec2Provider do
+describe AwsSecurityViz::Ec2Provider do
   def group(id)
     {group_id: id, group_name: id, vpc_id: "vpc-1", ip_permissions: [], ip_permissions_egress: []}
   end
@@ -14,7 +14,7 @@ describe Ec2Provider do
       {security_groups: [group("sg-1")], next_token: "t"},
       {security_groups: [group("sg-2")]}
     ])
-    ids = Ec2Provider.new({}, client: client).security_groups.map(&:group_id)
+    ids = AwsSecurityViz::Ec2Provider.new({}, client: client).security_groups.map(&:group_id)
     expect(ids).to eq(%w[sg-1 sg-2])
   end
 
@@ -24,20 +24,20 @@ describe Ec2Provider do
       seen = ctx.params[:filters]
       @handler.call(ctx)
     }
-    Ec2Provider.new({vpc_id: "vpc-1"}, client: client).security_groups
+    AwsSecurityViz::Ec2Provider.new({vpc_id: "vpc-1"}, client: client).security_groups
     expect(seen).to eq([{name: "vpc-id", values: ["vpc-1"]}])
   end
 
   describe "client options" do
     it "passes no region unless one is given, so the SDK chain decides" do
       allow(Aws::EC2::Client).to receive(:new).and_return(client)
-      Ec2Provider.new({access_key: "a", secret_key: "b"})
+      AwsSecurityViz::Ec2Provider.new({access_key: "a", secret_key: "b"})
       expect(Aws::EC2::Client).to have_received(:new).with({access_key_id: "a", secret_access_key: "b"})
     end
 
     it "uses the named profile" do
       allow(Aws::EC2::Client).to receive(:new).and_return(client)
-      Ec2Provider.new({profile: "dev", access_key: "a", secret_key: "b"})
+      AwsSecurityViz::Ec2Provider.new({profile: "dev", access_key: "a", secret_key: "b"})
       expect(Aws::EC2::Client).to have_received(:new).with({profile: "dev"})
     end
   end

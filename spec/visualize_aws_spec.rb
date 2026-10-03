@@ -23,8 +23,8 @@ class DummyRenderer
   end
 end
 
-describe VisualizeAws do
-  let(:visualize_aws) { VisualizeAws.new(AwsConfig.new) }
+describe AwsSecurityViz::VisualizeAws do
+  let(:visualize_aws) { AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new) }
   let(:renderer) { DummyRenderer.new }
 
   it "should add nodes, edges for each security group" do
@@ -47,7 +47,7 @@ describe VisualizeAws do
 
   it "should apply the groups name mapping to groups outside the described set" do
     stub_security_groups([group("Web", group_ingress(80, "ELB"))])
-    graph = VisualizeAws.new(AwsConfig.new(groups: {"ELB" => "Edge"})).build
+    graph = AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new(groups: {"ELB" => "Edge"})).build
 
     expect(graph.output(renderer)).to contain_exactly(
       [:node, "Web"],
@@ -62,7 +62,7 @@ describe VisualizeAws do
     ["Web", "sg-Web"].each do |source|
       it "matches source filter #{source} by name or id" do
         stub_security_groups(groups)
-        graph = VisualizeAws.new(AwsConfig.new(obfuscate: true)).build
+        graph = AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new(obfuscate: true)).build
         graph.filter(source, nil)
         graph.output(renderer)
 
@@ -137,8 +137,8 @@ describe VisualizeAws do
         ]
       )
       mapping = {"127.0.0.1/32" => "Work"}
-      mapping = CidrGroupMapping.new([], mapping)
-      allow(CidrGroupMapping).to receive(:new).and_return(mapping)
+      mapping = AwsSecurityViz::CidrGroupMapping.new([], mapping)
+      allow(AwsSecurityViz::CidrGroupMapping).to receive(:new).and_return(mapping)
 
       graph = visualize_aws.build
 
@@ -161,8 +161,8 @@ describe VisualizeAws do
             ]
           )
       mapping = {"127.0.0.1/32" => "Work", "192.168.0.1/32" => "Work"}
-      mapping = CidrGroupMapping.new([], mapping)
-      allow(CidrGroupMapping).to receive(:new).and_return(mapping)
+      mapping = AwsSecurityViz::CidrGroupMapping.new([], mapping)
+      allow(AwsSecurityViz::CidrGroupMapping).to receive(:new).and_return(mapping)
 
       graph = visualize_aws.build
 
@@ -184,7 +184,7 @@ describe VisualizeAws do
       )
 
       opts = {exclude: ["127.*"]}
-      graph = VisualizeAws.new(AwsConfig.new(opts)).build
+      graph = AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new(opts)).build
 
       expect(graph.output(renderer)).to contain_exactly(
         [:node, "Web"],
@@ -203,7 +203,7 @@ describe VisualizeAws do
       )
 
       opts = {exclude: ["D.*b", "App"]}
-      graph = VisualizeAws.new(AwsConfig.new(opts)).build
+      graph = AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new(opts)).build
 
       expect(graph.output(renderer)).to contain_exactly(
         [:node, "Web"],
@@ -221,7 +221,7 @@ describe VisualizeAws do
       )
 
       opts = {exclude: ["App"]}
-      graph = VisualizeAws.new(AwsConfig.new(opts)).build
+      graph = AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new(opts)).build
 
       expect(graph.output(renderer)).to contain_exactly(
         [:node, "Web"],

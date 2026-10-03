@@ -4,9 +4,9 @@ require "spec_helper"
 require "tmpdir"
 
 # Regression specs for graph correctness bugs B1-B4, all fixed; each guards its fix.
-describe VisualizeAws do
+describe AwsSecurityViz::VisualizeAws do
   let(:fixture) { File.expand_path("fixtures/graph_bugs.json", __dir__) }
-  let(:config) { AwsConfig.new({egress: true}) }
+  let(:config) { AwsSecurityViz::AwsConfig.new({egress: true}) }
   let(:out_dir) { Dir.mktmpdir }
   let(:out_file) { File.join(out_dir, "out.json") }
 
@@ -19,7 +19,7 @@ describe VisualizeAws do
   end
 
   def render(renderer)
-    VisualizeAws.new(config, source_file: fixture, renderer: renderer).unleash(out_file)
+    AwsSecurityViz::VisualizeAws.new(config, source_file: fixture, renderer: renderer).unleash(out_file)
     JSON.parse(File.read(out_file))
   end
 

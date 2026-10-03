@@ -21,7 +21,7 @@ class PeerRecorder
   end
 end
 
-describe VisualizeAws do
+describe AwsSecurityViz::VisualizeAws do
   let(:renderer) { PeerRecorder.new }
 
   def peer_ingress(port, ipv6: [], prefix_lists: [])
@@ -30,12 +30,12 @@ describe VisualizeAws do
   end
 
   def edges(config)
-    VisualizeAws.new(config).build.output(renderer).select { |o| o.first == :edge }
+    AwsSecurityViz::VisualizeAws.new(config).build.output(renderer).select { |o| o.first == :edge }
   end
 
   it "adds edges for IPv6 ranges and prefix lists from the AWS provider" do
     stub_security_groups([group("Web", peer_ingress(22, ipv6: ["::/0"], prefix_lists: ["pl-123"]))])
-    expect(edges(AwsConfig.new)).to contain_exactly(
+    expect(edges(AwsSecurityViz::AwsConfig.new)).to contain_exactly(
       [:edge, "::/0", "Web", {color: :blue, label: "22/tcp"}],
       [:edge, "pl-123", "Web", {color: :blue, label: "22/tcp"}]
     )
@@ -43,18 +43,18 @@ describe VisualizeAws do
 
   it "applies exclusions to IPv6 ranges and prefix lists" do
     stub_security_groups([group("Web", peer_ingress(22, ipv6: ["::/0", "2001:db8::/32"], prefix_lists: ["pl-123"]))])
-    config = AwsConfig.new(exclude: ["^::/0$", "^pl-"])
+    config = AwsSecurityViz::AwsConfig.new(exclude: ["^::/0$", "^pl-"])
     expect(edges(config).map { |e| e[1] }).to eq(["2001:db8::/32"])
   end
 
   it "applies CIDR group mapping to IPv6 ranges and prefix lists" do
     stub_security_groups([group("Web", peer_ingress(22, ipv6: ["::/0"], prefix_lists: ["pl-123"]))])
-    config = AwsConfig.new(groups: {"::/0" => "Internet", "pl-123" => "Office"})
+    config = AwsSecurityViz::AwsConfig.new(groups: {"::/0" => "Internet", "pl-123" => "Office"})
     expect(edges(config).map { |e| e[1] }).to contain_exactly("Internet", "Office")
   end
 
   it "adds edges for IPv6 ranges and prefix lists from the JSON provider" do
     fixture = File.expand_path("fixtures/graph_bugs.json", __dir__)
-    expect(VisualizeAws.new(AwsConfig.new, source_file: fixture).build.output(renderer).map { |o| o[1] }).to include("::/0", "pl-123")
+    expect(AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new, source_file: fixture).build.output(renderer).map { |o| o[1] }).to include("::/0", "pl-123")
   end
 end

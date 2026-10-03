@@ -9,7 +9,7 @@ RSpec::Matchers.define :be_graph_with do |nodes|
   end
 end
 
-describe VisualizeAws do
+describe AwsSecurityViz::VisualizeAws do
   let(:opts) {
     {
       source_file: source_file,
@@ -17,7 +17,7 @@ describe VisualizeAws do
     }
   }
   let(:source_file) { File.join(File.dirname(__FILE__), "dummy.json") }
-  let(:config) { AwsConfig.new({groups: {"0.0.0.0/0" => "*"}}) }
+  let(:config) { AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}}) }
   let(:expected_content) { File.read(expected_file) }
   let(:actual_content) { temp_file.read }
 
@@ -36,7 +36,7 @@ describe VisualizeAws do
     end
 
     it "should render nodes, edges and labels as dot" do
-      VisualizeAws.new(config, opts).unleash(temp_file.path)
+      AwsSecurityViz::VisualizeAws.new(config, opts).unleash(temp_file.path)
       edge = {"color" => "blue", "style" => "bold"}
       expect(statements_of(actual_content)).to eq(
         "graph" => {"concentrate" => "true", "overlap" => "false", "rankdir" => "LR", "sep" => "1", "splines" => "true"},
@@ -56,28 +56,28 @@ describe VisualizeAws do
     it "should parse json input with stubbed out graphviz" do
       nodes = ["sg-appgrp", "8.8.8.8/32", "sg-amzelb", "*", "sg-dbgrp"]
       expect(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil, dot: "dot")
-      VisualizeAws.new(config, opts).unleash(temp_file.path)
+      AwsSecurityViz::VisualizeAws.new(config, opts).unleash(temp_file.path)
     end
 
     it "fails clearly, without writing the file, when the layout engine is missing" do
-      missing = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, layout: "neato"})
+      missing = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, layout: "neato"})
       stub_const("ENV", ENV.to_h.merge("PATH" => ""))
       File.delete(temp_file.path)
-      expect { VisualizeAws.new(missing, opts).unleash(temp_file.path) }
+      expect { AwsSecurityViz::VisualizeAws.new(missing, opts).unleash(temp_file.path) }
         .to raise_error(ArgumentError, "Graphviz 'neato' not found; install graphviz")
       expect(File.exist?(temp_file.path)).to be(false)
     end
 
     it "passes the configured layout engine to graphviz" do
-      neato = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "neato"})
+      neato = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "neato"})
       expect(Graphviz).to receive(:output).with(anything, path: temp_file.path, format: nil, dot: "neato")
-      VisualizeAws.new(neato, opts).unleash(temp_file.path)
+      AwsSecurityViz::VisualizeAws.new(neato, opts).unleash(temp_file.path)
     end
 
     it "prefers the layout option over opts.yml format" do
-      neato = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "dot", layout: "sfdp"})
+      neato = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "dot", layout: "sfdp"})
       expect(Graphviz).to receive(:output).with(anything, path: temp_file.path, format: nil, dot: "sfdp")
-      VisualizeAws.new(neato, opts).unleash(temp_file.path)
+      AwsSecurityViz::VisualizeAws.new(neato, opts).unleash(temp_file.path)
     end
   end
 
@@ -87,14 +87,14 @@ describe VisualizeAws do
 
     it "should parse json input" do
       expect(FileUtils).to receive(:copy)
-      VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
+      AwsSecurityViz::VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
 
     it "should parse json input with obfuscation" do
-      config = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, obfuscate: true})
+      config = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, obfuscate: true})
       expect(FileUtils).to receive(:copy)
-      VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
+      AwsSecurityViz::VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
       expect(actual_content).not_to include('"amazon-elb-sg"', '"app"', '"db"', "sg-appgrp")
     end
   end
@@ -105,7 +105,7 @@ describe VisualizeAws do
 
     it "should parse json input" do
       expect(FileUtils).to receive(:copy)
-      VisualizeAws.new(config, opts.merge(renderer: "navigator")).unleash(temp_file.path)
+      AwsSecurityViz::VisualizeAws.new(config, opts.merge(renderer: "navigator")).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
   end
@@ -125,7 +125,7 @@ describe VisualizeAws do
 
       it "should read from ec2 account", integration: true do
         expect(FileUtils).to receive(:copy)
-        VisualizeAws.new(config, opts).unleash(temp_file.path)
+        AwsSecurityViz::VisualizeAws.new(config, opts).unleash(temp_file.path)
         expect(JSON.parse(expected_content)["edges"]).to match_array(JSON.parse(actual_content)["edges"])
         expect(JSON.parse(expected_content)["nodes"]).to match_array(JSON.parse(actual_content)["nodes"])
       end

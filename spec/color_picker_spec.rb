@@ -2,9 +2,9 @@
 
 require "spec_helper"
 
-describe ColorPicker do
+describe AwsSecurityViz::ColorPicker do
   context "default picker" do
-    let(:picker) { ColorPicker.new(false) }
+    let(:picker) { AwsSecurityViz::ColorPicker.new(false) }
 
     it "should add default colors for edges" do
       expect(picker.color(0, true)).to eq(:blue)
@@ -12,7 +12,7 @@ describe ColorPicker do
     end
   end
   context "color picker" do
-    let(:picker) { ColorPicker.new(true) }
+    let(:picker) { AwsSecurityViz::ColorPicker.new(true) }
 
     it "should add default colors for edges" do
       expect(picker.color(0, "ignore")).to eq("#00004c")
