@@ -1,7 +1,8 @@
 # Releasing
 
 Releases are cut by the maintainer. Pushing a `v*` tag triggers
-`.github/workflows/rubygem_release.yml`, which publishes the gem to RubyGems using trusted publishing (OIDC). There
+`.github/workflows/rubygem_release.yml`, which publishes the gem to RubyGems using trusted publishing (OIDC) and then pushes a multi-arch image to
+`ghcr.io/anaynayak/aws-security-viz` tagged with the version. There
 is no API key stored in GitHub.
 
 ## One-time setup (manual)
