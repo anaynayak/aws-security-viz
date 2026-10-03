@@ -8,6 +8,8 @@ Aws.config[:ec2] = {stub_responses: true}
 Aws::EC2::Client.prepend(Module.new {
   def initialize(*args)
     super
-    warn "CLIENT #{args.last.inspect} region=#{config.region}"
+    # Hash#inspect changed format in Ruby 3.4, so print the options in one fixed form.
+    options = args.last.sort.map { |k, v| "#{k}: #{v.inspect}" }.join(", ")
+    warn "CLIENT {#{options}} region=#{config.region}"
   end
 })

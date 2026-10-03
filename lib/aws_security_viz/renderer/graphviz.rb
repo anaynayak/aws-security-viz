@@ -104,7 +104,9 @@ module AwsSecurityViz
       end
 
       def on_path?(command)
-        suffixes = [""] + ENV.fetch("PATHEXT", "").split(File::PATH_SEPARATOR).reject(&:empty?)
+        pathext = ENV.fetch("PATHEXT", "").split(File::PATH_SEPARATOR).reject(&:empty?)
+        # PATHEXT is upper case (.EXE) but the file is usually dot.exe; only Windows matches case-insensitively.
+        suffixes = [""] + pathext.flat_map { |ext| [ext, ext.downcase] }.uniq
         ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? { |dir|
           suffixes.any? { |suffix|
             path = File.join(dir, command + suffix)
