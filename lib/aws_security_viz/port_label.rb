@@ -29,10 +29,9 @@ module AwsSecurityViz
     TOKEN = %r{\A(-?\d+)(?:-(-?\d+))?/(.*)\z}
 
     # Deduplicates tokens and sorts them by from port, then protocol; "all" swallows everything else.
-    # `wildcard` is the all-traffic token (a hash when labels are obfuscated).
-    def self.normalise(label, wildcard: ALL)
+    def self.normalise(label)
       tokens = label.to_s.split(",").uniq
-      return wildcard if tokens.include?(wildcard)
+      return ALL if tokens.include?(ALL)
       tokens.sort_by { |token| sort_key(token) }.join(",")
     end
 

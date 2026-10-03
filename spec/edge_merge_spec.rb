@@ -51,19 +51,14 @@ describe AwsSecurityViz::Graph do
     expect(rendered[:color]).to eq(:blue)
   end
 
-  it "keeps one deterministic colour in colour mode" do
-    edge("a", "b", "#cc0000", "22/tcp")
-    edge("a", "b", "#00004c", "80/tcp")
-    expect(rendered[:color]).to eq("#00004c")
-  end
-
   it "merges hashed port tokens and collapses the hashed wildcard" do
-    h = ->(t) { Digest::SHA256.hexdigest(t) }
-    obfuscated = AwsSecurityViz::DebugGraph.new(AwsSecurityViz::AwsConfig.new({}))
+    h = ->(t) { AwsSecurityViz::Obfuscation.hash(t) }
+    obfuscated = AwsSecurityViz::Graph.new(AwsSecurityViz::AwsConfig.new(obfuscate: true))
     obfuscated.add_edge("a", "b", color: :blue, label: "22/tcp,80/tcp")
     obfuscated.add_edge("a", "b", color: :red, label: "22/tcp")
     obfuscated.output(renderer)
     label = renderer.edges.fetch([h.call("a"), h.call("b")])[:label]
+    expect(h.call("a").length).to be <= 10
     expect(label.split(",")).to match_array([h.call("22/tcp"), h.call("80/tcp")])
 
     obfuscated.add_edge("a", "b", color: :red, label: "all")
@@ -120,5 +115,10 @@ describe AwsSecurityViz::VisualizeAws do
       expect(edge[:color]).to eq(:blue)
       expect(edge[:label]).to eq("80/tcp,5432/tcp")
     end
+  end
+
+  it "colours egress-only edges red and ignores the deprecated color option" do
+    app = group("sg-app", "app", egress: [rule("tcp", 5432, 5432, "sg-db")])
+    expect(edges_for([app], color: true).fetch(["sg-app", "sg-db"])[:color]).to eq(:red)
   end
 end

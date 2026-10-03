@@ -33,7 +33,7 @@ module AwsSecurityViz
       peers = (ip[:ip_ranges] || []).map { |r| Peer.new(kind: :cidr4, id: r[:cidr_ip]) } +
         (ip[:ipv6_ranges] || []).map { |r| Peer.new(kind: :cidr6, id: r[:cidr_ipv6]) } +
         (ip[:prefix_list_ids] || []).map { |r| Peer.new(kind: :prefix_list, id: r[:prefix_list_id]) } +
-        (ip[:user_id_group_pairs] || []).map { |g| Peer.new(kind: :group, id: g[:group_id], name: g[:group_name]) }
+        (ip[:user_id_group_pairs] || []).map { |g| Peer.new(kind: :group, id: g[:group_id] || g[:group_name], name: g[:group_name]) }
       new(protocol: ip[:ip_protocol], from_port: ip[:from_port], to_port: ip[:to_port], peers: peers)
     end
   end

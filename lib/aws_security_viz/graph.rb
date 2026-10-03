@@ -2,14 +2,14 @@
 
 require "rgl/adjacency"
 require_relative "port_label"
+require_relative "obfuscation"
 
 module AwsSecurityViz
   class Graph
     attr_reader :underlying
 
-    def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new, wildcard: PortLabel::ALL)
+    def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new)
       @config = config
-      @wildcard = wildcard
       @underlying = underlying
       @edge_properties = {}
       @node_properties = {}
@@ -38,10 +38,11 @@ module AwsSecurityViz
     end
 
     def output(renderer)
-      @underlying.each_vertex { |v| renderer.add_node(v, @node_properties[v] || {}) }
-      @underlying.each_edge { |u, v|
-        renderer.add_edge(u, v, opts(u, v))
-      }
+      nodes = @underlying.vertices.map { |v| [v, @node_properties[v] || {}] }
+      edges = @underlying.edges.map { |e| [e.source, e.target, opts(e.source, e.target)] }
+      nodes, edges = Obfuscation.apply(nodes, edges) if @config.obfuscate?
+      nodes.each { |v, node_opts| renderer.add_node(v, node_opts) }
+      edges.each { |u, v, edge_opts| renderer.add_edge(u, v, edge_opts) }
       renderer.output
     end
 
@@ -60,13 +61,12 @@ module AwsSecurityViz
     end
 
     # Rules from several groups (or egress and ingress) can map to one edge: union the
-    # port labels and pick the colour independently of rule order (blue wins in the
-    # default scheme, otherwise the smallest colour).
+    # port labels and pick the colour independently of rule order (ingress blue wins
+    # over egress red).
     def merge_edge(existing, opts)
       return opts unless existing
-      colors = [existing[:color], opts[:color]].compact
-      color = colors.include?(:blue) ? :blue : colors.min_by(&:to_s)
-      existing.merge(opts).merge(color: color, label: PortLabel.normalise("#{existing[:label]},#{opts[:label]}", wildcard: @wildcard))
+      color = [existing[:color], opts[:color]].include?(:blue) ? :blue : opts[:color]
+      existing.merge(opts).merge(color: color, label: PortLabel.normalise("#{existing[:label]},#{opts[:label]}"))
     end
 
     def opts(u, v)

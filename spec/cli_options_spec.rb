@@ -29,6 +29,12 @@ describe "exe/aws_security_viz options" do
     expect(out).to include("unknown renderer 'bogus'", "graphviz, json, navigator")
   end
 
+  it "warns that --color is deprecated and still runs" do
+    out, err, status = run_exe("--color", "--renderer", "json", "-f", File.join(@dir, "c.json"), dir: @dir)
+    expect(status.exitstatus).to eq(0)
+    expect(out + err).to include("--color is deprecated")
+  end
+
   it "rejects an unknown layout engine" do
     out, _err, status = run_exe("--layout", "bogus", "-f", File.join(@dir, "x.dot"), dir: @dir)
     expect(status.exitstatus).to eq(1)

@@ -17,7 +17,7 @@ opts = Optimist.options do
   opt :source_file, "JSON source file containing security groups", type: :string
   opt :filename, "Output file name (default: aws-security-viz.png, or .json for json/navigator)", type: :string
   opt :config, "Config file (opts.yml)", type: :string, default: "opts.yml"
-  opt :color, "Colored node edges", default: false
+  opt :color, "Deprecated, ignored: edges are blue for ingress and red for egress", default: false
   opt :renderer, "Renderer (#{AwsSecurityViz::Renderer.all.join("|")})", default: "graphviz"
   opt :layout, "Graphviz layout engine (#{AwsSecurityViz::AwsConfig::LAYOUTS.join("|")}); overrides opts.yml format", type: :string
   opt :debug, "Verbose output and stack traces (or DEBUG=true)", default: false
@@ -36,6 +36,7 @@ end
 
 debug = false
 status = AwsSecurityViz::CliGuard.run(debug: -> { debug }) do
+  warn "--color is deprecated and ignored; edges are blue (ingress) or red (egress)" if opts[:color]
   debug = opts[:debug] || AwsSecurityViz::AwsConfig.boolean(ENV["DEBUG"], "DEBUG")
   overrides = {
     obfuscate: opts[:obfuscate] || AwsSecurityViz::AwsConfig.boolean(ENV["OBFUSCATE"], "OBFUSCATE"),

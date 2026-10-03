@@ -17,6 +17,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Boolean environment variables (DEBUG, OBFUSCATE) are parsed as booleans
 - The default output file name is aws-security-viz.png (.json for json and navigator output), and the html asset is written next to the output file, not the current directory
 
+- Edges are blue for ingress and red for egress; `--color` is deprecated and ignored (the per-group colour palette is gone)
+- Obfuscation hashes are shorter (10 hex characters)
+
 ### Fixed
 - Security groups sharing a name in different VPCs no longer collapse into one node
 - Several rules between the same two groups are merged into a single edge with merged port labels

@@ -100,7 +100,7 @@ Options:
   -f, --filename=<s>         Output file name (default: aws-security-viz.png,
                              or .json for json/navigator)
   -c, --config=<s>           Config file (opts.yml) (default: opts.yml)
-  -l, --color                Colored node edges
+  -l, --color                Deprecated, ignored (edges are blue for ingress, red for egress)
   -n, --renderer=<s>         Renderer (graphviz|json|navigator) (default:
                              graphviz)
   -y, --layout=<s>           Graphviz layout engine

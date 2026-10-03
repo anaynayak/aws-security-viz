@@ -26,6 +26,37 @@ describe "provider model" do
     expect(names).to eq(["sg-Web"])
   end
 
+  def json_edges(groups, config)
+    source = File.join(Dir.mktmpdir, "in.json")
+    File.write(source, {"SecurityGroups" => groups}.to_json)
+    edges = []
+    recorder = Object.new
+    recorder.define_singleton_method(:add_node) { |*| }
+    recorder.define_singleton_method(:add_edge) { |from, to, opts| edges << [from, to, opts[:label]] }
+    recorder.define_singleton_method(:output) {}
+    AwsSecurityViz::VisualizeAws.new(config, source_file: source).build.output(recorder)
+    edges
+  end
+
+  def sg(id, name, ingress, egress = [])
+    {"GroupName" => name, "GroupId" => id, "VpcId" => "vpc-1", "IpPermissions" => ingress, "IpPermissionsEgress" => egress}
+  end
+
+  def pair_rule(pair)
+    {"IpProtocol" => "tcp", "FromPort" => 22, "ToPort" => 22, "IpRanges" => [], "UserIdGroupPairs" => [pair]}
+  end
+
+  it "falls back to the group name when a group peer has no GroupId" do
+    edges = json_edges([sg("sg-web", "web", [pair_rule("GroupName" => "legacy")])], AwsSecurityViz::AwsConfig.new)
+    expect(edges).to eq([["legacy", "sg-web", "22/tcp"]])
+  end
+
+  it "collapses a self-referencing ingress and egress rule into one edge" do
+    rule = pair_rule("GroupId" => "sg-web", "GroupName" => "web")
+    edges = json_edges([sg("sg-web", "web", [rule], [rule])], AwsSecurityViz::AwsConfig.new(egress: true))
+    expect(edges).to eq([["sg-web", "sg-web", "22/tcp"]])
+  end
+
   # Re-keys the CLI JSON the way the SDK stub expects (snake_case symbols, ipv_6 spelling).
   def aws_shape(value)
     case value
