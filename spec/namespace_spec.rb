@@ -16,7 +16,7 @@ RSpec.describe "AwsSecurityViz namespace" do
   end
 
   it "does not use load-path requires inside the gem" do
-    sources = Dir[File.join(root, "lib/**/*.rb")].select { |f| File.read(f).match?(/^require "(version|graph|renderer)/) }
+    sources = Dir[File.join(root, "lib/**/*.rb")].select { |f| File.read(f).match?(/^require "(version|aws_security_viz)/) }
     expect(sources).to be_empty
   end
 end
