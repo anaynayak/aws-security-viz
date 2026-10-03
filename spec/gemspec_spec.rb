@@ -21,6 +21,10 @@ RSpec.describe "aws_security_viz.gemspec" do
     expect(spec.files.reject { |f| File.directory?(File.join(root, f)) }).to all(match(%r{\A(lib/|exe/|LICENSE\.md\z|README\.md\z|CHANGELOG\.md\z)}))
   end
 
+  it "packages the executable, option sample and html viewers" do
+    expect(spec.files).to include("exe/aws_security_viz", "lib/opts.yml.sample", "lib/export/html/view.html", "lib/export/html/navigator.html")
+  end
+
   it "declares release metadata and no build-time fields" do
     expect(spec.metadata).to include("rubygems_mfa_required" => "true", "source_code_uri" => a_string_starting_with("https://"), "changelog_uri" => a_string_starting_with("https://"))
     expect(spec.test_files).to be_empty

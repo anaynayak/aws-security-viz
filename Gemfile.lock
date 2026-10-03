@@ -2,8 +2,8 @@ PATH
   remote: .
   specs:
     aws_security_viz (0.3.0)
-      aws-sdk-ec2 (>= 1.655)
-      graphviz (>= 1.1.0)
+      aws-sdk-ec2 (>= 1.400)
+      graphviz (>= 1.2)
       optimist (>= 3.0)
       rexml (>= 3.4.4)
       rgl (>= 0.5.3)

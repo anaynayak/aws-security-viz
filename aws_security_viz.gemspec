@@ -25,11 +25,11 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_runtime_dependency "rexml", ">= 3.4.4"
-  s.add_runtime_dependency "graphviz", ">= 1.1.0"
+  s.add_runtime_dependency "graphviz", ">= 1.2"
   s.add_runtime_dependency "optimist", ">= 3.0"
   s.add_runtime_dependency "rgl", ">= 0.5.3"
   s.add_runtime_dependency "webrick", ">= 1.8.1"
-  s.add_runtime_dependency "aws-sdk-ec2", ">= 1.655"
+  s.add_runtime_dependency "aws-sdk-ec2", ">= 1.400"
 
   s.required_ruby_version = ">= 3.3"
 end
