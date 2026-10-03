@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'ostruct'
 
 describe GraphFilter do
   it 'should include nodes reachable from source' do
