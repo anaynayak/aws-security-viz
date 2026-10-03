@@ -7,7 +7,7 @@ It reads either the live AWS API (`aws-sdk-ec2`) or `aws ec2 describe-security-g
 
 1. Install: `bundle install`
 2. Tests: `bundle exec rspec` (needs the Graphviz `dot` binary for the integration specs)
-3. Lint: `bundle exec standardrb` (once task "Add standardrb" is done)
+3. Lint: `bundle exec standardrb`
 4. Run locally: `bundle exec exe/aws_security_viz -o spec/integration/dummy.json -f /tmp/out.svg`
 5. Backlog: `backlog task list --plain`, `backlog board`
 
