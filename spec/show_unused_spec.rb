@@ -31,6 +31,17 @@ describe "--show-unused" do
       expect(groups.to_h { |g| [g.id, g.unused] }).to eq("sg-1" => false, "sg-2" => true, "sg-3" => false)
     end
 
+    it "hashes the region in the warning when obfuscating" do
+      client.stub_responses(:describe_network_interfaces, "UnauthorizedOperation")
+      err = StringIO.new
+      AwsSecurityViz.logger = AwsSecurityViz.build_logger(err)
+      described_class.new({show_unused: true, obfuscate: true}, client: client).send(:describe, client, "eu-west-1")
+      expect(err.string).to include(AwsSecurityViz::Obfuscation.hash("eu-west-1"))
+      expect(err.string).not_to include("eu-west-1")
+    ensure
+      AwsSecurityViz.logger = nil
+    end
+
     it "keeps the groups and warns when DescribeNetworkInterfaces is not permitted" do
       client.stub_responses(:describe_network_interfaces, "UnauthorizedOperation")
       err = StringIO.new
