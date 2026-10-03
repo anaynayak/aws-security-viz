@@ -6,7 +6,7 @@ RSpec.describe "AwsSecurityViz namespace" do
   let(:root) { File.expand_path("..", __dir__) }
 
   it "keeps the library constants out of the global namespace" do
-    names = %i[VisualizeAws Graph GraphFilter DebugGraph Traffic SecurityGroup SecurityGroups IpPermission
+    names = %i[VisualizeAws Graph GraphFilter DebugGraph Traffic SecurityGroup SecurityGroups Peer Rule
       Renderer Json Ec2 Ec2Provider JsonProvider PortLabel AwsConfig CliGuard ColorPicker Exclusions CidrGroupMapping]
     expect(names.select { |name| Object.const_defined?(name, false) }).to be_empty
   end

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-require "forwardable"
-require_relative "ip_permission"
+require_relative "../model"
 
 module AwsSecurityViz
   class SecurityGroups
@@ -13,52 +12,36 @@ module AwsSecurityViz
     end
 
     def each(&block)
-      groups = @groups.select { |sg| !@config.exclusions.match(sg.name) }
-      groups.each { |group|
-        if block_given?
-          block.call SecurityGroup.new(@groups, group, @config)
-        else
-          yield SecurityGroup.new(@groups, group, @config)
-        end
-      }
+      @groups.reject { |sg| @config.exclusions.match(sg.name) }.each(&block)
     end
 
     def size
       @groups.size
     end
-  end
 
-  class SecurityGroup
-    extend Forwardable
-
-    def_delegators :@group, :name, :vpc_id, :group_id
-
-    def initialize(all_groups, group, config)
-      @all_groups = all_groups
-      @group = group
-      @config = config
+    # Group id -> name for referenced groups whose name is known.
+    def peer_names(group)
+      directed_rules(group).flat_map { |rule, _| rule.peers }
+        .select { |p| p.kind == :group && p.name != p.id }.to_h { |p| [p.id, p.name] }
     end
 
-    def permissions
-      ingress_permissions = @group.ip_permissions.collect { |ip|
-        IpPermission.new(@group, ip, true, @config.exclusions)
+    def traffic(group)
+      all_traffic = directed_rules(group).flat_map { |rule, ingress| rule_traffic(group, rule, ingress) }.uniq
+      CidrGroupMapping.new(@groups, @config.groups, peer_names(group)).map(all_traffic)
+    end
+
+    private
+
+    # [rule, ingress?] pairs; egress rules only when configured.
+    def directed_rules(group)
+      rules = group.ingress.map { |r| [r, true] }
+      @config.egress? ? rules + group.egress.map { |r| [r, false] } : rules
+    end
+
+    def rule_traffic(group, rule, ingress)
+      rule.peers.reject { |peer| @config.exclusions.match(peer.name) }.map { |peer|
+        Traffic.new(ingress, peer.id, group.id, rule.port_range)
       }
-      return ingress_permissions unless @config.egress?
-      egress_permissions = @group.ip_permissions_egress.collect { |ip|
-        IpPermission.new(@group, ip, false, @config.exclusions)
-      }
-      ingress_permissions + egress_permissions
-    end
-
-    def peer_names
-      permissions.map(&:peer_names).reduce({}, :merge)
-    end
-
-    def traffic
-      all_traffic = permissions.collect { |permission|
-        permission.traffic
-      }.flatten.uniq
-      CidrGroupMapping.new(@all_groups, @config.groups, peer_names).map(all_traffic)
     end
   end
 
@@ -71,7 +54,7 @@ module AwsSecurityViz
 
     def map(all_traffic)
       traffic = all_traffic.collect { |traffic|
-        traffic.copy(mapping(traffic.from), mapping(traffic.to))
+        traffic.with(from: mapping(traffic.from), to: mapping(traffic.to))
       }
       traffic.uniq.group_by { |t| [t.from, t.to, t.ingress] }.collect { |k, v| Traffic.grouped(v) }.uniq
     end
@@ -79,7 +62,7 @@ module AwsSecurityViz
     private
 
     def mapping(val)
-      group = @all_groups.find { |g| g.group_id == val }
+      group = @all_groups.find { |g| g.id == val }
       name = group ? group.name : @peer_names[val]
       @user_groups[val] || (name && @user_groups[name]) || val
     end

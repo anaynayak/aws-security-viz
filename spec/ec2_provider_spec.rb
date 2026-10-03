@@ -14,7 +14,7 @@ describe AwsSecurityViz::Ec2Provider do
       {security_groups: [group("sg-1")], next_token: "t"},
       {security_groups: [group("sg-2")]}
     ])
-    ids = AwsSecurityViz::Ec2Provider.new({}, client: client).security_groups.map(&:group_id)
+    ids = AwsSecurityViz::Ec2Provider.new({}, client: client).security_groups.map(&:id)
     expect(ids).to eq(%w[sg-1 sg-2])
   end
 
