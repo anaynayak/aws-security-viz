@@ -9,7 +9,7 @@ This release also covers the 0.3.0 work, which was never tagged or published.
 
 ### Breaking changes
 - Ruby 3.3 or newer is required (it was 3.0 or newer in 0.2.4)
-- The default output is now `aws-security-viz.html`, a self-contained page, instead of `aws-security-viz.png` (`.json` for json and navigator output). The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg). Image output still needs the Graphviz `dot` binary
+- The default output is now `aws-security-viz.html`, a self-contained page, instead of `aws-security-viz.png`. The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg). Image output still needs the Graphviz `dot` binary
 - The old html viewers and the navigator renderer are removed, along with `--serve`
 - There is no default region (it used to be us-east-1); the region comes from the AWS SDK credential/config chain (AWS_REGION, profile, ...) or -r, and a missing region fails with an error
 - --profile no longer defaults to AWS_PROFILE, so explicit access keys are kept
@@ -35,7 +35,7 @@ This release also covers the 0.3.0 work, which was never tagged or published.
 - --debug (or DEBUG=true) for verbose output and stack traces, --obfuscate (or OBFUSCATE=true) to hash group names, ports and ids
 - IPv6 ranges and prefix lists are drawn as rule peers
 - --vpc-id is honoured for --source-file input
-- Tag-triggered release workflow using RubyGems trusted publishing, which also pushes a multi-arch (amd64 and arm64) image to ghcr.io/anaynayak/aws-security-viz tagged `<version>`, `<major>.<minor>` and `latest`. The image is built from this source and runs as a non-root user. Not yet verified locally (task-17: the Docker build and the release workflow have not been run)
+- Tag-triggered release workflow using RubyGems trusted publishing, which also pushes a multi-arch (amd64 and arm64) image to ghcr.io/anaynayak/aws-security-viz tagged `<version>`, `<major>.<minor>` and `latest`. The image is built from this source and runs as a non-root user
 
 ### Changed
 - CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser
@@ -44,7 +44,6 @@ This release also covers the 0.3.0 work, which was never tagged or published.
 - Graph building uses a small adjacency-list graph and DOT is generated directly; Graphviz is only needed for image formats
 - Rules that allow all traffic, ICMP, or a numeric protocol get readable labels, and all-traffic is labelled "all"
 - Boolean environment variables (DEBUG, OBFUSCATE) are parsed as booleans
-- The html asset is written next to the output file, not the current directory
 - Gemfile.lock is committed, the gemspec has no upper version caps, and CI tests Ruby 3.3, 3.4 and 4.0
 
 ### Removed
