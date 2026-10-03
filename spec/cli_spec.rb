@@ -94,6 +94,17 @@ describe AwsSecurityViz::CLI do
     expect(JSON.parse(File.read("r.out"))).to have_key("nodes")
   end
 
+  it "warns when --renderer conflicts with the output extension" do
+    expect(cli("-o", source, "-n", "json", "-f", "out.svg").run).to eq(0)
+    expect(err.string).to include("--renderer json overrides the .svg extension")
+    expect(JSON.parse(File.read("out.svg"))).to have_key("nodes")
+  end
+
+  it "does not warn when --renderer agrees with the extension" do
+    expect(cli("-o", source, "-n", "json", "-f", "out.json").run).to eq(0)
+    expect(err.string).not_to include("overrides")
+  end
+
   it "maps --renderer navigator to the html viewer with a warning" do
     expect(cli("-o", source, "-n", "navigator").run).to eq(0)
     expect(err.string).to include("--renderer navigator is deprecated")

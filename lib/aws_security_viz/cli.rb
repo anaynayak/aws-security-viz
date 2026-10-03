@@ -112,6 +112,7 @@ module AwsSecurityViz
         config = AwsConfig.load(opts[:config]).merge(overrides)
         opts[:renderer] = resolve_renderer(opts[:renderer])
         filename = opts[:filename] || Renderer.default_file(opts[:renderer] || Renderer::DEFAULT)
+        warn_renderer_conflict(opts[:renderer], opts[:filename])
         risky = VisualizeAws.new(config, opts).unleash(filename).to_i
         report_risk(risky)
         return RISK_EXIT if risky > 0 && opts[:fail_on_risk]
@@ -124,6 +125,15 @@ module AwsSecurityViz
       else
         AwsSecurityViz.logger.info("no risky public ingress found")
       end
+    end
+
+    # An explicit --renderer wins over the -f extension; say so when the two disagree (e.g. -n json -f out.png).
+    def warn_renderer_conflict(renderer, file_name)
+      return if renderer.nil? || file_name.nil?
+      ext = File.extname(file_name.to_s).delete_prefix(".").downcase
+      inferred = Renderer::EXTENSIONS[ext]
+      return if inferred.nil? || inferred == renderer.to_sym
+      AwsSecurityViz.logger.warn("--renderer #{renderer} overrides the .#{ext} extension of #{file_name}; the file will be written as #{renderer}")
     end
 
     # --renderer is a deprecated alias for the extension-based format; the removed navigator renderer is the html viewer now.

@@ -65,7 +65,7 @@ module AwsSecurityViz
 
         unless IMAGE_EXTENSIONS.include?(format)
           shown = format.empty? ? "no file extension" : "unknown file extension '.#{format}'"
-          raise ArgumentError, "cannot pick an output format from #{@file_name.to_s.inspect}: #{shown} (use e.g. .png, .svg, .pdf, .dot)"
+          raise ArgumentError, "cannot pick an output format from #{@file_name.to_s.inspect}: #{shown} (supported: .html, .json, .mmd, .dot/.gv, or an image: #{IMAGE_EXTENSIONS.map { |e| ".#{e}" }.join(", ")})"
         end
         raise ArgumentError, "Graphviz 'dot' not found; install graphviz" unless on_path?("dot")
         image, err, status = Open3.capture3("dot", "-T#{format}", "-K#{engine}", stdin_data: to_dot, binmode: true)

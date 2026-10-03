@@ -21,7 +21,7 @@ RSpec.describe "aws_security_viz.gemspec" do
     expect(spec.files.reject { |f| File.directory?(File.join(root, f)) }).to all(match(%r{\A(lib/|exe/|LICENSE\.md\z|README\.md\z|CHANGELOG\.md\z)}))
   end
 
-  it "packages the executable, option sample" do
+  it "packages the executable and the option sample" do
     expect(spec.files).to include("exe/aws_security_viz", "lib/aws_security_viz/opts.yml.sample")
   end
 

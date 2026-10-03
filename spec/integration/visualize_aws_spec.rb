@@ -72,7 +72,7 @@ describe AwsSecurityViz::VisualizeAws do
       expect(Open3).not_to receive(:capture3)
       ["out", "out.xyz"].each do |name|
         renderer = AwsSecurityViz::Renderer::GraphViz.new(File.join(Dir.tmpdir, name), config)
-        expect { renderer.output }.to raise_error(ArgumentError, /cannot pick an output format.*\.png, \.svg/)
+        expect { renderer.output }.to raise_error(ArgumentError, /cannot pick an output format.*\.html, \.json, \.mmd, \.dot\/\.gv.*\.png, \.svg, \.pdf/)
       end
     end
 

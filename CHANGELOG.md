@@ -6,7 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - --input and --output aliases for -o/--source-file and -f/--filename; `init` alias for `setup`
 - Rule descriptions are kept: JSON edges carry a `descriptions` list and DOT edges a `tooltip` (hashed under --obfuscate)
-- --show-unused marks security groups with no attached network interface (dashed grey in DOT, `unused` class in Mermaid, `unused: true` in JSON and navigator output); it needs `ec2:DescribeNetworkInterfaces` and is ignored with --source-file
+- --show-unused marks security groups with no attached network interface (dashed grey in DOT, `unused` class in Mermaid, `unused: true` in JSON and HTML output); it needs `ec2:DescribeNetworkInterfaces` and is ignored with --source-file
 
 ### Changed
 - The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg); the default output is aws-security-viz.html. --renderer is deprecated, still works, and prints a warning; `--renderer navigator` writes the html viewer
