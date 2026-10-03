@@ -86,7 +86,8 @@ Options:
   -a, --access-key=<s>       AWS access key
   -s, --secret-key=<s>       AWS secret key
   -e, --session-token=<s>    AWS session token
-  -r, --region=<s>           AWS region to query (default: us-east-1)
+  -r, --region=<s>           AWS region to query (default: SDK chain, e.g. AWS_REGION or profile)
+  -p, --profile=<s>          AWS shared-config profile to use (default: AWS_PROFILE)
   -v, --vpc-id=<s>           AWS VPC id to show
   -o, --source-file=<s>      JSON source file containing security groups
   -f, --filename=<s>         Output file name (default: aws-security-viz.png)
