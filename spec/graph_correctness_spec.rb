@@ -31,7 +31,6 @@ describe VisualizeAws do
   end
 
   it "B2: keeps IPv6 ranges and prefix lists as rule peers" do
-    pending "B2: Ipv6Ranges and PrefixListIds are ignored"
     labels = render("navigator")["data"]["nodes"].map { |n| n["label"] }
     expect(labels).to include("::/0", "pl-123")
   end

@@ -27,8 +27,9 @@ class IpPermission
     (@ip.protocol == "-1") ? "*" : [@ip.from, @ip.to].uniq.join("-") + "/" + @ip.protocol
   end
 
+  # IPv4 ranges, IPv6 ranges and prefix lists; each peer is named by its CIDR or prefix list id.
   def cidr_traffic
-    @ip.ip_ranges
+    (@ip.ip_ranges + @ip.ipv6_ranges + @ip.prefix_lists)
       .select { |range| !@exclusions.match(range) }
       .collect { |range|
       Traffic.new(@ingress, range.cidr_ip, @group.group_id, port_range)

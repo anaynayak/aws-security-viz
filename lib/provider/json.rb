@@ -68,6 +68,18 @@ module Json
       }
     end
 
+    def ipv6_ranges
+      (@ip["Ipv6Ranges"] || []).collect { |range|
+        Json::IpPermissionRange.new(range, "CidrIpv6")
+      }
+    end
+
+    def prefix_lists
+      (@ip["PrefixListIds"] || []).collect { |pl|
+        Json::IpPermissionRange.new(pl, "PrefixListId")
+      }
+    end
+
     def groups
       @ip["UserIdGroupPairs"].collect { |pair|
         Json::IpPermissionGroup.new(pair)
@@ -76,12 +88,13 @@ module Json
   end
 
   class IpPermissionRange
-    def initialize(range)
+    def initialize(range, key = "CidrIp")
       @range = range
+      @key = key
     end
 
     def cidr_ip
-      @range["CidrIp"]
+      @range[@key]
     end
 
     def to_str

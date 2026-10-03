@@ -73,6 +73,18 @@ module Ec2
       }
     end
 
+    def ipv6_ranges
+      (@ip["ipv_6_ranges"] || []).collect { |range|
+        Ec2::IpPermissionRange.new(range, "cidr_ipv_6")
+      }
+    end
+
+    def prefix_lists
+      (@ip["prefix_list_ids"] || []).collect { |pl|
+        Ec2::IpPermissionRange.new(pl, "prefix_list_id")
+      }
+    end
+
     def groups
       @ip["user_id_group_pairs"].collect { |gp|
         Ec2::IpPermissionGroup.new(gp)
@@ -81,12 +93,13 @@ module Ec2
   end
 
   class IpPermissionRange
-    def initialize(range)
+    def initialize(range, key = "cidr_ip")
       @range = range
+      @key = key
     end
 
     def cidr_ip
-      @range["cidr_ip"]
+      @range[@key]
     end
 
     def to_str
