@@ -64,9 +64,11 @@ You can open it with your local browser at `http://localhost:3000/navigator.html
 
 3.b With AWS credentials passed as parameters:
 
-```docker run -i --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz -a REPLACE_AWS_ACCESS_KEY_ID -s REPLACE_SECRET --renderer navigator --serve 3000```. 
+```docker run -i --rm -t -p 3000:3000 -v (pwd)/aws-viz:/aws-security-viz --name  sec-viz sec-viz /usr/local/bundle/bin/aws_security_viz -a REPLACE_AWS_ACCESS_KEY_ID -s REPLACE_SECRET -r REPLACE_REGION --renderer navigator --serve 3000```. 
 
 You can open it with your local browser at `http://localhost:3000/navigator.html#aws-security-viz.png`. 
+
+The region comes from `-r/--region`, or otherwise from the AWS SDK chain (`AWS_REGION`, a profile); there is no built-in default, so a missing region fails with `MissingRegionError`.
 
 Parameters passed to the docker command:
 * `-v $(pwd)/aws-viz:aws-security-viz` local directory where output will be generated.
