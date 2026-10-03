@@ -59,6 +59,15 @@ describe VisualizeAws do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
     end
 
+    it "fails clearly, without writing the file, when the layout engine is missing" do
+      missing = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, layout: "neato"})
+      stub_const("ENV", ENV.to_h.merge("PATH" => ""))
+      File.delete(temp_file.path)
+      expect { VisualizeAws.new(missing, opts).unleash(temp_file.path) }
+        .to raise_error(ArgumentError, "Graphviz 'neato' not found; install graphviz")
+      expect(File.exist?(temp_file.path)).to be(false)
+    end
+
     it "passes the configured layout engine to graphviz" do
       neato = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "neato"})
       expect(Graphviz).to receive(:output).with(anything, path: temp_file.path, format: nil, dot: "neato")

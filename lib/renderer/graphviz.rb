@@ -29,11 +29,20 @@ module Renderer
     end
 
     def output
+      engine = @config.layout
+      raise ArgumentError, "Graphviz '#{engine}' not found; install graphviz" unless on_path?(engine)
       # format: nil to force detection based on extension; the layout engine is the executable.
       Graphviz.output(@g, path: @file_name, format: nil, dot: @config.layout)
     end
 
     private
+
+    def on_path?(command)
+      ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? { |dir|
+        path = File.join(dir, command)
+        File.file?(path) && File.executable?(path)
+      }
+    end
 
     def parent_for(vpc_id)
       return @g if vpc_id.nil?

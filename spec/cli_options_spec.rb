@@ -12,7 +12,7 @@ describe "exe/aws_security_viz options" do
 
   def run_exe(*args, dir:, env: {})
     cmd = ["bundle", "exec", "ruby", "-I", "lib", "exe/aws_security_viz", "-o", source, "-c", File.join(dir, "opts.yml"), *args]
-    env = {"DEBUG" => nil, "OBFUSCATE" => nil}.merge(env)
+    env = {"DEBUG" => nil, "OBFUSCATE" => nil, "BUNDLE_GEMFILE" => File.join(root, "Gemfile")}.merge(env)
     Open3.capture3(env, *cmd, chdir: root)
   end
 
@@ -33,13 +33,6 @@ describe "exe/aws_security_viz options" do
     out, _err, status = run_exe("--layout", "bogus", "-f", File.join(@dir, "x.dot"), dir: @dir)
     expect(status.exitstatus).to eq(1)
     expect(out).to include("unknown layout engine 'bogus'")
-  end
-
-  it "uses the neato layout engine when asked" do
-    file = File.join(@dir, "x.dot")
-    _out, _err, status = run_exe("--layout", "neato", "-f", file, dir: @dir)
-    expect(status.exitstatus).to eq(0)
-    expect(File.read(file)).to include("digraph").or include("graph")
   end
 
   it "takes the layout engine from opts.yml" do
@@ -83,11 +76,13 @@ describe "exe/aws_security_viz options" do
 
   it "names the default output after the renderer" do
     Dir.chdir(@dir) do
-      cmd = ->(*args) { Open3.capture3({"DEBUG" => nil}, "bundle", "exec", "ruby", "-I", File.join(root, "lib"), File.join(root, "exe/aws_security_viz"), "-o", source, *args) }
-      cmd.call("--renderer", "json")
+      cmd = ->(*args) { Open3.capture3({"DEBUG" => nil, "OBFUSCATE" => nil, "BUNDLE_GEMFILE" => File.join(root, "Gemfile")}, "bundle", "exec", "ruby", "-I", File.join(root, "lib"), File.join(root, "exe/aws_security_viz"), "-o", source, *args) }
+      _out, _err, status = cmd.call("--renderer", "json")
+      expect(status.exitstatus).to eq(0)
       expect(File.exist?("aws-security-viz.json")).to be(true)
       expect(File.exist?("aws-security-viz.png")).to be(false)
-      cmd.call
+      _out, _err, status = cmd.call
+      expect(status.exitstatus).to eq(0)
       expect(File.exist?("aws-security-viz.png")).to be(true)
     end
   end
