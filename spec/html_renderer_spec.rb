@@ -73,6 +73,7 @@ describe AwsSecurityViz::Renderer::Html do
       r = browser_report(File.expand_path("report.html"))
       expect(r["requests"]).to eq(["file://" + File.expand_path("report.html")])
       expect(r["errors"]).to be_empty
+      expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
       expect(r["dialogs"]).to be_empty
       expect(r["pwned"]).to be_nil
       expect(r["injected"]).to eq(0)

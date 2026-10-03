@@ -6,13 +6,14 @@ import sys
 from playwright.sync_api import sync_playwright
 
 report = sys.argv[1]
-out = {"requests": [], "dialogs": [], "errors": []}
+out = {"requests": [], "dialogs": [], "errors": [], "console": []}
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page()
     page.on("request", lambda r: out["requests"].append(r.url))
     page.on("dialog", lambda d: (out["dialogs"].append(d.message), d.dismiss()))
+    page.on("console", lambda m: out["console"].append(m.type + ": " + m.text) if m.type in ("error", "warning") else None)
     page.on("pageerror", lambda e: out["errors"].append(str(e)))
     page.goto("file://" + report)
     page.wait_for_selector("canvas")
