@@ -13,13 +13,16 @@ It reads either the live AWS API (`aws-sdk-ec2`) or `aws ec2 describe-security-g
 
 ## Conventions
 
-1. Commit directly to `main`. Small, single-purpose commits. Never push and never tag or publish a gem or image -
-   the user does releases.
-2. Every behaviour change or bug fix lands with a spec that fails before and passes after.
-3. Keep the suite green and `standardrb` clean at every commit.
-4. Plain ASCII in all prose (`->`, `-`, straight quotes); numbered lists rather than bullets.
-5. Supported Ruby: 3.3, 3.4, 4.0. Use `Data.define` for value objects, `require_relative` within the gem.
-6. `*.html` is git-ignored (local reports, generated output). Viewer templates that ship in the gem live under
+1. Changes land through pull requests: small, single-purpose commits on a branch, one combined PR per batch
+   of work. Subagents commit locally only - they never push, open PRs, tag, or publish a gem or image. The main
+   session pushes, opens the PR, waits for checks and merges; the user does releases.
+2. Published docs and repo prose never contain agent narration or working notes ("I checked...", "not verified").
+   Before rewording an existing file, run `feta get <path> --json` and keep wording the user wrote.
+3. Every behaviour change or bug fix lands with a spec that fails before and passes after.
+4. Keep the suite green and `standardrb` clean at every commit.
+5. Plain ASCII in all prose (`->`, `-`, straight quotes); numbered lists rather than bullets.
+6. Supported Ruby: 3.3, 3.4, 4.0. Use `Data.define` for value objects, `require_relative` within the gem.
+7. `*.html` is git-ignored (local reports, generated output). Viewer templates that ship in the gem live under
    `lib/` and are exempted in `.gitignore`.
 
 ## Modernization goal
