@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:">
+<title>AWS security groups</title>
+<style>
+  html, body { margin: 0; height: 100%; font: 13px/1.4 system-ui, sans-serif; color: #222; }
+  #app { display: flex; flex-direction: column; height: 100%; }
+  #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #ccc; background: #f6f6f6; }
+  #bar input[type=search] { width: 220px; padding: 3px 6px; }
+  #main { display: flex; flex: 1; min-height: 0; }
+  #cy { flex: 1; }
+  #details { width: 320px; overflow: auto; padding: 10px 12px; border-left: 1px solid #ccc; background: #fafafa; }
+  #details h2 { margin: 0 0 6px; font-size: 15px; }
+  #details h3 { margin: 12px 0 4px; font-size: 13px; }
+  #details ul { margin: 0; padding-left: 18px; }
+  .risky { color: #b00020; font-weight: bold; }
+  .muted { color: #666; }
+  #legend span { margin-right: 10px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bar">
+    <input id="search" type="search" placeholder="Search groups" aria-label="Search groups">
+    <label><input id="ingress" type="checkbox" checked> Ingress</label>
+    <label><input id="egress" type="checkbox" checked> Egress</label>
+    <label><input id="risky-only" type="checkbox"> Risky only</label>
+    <button id="reset" type="button">Reset view</button>
+    <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span class="risky">thick dashed: risky public ingress</span><span>grey dashed node: unused</span></span>
+  </div>
+  <div id="main">
+    <div id="cy"></div>
+    <div id="details"><p class="muted">Click a group or an edge to see its details.</p></div>
+  </div>
+</div>
+<script type="application/json" id="graph-data">/*DATA*/</script>
+<script>/*CYTOSCAPE*/</script>
+<script>
+(function () {
+  "use strict";
+  var data = JSON.parse(document.getElementById("graph-data").textContent);
+  var nodeById = {};
+  data.nodes.forEach(function (n) { nodeById[n.id] = n; });
+
+  // Compound parents: region (when several regions were queried) containing VPC.
+  var elements = [];
+  var seen = {};
+  function parent(id, label, kind, parentId) {
+    if (!seen[id]) {
+      seen[id] = true;
+      var d = { id: id, label: label, kind: kind };
+      if (parentId) d.parent = parentId;
+      elements.push({ group: "nodes", data: d, classes: kind });
+    }
+    return id;
+  }
+  data.nodes.forEach(function (n) {
+    var d = { id: n.id, label: n.label, kind: "group", unused: !!n.unused };
+    var up = null;
+    if (n.region) up = parent("region:" + n.region, n.region, "region", null);
+    if (n.vpc) up = parent("vpc:" + (n.region || "") + "|" + n.vpc, n.vpc, "vpc", up);
+    if (up) d.parent = up;
+    elements.push({ group: "nodes", data: d, classes: n.unused ? "unused" : "" });
+  });
+  data.edges.forEach(function (e) {
+    elements.push({ group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") });
+  });
+
+  var cy = cytoscape({
+    container: document.getElementById("cy"),
+    elements: elements,
+    wheelSensitivity: 0.3,
+    style: [
+      { selector: "node", style: { label: "data(label)", "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "label", height: "label", padding: "8px" } },
+      { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
+      { selector: "node.unused", style: { "background-color": "#eee", "border-style": "dashed", "border-color": "#888", color: "#555" } },
+      { selector: "edge", style: { label: "data(label)", "font-size": 9, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "text-background-color": "#fff", "text-background-opacity": 0.85, "text-background-padding": "1px" } },
+      { selector: "edge.ingress", style: { "line-color": "#1f5fbf", "target-arrow-color": "#1f5fbf" } },
+      { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
+      { selector: "edge.risky", style: { width: 4, "line-style": "dashed", "line-color": "#dc143c", "target-arrow-color": "#dc143c", color: "#b00020" } },
+      { selector: ".dim", style: { opacity: 0.12 } },
+      { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
+      { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
+    ],
+    layout: { name: "cose", animate: false, nodeDimensionsIncludeLabels: true, padding: 30 }
+  });
+
+  window.awsSecurityViz = { cy: cy }; // read by the browser spec
+
+  var details = document.getElementById("details");
+
+  function el(tag, text, cls) {
+    var e = document.createElement(tag);
+    if (text !== undefined) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+  function field(label, value) {
+    var p = el("p");
+    p.appendChild(el("strong", label + ": "));
+    p.appendChild(document.createTextNode(value));
+    return p;
+  }
+  function describeEdges(title, edges, other) {
+    var box = document.createDocumentFragment();
+    if (!edges.length) return box;
+    box.appendChild(el("h3", title));
+    var ul = el("ul");
+    edges.forEach(function (e) {
+      var li = el("li");
+      li.appendChild(document.createTextNode(other(e).data("label") + " : " + (e.data("label") || "all")));
+      if (e.data("risky")) li.appendChild(el("span", " (risky)", "risky"));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    return box;
+  }
+  function descriptionList(descs) {
+    var ul = el("ul");
+    (descs || []).forEach(function (d) {
+      ul.appendChild(el("li", (d.ports ? d.ports + ": " : "") + d.text));
+    });
+    return ul;
+  }
+  var edgeData = {};
+  data.edges.forEach(function (e) { edgeData[e.id] = e; });
+
+  function show(target) {
+    details.textContent = "";
+    if (target.isEdge()) {
+      var e = edgeData[target.id()];
+      details.appendChild(el("h2", target.source().data("label") + " -> " + target.target().data("label")));
+      details.appendChild(field("Direction", e.kind));
+      details.appendChild(field("Ports", e.label || "all"));
+      if (e.risky) details.appendChild(el("p", "Risky: public ingress on a sensitive port or all traffic", "risky"));
+      if (e.descriptions && e.descriptions.length) {
+        details.appendChild(el("h3", "Rule descriptions"));
+        details.appendChild(descriptionList(e.descriptions));
+      }
+      return;
+    }
+    var n = nodeById[target.id()];
+    if (!n) {
+      details.appendChild(el("h2", target.data("label")));
+      details.appendChild(field("Type", target.data("kind").toUpperCase()));
+      return;
+    }
+    details.appendChild(el("h2", n.label));
+    details.appendChild(field("Id", n.id));
+    if (n.vpc) details.appendChild(field("VPC", n.vpc));
+    if (n.region) details.appendChild(field("Region", n.region));
+    if (n.unused) details.appendChild(el("p", "Unused: no network interfaces attached", "muted"));
+    details.appendChild(describeEdges("Incoming", target.incomers("edge").toArray(), function (e) { return e.source(); }));
+    details.appendChild(describeEdges("Outgoing", target.outgoers("edge").toArray(), function (e) { return e.target(); }));
+    var withDescs = target.connectedEdges().toArray().filter(function (e) { var d = edgeData[e.id()].descriptions; return d && d.length; });
+    if (withDescs.length) {
+      details.appendChild(el("h3", "Rule descriptions"));
+      withDescs.forEach(function (e) {
+        details.appendChild(el("p", e.source().data("label") + " -> " + e.target().data("label"), "muted"));
+        details.appendChild(descriptionList(edgeData[e.id()].descriptions));
+      });
+    }
+  }
+
+  function clearFocus() { cy.elements().removeClass("dim"); }
+  function focus(target) {
+    clearFocus();
+    var keep = target.isNode() ? target.closedNeighborhood().union(target.ancestors()).union(target.neighborhood().ancestors()) : target.union(target.connectedNodes()).union(target.connectedNodes().ancestors());
+    cy.elements().not(keep).addClass("dim");
+  }
+
+  cy.on("tap", "node, edge", function (evt) {
+    var t = evt.target;
+    if (t.isNode() && t.isParent()) { show(t); return; }
+    show(t);
+    focus(t);
+  });
+  cy.on("tap", function (evt) {
+    if (evt.target === cy) {
+      clearFocus();
+      details.textContent = "";
+      details.appendChild(el("p", "Click a group or an edge to see its details.", "muted"));
+    }
+  });
+
+  function applyFilters() {
+    var ingress = document.getElementById("ingress").checked;
+    var egress = document.getElementById("egress").checked;
+    var riskyOnly = document.getElementById("risky-only").checked;
+    cy.edges().forEach(function (e) {
+      var visible = (e.data("kind") === "ingress" ? ingress : egress) && (!riskyOnly || e.data("risky"));
+      e.style("display", visible ? "element" : "none");
+    });
+  }
+  ["ingress", "egress", "risky-only"].forEach(function (id) {
+    document.getElementById(id).addEventListener("change", applyFilters);
+  });
+
+  document.getElementById("search").addEventListener("input", function (evt) {
+    var q = evt.target.value.trim().toLowerCase();
+    cy.nodes().removeClass("match");
+    if (!q) return;
+    var hits = cy.nodes().filter(function (n) {
+      return !n.isParent() && (String(n.data("label")).toLowerCase().indexOf(q) !== -1 || String(n.id()).toLowerCase().indexOf(q) !== -1);
+    });
+    hits.addClass("match");
+    if (hits.length) cy.animate({ fit: { eles: hits, padding: 80 }, duration: 0 });
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    clearFocus();
+    cy.nodes().removeClass("match");
+    document.getElementById("search").value = "";
+    cy.fit(undefined, 30);
+  });
+})();
+</script>
+</body>
+</html>

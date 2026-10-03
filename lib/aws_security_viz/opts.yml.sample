@@ -1,0 +1,14 @@
+--- 
+:format: dot
+#:egress: true
+# Ports flagged when open to 0.0.0.0/0 or ::/0 (all-traffic rules always are):
+#:risky_ports: [22, 3389, 3306, 5432, 1433, 6379, 9200, 27017]
+#:exclude: 
+#- .*test.*
+#- .*perf.*
+#- .*0.0.0.0/32.*
+:groups:
+#  '0.0.0.0/0': '*'
+  'x.x.x.x/0': 'External'
+  'y.y.y.y/0': 'External'
+

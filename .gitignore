@@ -31,13 +31,18 @@
 opts.yml
 
 .vagrant
-Gemfile.lock
 
 # in case you run the sample commands in this directory..
 viz.svg
 aws.json
-navigator.html
 *.png
 *.dot
 *.svg
 .DS_Store
+
+# local reports and generated output; viewer templates shipped in the gem are exempt
+*.html
+!/lib/**/*.html
+
+# Backlog.md task tracking stays local
+/backlog/
