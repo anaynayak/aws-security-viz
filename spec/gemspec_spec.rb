@@ -25,6 +25,15 @@ RSpec.describe "aws_security_viz.gemspec" do
     expect(spec.files).to include("exe/aws_security_viz", "lib/aws_security_viz/opts.yml.sample", "lib/aws_security_viz/export/html/view.html", "lib/aws_security_viz/export/html/navigator.html")
   end
 
+  it "packages the html viewer template and the vendored Cytoscape.js with its license and provenance" do
+    expect(spec.files).to include(
+      "lib/aws_security_viz/export/html/viewer.html",
+      "lib/aws_security_viz/vendor/cytoscape/cytoscape.min.js",
+      "lib/aws_security_viz/vendor/cytoscape/LICENSE",
+      "lib/aws_security_viz/vendor/cytoscape/README.md"
+    )
+  end
+
   it "declares release metadata and no build-time fields" do
     expect(spec.metadata).to include("rubygems_mfa_required" => "true", "source_code_uri" => a_string_starting_with("https://"), "changelog_uri" => a_string_starting_with("https://"))
     expect(spec.test_files).to be_empty

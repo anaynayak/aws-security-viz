@@ -79,7 +79,7 @@ module AwsSecurityViz
         o.on("-p", "--profile=NAME", "AWS shared-config profile to use (AWS_PROFILE is read by the SDK)") { |v| opts[:profile] = v }
         o.on("-v", "--vpc-id=ID", "AWS VPC id to show") { |v| opts[:vpc_id] = v }
         o.on("-o", "--source-file=FILE", "--input=FILE", "JSON source file containing security groups") { |v| opts[:source_file] = v }
-        o.on("-f", "--filename=FILE", "--output=FILE", "Output file name (default: aws-security-viz.png, .mmd for mermaid, .json for json/navigator)") { |v| opts[:filename] = v }
+        o.on("-f", "--filename=FILE", "--output=FILE", "Output file name (default: aws-security-viz.png, .mmd for mermaid, .json for json/navigator, .html for html)") { |v| opts[:filename] = v }
         o.on("-c", "--config=FILE", "Config file (opts.yml)") { |v| opts[:config] = v }
         o.on("-l", "--[no-]color", "Deprecated, ignored: edges are blue for ingress and red for egress, risky public ingress is dashed crimson") { |v| opts[:color] = v }
         o.on("-n", "--renderer=NAME", "Renderer (#{Renderer.all.join("|")}) (default: graphviz)") { |v| opts[:renderer] = v }
