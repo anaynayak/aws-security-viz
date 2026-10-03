@@ -88,16 +88,27 @@ Options:
   -a, --access-key=<s>       AWS access key
   -s, --secret-key=<s>       AWS secret key
   -e, --session-token=<s>    AWS session token
-  -r, --region=<s>           AWS region to query (default: SDK chain, e.g. AWS_REGION or profile)
-  -p, --profile=<s>          AWS shared-config profile to use (default: AWS_PROFILE)
+  -r, --region=<s>           AWS region to query (default: SDK chain, e.g.
+                             AWS_REGION or profile)
+  -p, --profile=<s>          AWS shared-config profile to use (AWS_PROFILE is
+                             read by the SDK)
   -v, --vpc-id=<s>           AWS VPC id to show
   -o, --source-file=<s>      JSON source file containing security groups
-  -f, --filename=<s>         Output file name (default: aws-security-viz.png)
+  -f, --filename=<s>         Output file name (default: aws-security-viz.png,
+                             or .json for json/navigator)
   -c, --config=<s>           Config file (opts.yml) (default: opts.yml)
   -l, --color                Colored node edges
+  -n, --renderer=<s>         Renderer (graphviz|json|navigator) (default:
+                             graphviz)
+  -y, --layout=<s>           Graphviz layout engine
+                             (dot|neato|sfdp|fdp|twopi|circo); overrides
+                             opts.yml format
+  -d, --debug                Verbose output and stack traces (or DEBUG=true)
+  -b, --obfuscate            Hash group names and ports (or OBFUSCATE=true)
   -u, --source-filter=<s>    Source filter
   -t, --target-filter=<s>    Target filter
-  --serve=<i>                Serve a HTTP server at specified port
+  --serve=<i>                Serve a HTTP server
+  -i, --version              Print version and exit
   -h, --help                 Show this message
 ```
 
