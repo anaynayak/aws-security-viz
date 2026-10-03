@@ -49,7 +49,7 @@ describe AwsSecurityViz::VisualizeAws do
         "sg-amzelb" => {"label" => "amazon-elb-sg"},
         "sg-amzelb -> sg-appgrp" => edge.merge("label" => "80/tcp"),
         "*" => {"label" => "*"},
-        "* -> sg-appgrp" => edge.merge("label" => "22/tcp")
+        "* -> sg-appgrp" => edge.merge("label" => "22/tcp", "color" => "red", "penwidth" => "3")
       )
     end
 

@@ -36,7 +36,8 @@ module AwsSecurityViz
         add_node(from, {})
         add_node(to, {})
         # Edges live in the root graph: an edge inside a cluster would pull its other endpoint in.
-        edge_attrs = {style: "bold"}.merge(opts.except(:descriptions))
+        edge_attrs = {style: "bold"}.merge(opts.except(:descriptions, :risky))
+        edge_attrs = edge_attrs.merge(color: "red", penwidth: 3) if opts[:risky]
         edge_attrs[:tooltip] = tooltip(opts[:descriptions]) unless opts[:descriptions].to_a.empty?
         @edges << "#{quote(from)} -> #{quote(to)} [#{attrs(edge_attrs)}];"
       end

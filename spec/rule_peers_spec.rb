@@ -36,7 +36,7 @@ describe AwsSecurityViz::VisualizeAws do
   it "adds edges for IPv6 ranges and prefix lists from the AWS provider" do
     stub_security_groups([group("Web", peer_ingress(22, ipv6: ["::/0"], prefix_lists: ["pl-123"]))])
     expect(edges(AwsSecurityViz::AwsConfig.new)).to contain_exactly(
-      [:edge, "::/0", "Web", {color: :blue, label: "22/tcp"}],
+      [:edge, "::/0", "Web", {color: :blue, label: "22/tcp", risky: true}],
       [:edge, "pl-123", "Web", {color: :blue, label: "22/tcp"}]
     )
   end

@@ -8,6 +8,8 @@ require_relative "../aws_security_viz"
 module AwsSecurityViz
   # Command line front end: `CLI.new(argv).run` returns the exit status (0, 1, or 130 on Ctrl-C).
   class CLI
+    RISK_EXIT = 2
+
     def initialize(argv, env: ENV, out: $stdout, err: $stderr)
       @argv = argv.dup
       @env = env
@@ -78,6 +80,7 @@ module AwsSecurityViz
         o.on("-b", "--[no-]obfuscate", "Hash group names and ports (or OBFUSCATE=true)") { |v| opts[:obfuscate] = v }
         o.on("-u", "--source-filter=FILTER", "Source filter") { |v| opts[:source_filter] = v }
         o.on("-t", "--target-filter=FILTER", "Target filter") { |v| opts[:target_filter] = v }
+        o.on("--fail-on-risk", "Exit 2 when 0.0.0.0/0 or ::/0 can reach a sensitive port (the output is still written)") { opts[:fail_on_risk] = true }
         o.on("--serve=PORT", Integer, "Serve a HTTP server") { |v| opts[:serve] = v }
         o.on("-i", "--version", "Print version and exit") {
           @out.puts "aws_security_viz v#{VERSION}"
@@ -109,8 +112,18 @@ module AwsSecurityViz
         config = AwsConfig.load(opts[:config]).merge(overrides)
         Renderer.validate!(opts[:renderer])
         filename = opts[:filename] || Renderer.default_file(opts[:renderer])
-        VisualizeAws.new(config, opts).unleash(filename)
+        risky = VisualizeAws.new(config, opts).unleash(filename).to_i
+        report_risk(risky)
         serve(opts[:serve], filename) if opts[:serve]
+        return RISK_EXIT if risky > 0 && opts[:fail_on_risk]
+      end
+    end
+
+    def report_risk(count)
+      if count > 0
+        AwsSecurityViz.logger.warn("#{count} risky edge#{"s" unless count == 1}: public ingress (0.0.0.0/0 or ::/0) on a sensitive port or all traffic")
+      else
+        AwsSecurityViz.logger.info("no risky public ingress found")
       end
     end
 

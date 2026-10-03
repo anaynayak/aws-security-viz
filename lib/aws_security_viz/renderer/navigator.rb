@@ -22,7 +22,9 @@ module AwsSecurityViz
       end
 
       def add_edge(from, to, opts)
-        @edges << {id: "#{from}-#{to}", from: from, to: to, label: opts[:label]}
+        edge = {id: "#{from}-#{to}", from: from, to: to, label: opts[:label]}
+        edge[:risky] = true if opts[:risky]
+        @edges << edge
       end
 
       def output

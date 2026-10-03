@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require_relative "risk"
 
 module AwsSecurityViz
   class AwsConfig
@@ -18,6 +19,11 @@ module AwsSecurityViz
 
     def groups
       @opts[:groups] || {}
+    end
+
+    # Ports whose exposure to 0.0.0.0/0 or ::/0 is flagged (opts.yml :risky_ports); all traffic always is.
+    def risky_ports
+      Array(@opts[:risky_ports] || Risk::DEFAULT_PORTS).map { |p| Integer(p) }
     end
 
     LAYOUTS = %w[dot neato sfdp fdp twopi circo].freeze

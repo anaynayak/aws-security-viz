@@ -38,6 +38,11 @@ module AwsSecurityViz
       @underlying = GraphFilter.new(underlying).filter(resolve(source), resolve(destination))
     end
 
+    # Risky edges that survived filtering.
+    def risky_edge_count
+      @underlying.edges.count { |e| opts(e.source, e.target)[:risky] }
+    end
+
     def output(renderer)
       nodes = @underlying.vertices.map { |v| [v, @node_properties[v] || {}] }
       edges = @underlying.edges.map { |e| [e.source, e.target, opts(e.source, e.target)] }
@@ -76,6 +81,7 @@ module AwsSecurityViz
       return opts unless existing
       color = [existing[:color], opts[:color]].include?(:blue) ? :blue : opts[:color]
       merged = existing.merge(opts).merge(color: color, label: PortLabel.normalise("#{existing[:label]},#{opts[:label]}"))
+      merged[:risky] = true if existing[:risky] || opts[:risky]
       descriptions = (existing[:descriptions].to_a + opts[:descriptions].to_a).uniq
       descriptions.empty? ? merged : merged.merge(descriptions: descriptions)
     end

@@ -45,8 +45,9 @@ module AwsSecurityViz
   end
 
   # descriptions: the non-empty rule descriptions behind this traffic, as {ports:, text:} hashes.
-  Traffic = Data.define(:ingress, :from, :to, :port_range, :descriptions) do
-    def initialize(ingress:, from:, to:, port_range:, descriptions: [])
+  # risky: public ingress on a sensitive port (see Risk), decided on the real rule.
+  Traffic = Data.define(:ingress, :from, :to, :port_range, :descriptions, :risky) do
+    def initialize(ingress:, from:, to:, port_range:, descriptions: [], risky: false)
       super
     end
 
@@ -54,7 +55,7 @@ module AwsSecurityViz
       t = traffic_list.first
       port_range = PortLabel.normalise(traffic_list.collect(&:port_range).join(","))
       new(ingress: t.ingress, from: t.from, to: t.to, port_range: port_range,
-        descriptions: traffic_list.flat_map(&:descriptions).uniq)
+        descriptions: traffic_list.flat_map(&:descriptions).uniq, risky: traffic_list.any?(&:risky))
     end
   end
 

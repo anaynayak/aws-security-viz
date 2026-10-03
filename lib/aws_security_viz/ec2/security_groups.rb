@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../model"
+require_relative "../risk"
 
 module AwsSecurityViz
   class SecurityGroups
@@ -42,6 +43,7 @@ module AwsSecurityViz
       rule.peers.reject { |peer| @config.exclusions.match(peer.name) }.map { |peer|
         text = peer.description.to_s.strip
         Traffic.new(ingress: ingress, from: peer.id, to: group.id, port_range: rule.port_range,
+          risky: ingress && Risk.risky?(rule, peer, @config.risky_ports),
           descriptions: text.empty? ? [] : [{ports: rule.port_range, text: text}])
       }
     end

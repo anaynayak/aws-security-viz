@@ -23,6 +23,7 @@ module AwsSecurityViz
       g = build
       g.filter(@options[:source_filter], @options[:target_filter])
       g.output(Renderer.pick(@options[:renderer], output_file, @config))
+      g.risky_edge_count
     end
 
     def build
@@ -33,6 +34,7 @@ module AwsSecurityViz
         g.add_node(group.id, {label: group.name, vpc_id: group.vpc_id, region: group.region, group_id: group.id})
         @security_groups.traffic(group).each { |traffic|
           edge = {color: traffic.ingress ? :blue : :red, label: traffic.port_range}
+          edge[:risky] = true if traffic.risky
           edge[:descriptions] = traffic.descriptions unless traffic.descriptions.empty?
           if traffic.ingress
             g.add_edge(traffic.from, traffic.to, edge)
