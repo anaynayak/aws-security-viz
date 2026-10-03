@@ -22,7 +22,7 @@ RSpec.describe "aws_security_viz.gemspec" do
   end
 
   it "packages the executable, option sample and html viewers" do
-    expect(spec.files).to include("exe/aws_security_viz", "lib/opts.yml.sample", "lib/export/html/view.html", "lib/export/html/navigator.html")
+    expect(spec.files).to include("exe/aws_security_viz", "lib/aws_security_viz/opts.yml.sample", "lib/aws_security_viz/export/html/view.html", "lib/aws_security_viz/export/html/navigator.html")
   end
 
   it "declares release metadata and no build-time fields" do

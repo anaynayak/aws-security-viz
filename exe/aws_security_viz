@@ -4,7 +4,7 @@
 require "aws_security_viz"
 require "optimist"
 require "webrick"
-require "version"
+require "aws_security_viz/version"
 
 opts = Optimist.options do
   version "aws_security_viz v#{AwsSecurityViz::VERSION}"

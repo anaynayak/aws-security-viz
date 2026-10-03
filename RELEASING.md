@@ -19,6 +19,6 @@ is no API key stored in GitHub.
 
 ## Cutting a release
 
-1. Bump `lib/version.rb` and finish the `CHANGELOG.md` entry; commit on `main` and make sure CI is green.
+1. Bump `lib/aws_security_viz/version.rb` and finish the `CHANGELOG.md` entry; commit on `main` and make sure CI is green.
 2. Tag and push: `git tag v0.3.0 && git push origin main v0.3.0` (the tag must equal `v` + the version).
-3. Watch the "Ruby Gem Release" workflow. It fails early if the tag and `lib/version.rb` disagree.
+3. Watch the "Ruby Gem Release" workflow. It fails early if the tag and `lib/aws_security_viz/version.rb` disagree.

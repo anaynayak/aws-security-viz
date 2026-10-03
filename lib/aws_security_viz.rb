@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-require_relative "ec2/security_groups"
-require_relative "provider/json"
-require_relative "provider/ec2"
-require_relative "renderer/all"
-require_relative "graph"
-require_relative "graph_filter"
-require_relative "exclusions"
-require_relative "debug_graph"
-require_relative "color_picker"
-require_relative "aws_config"
-require_relative "cli_guard"
+require_relative "aws_security_viz/ec2/security_groups"
+require_relative "aws_security_viz/provider/json"
+require_relative "aws_security_viz/provider/ec2"
+require_relative "aws_security_viz/renderer/all"
+require_relative "aws_security_viz/graph"
+require_relative "aws_security_viz/graph_filter"
+require_relative "aws_security_viz/exclusions"
+require_relative "aws_security_viz/debug_graph"
+require_relative "aws_security_viz/color_picker"
+require_relative "aws_security_viz/aws_config"
+require_relative "aws_security_viz/cli_guard"
 
 class VisualizeAws
   def initialize(config, options = {})

@@ -27,9 +27,9 @@ jobs:
           bundler-cache: true
       - name: Check tag matches gem version
         run: |
-          version="$(ruby -Ilib -e 'require "version"; print AwsSecurityViz::VERSION')"
+          version="$(ruby -Ilib -e 'require "aws_security_viz/version"; print AwsSecurityViz::VERSION')"
           if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match lib/version.rb (v${version})" >&2
+            echo "Tag ${GITHUB_REF_NAME} does not match lib/aws_security_viz/version.rb (v${version})" >&2
             exit 1
           fi
       - name: Publish to RubyGems
