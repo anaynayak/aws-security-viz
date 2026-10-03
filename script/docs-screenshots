@@ -1,0 +1,72 @@
+#!/usr/bin/env -S uv run --with playwright python3
+"""Regenerate the viewer screenshots and the social card in docs/assets from spec/integration/dummy.json.
+
+Needs headless Chromium: uv run --with playwright python3 -m playwright install chromium
+Usage: script/docs-screenshots
+"""
+import base64
+import pathlib
+import subprocess
+import tempfile
+
+from playwright.sync_api import sync_playwright
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+ASSETS = ROOT / "docs" / "assets"
+
+
+CARD = """
+<body style="margin:0;width:1200px;height:630px;background:#1f2937;color:#fff;font-family:Helvetica,Arial,sans-serif;display:flex">
+  <div style="padding:70px 60px;width:520px">
+    <div style="font-size:54px;font-weight:700">aws-security-viz</div>
+    <div style="font-size:30px;margin-top:28px;line-height:1.4;color:#d1d5db">Visualise AWS security groups and find open-to-the-internet ingress</div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;padding-right:50px">
+    <img style="width:100%;border-radius:12px;border:2px solid #374151" src="data:image/png;base64,SHOT">
+  </div>
+</body>
+"""
+
+
+def main():
+    with tempfile.TemporaryDirectory() as tmp:
+        page_file = pathlib.Path(tmp) / "viewer.html"
+        subprocess.run(
+            ["bundle", "exec", "exe/aws_security_viz", "-o", "spec/integration/dummy.json", "-f", str(page_file)],
+            cwd=ROOT,
+            check=True,
+        )
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1000, "height": 560})
+            page.goto(page_file.as_uri())
+            page.wait_for_timeout(800)
+            page.screenshot(path=str(ASSETS / "viewer-overview.png"))
+
+            page.check("#risky-only")
+            page.wait_for_timeout(500)
+            page.screenshot(path=str(ASSETS / "viewer-risky-only.png"))
+            page.uncheck("#risky-only")
+
+            page.fill("#search", "app")
+            page.wait_for_timeout(500)
+            page.screenshot(path=str(ASSETS / "viewer-search.png"))
+            page.fill("#search", "")
+
+            page.click("#reset")
+            page.wait_for_timeout(300)
+            page.evaluate(
+                "() => { const e = window.awsSecurityViz.cy.edges('[?risky]')[0]; e.emit('tap'); }"
+            )
+            page.wait_for_timeout(300)
+            page.screenshot(path=str(ASSETS / "viewer-details.png"))
+
+            shot = base64.b64encode((ASSETS / "viewer-risky-only.png").read_bytes()).decode()
+            card = browser.new_page(viewport={"width": 1200, "height": 630})
+            card.set_content(CARD.replace("SHOT", shot))
+            card.screenshot(path=str(ASSETS / "social-card.png"))
+            browser.close()
+
+
+if __name__ == "__main__":
+    main()
