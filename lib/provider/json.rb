@@ -5,6 +5,7 @@ require "json"
 class JsonProvider
   def initialize(options)
     @groups = JSON.parse(File.read(options[:source_file]))["SecurityGroups"]
+    @groups = @groups.select { |sg| sg["VpcId"] == options[:vpc_id] } if options[:vpc_id]
   end
 
   def security_groups
