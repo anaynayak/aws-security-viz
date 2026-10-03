@@ -3,41 +3,61 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-10-03
+This release also covers the 0.3.0 work, which was never tagged or published.
+
+### Breaking changes
+- Ruby 3.3 or newer is required (it was 3.0 or newer in 0.2.4)
+- The default output is now `aws-security-viz.html`, a self-contained page, instead of `aws-security-viz.png` (`.json` for json and navigator output). The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg). Image output still needs the Graphviz `dot` binary
+- The old html viewers and the navigator renderer are removed, along with `--serve`
+- There is no default region (it used to be us-east-1); the region comes from the AWS SDK credential/config chain (AWS_REGION, profile, ...) or -r, and a missing region fails with an error
+- --profile no longer defaults to AWS_PROFILE, so explicit access keys are kept
+- Node ids in JSON output are now security group ids; names are labels, and groups are clustered by VPC (and by region when several are queried)
+- Edges are blue for ingress and red for egress; the per-group colour palette is gone and `--color` is ignored
+- All library code is under the `AwsSecurityViz` namespace and moved to `lib/aws_security_viz/`; the top-level `VisualizeAws`, `Renderer`, `Ec2Provider` and similar constants no longer exist. Use the `aws_security_viz` executable, or `AwsSecurityViz::CLI`
+- Obfuscation hashes are shorter (10 hex characters)
+- Runtime dependencies are now only `aws-sdk-ec2` (>= 1.400, no upper cap) and `rexml`. `graphviz`, `rgl`, `optimist`, `webrick` and `organic_hash` are gone
+
+### Deprecated
+- --renderer: still works but prints a warning; use the -f extension instead. `--renderer navigator` now writes the html viewer
+- --color: ignored, prints a warning
+
 ### Added
-- --input and --output aliases for -o/--source-file and -f/--filename; `init` alias for `setup`
-- Rule descriptions are kept: JSON edges carry a `descriptions` list and DOT edges a `tooltip` (hashed under --obfuscate)
+- Self-contained HTML viewer (`-f out.html`, the default): one file with Cytoscape.js 3.34.3 vendored and the graph data inlined, a Content-Security-Policy, no CDN or server, works from `file://`
+- Mermaid flowchart output (`-f out.mmd`), with a warning when the diagram exceeds Mermaid's default edge or text limits
+- Multi-region support: `--region us-east-1,eu-west-1` or `--all-regions` (needs `ec2:DescribeRegions`); regions that fail with an authorisation error are skipped with a warning
+- Risky ingress highlighting: 0.0.0.0/0 or ::/0 reaching a sensitive port (22, 3389, 3306, 5432, 1433, 6379, 9200, 27017, configurable with `risky_ports` in opts.yml) or allowing all traffic is drawn distinctly and flagged `risky` in JSON and HTML output. --fail-on-risk exits 2 when any is found
 - --show-unused marks security groups with no attached network interface (dashed grey in DOT, `unused` class in Mermaid, `unused: true` in JSON and HTML output); it needs `ec2:DescribeNetworkInterfaces` and is ignored with --source-file
+- Rule descriptions are kept: JSON edges carry a `descriptions` list and DOT edges a `tooltip` (hashed under --obfuscate)
+- --input and --output aliases for -o/--source-file and -f/--filename; `init` alias for `setup`
+- --layout picks the Graphviz layout engine (overrides `format` in opts.yml; unknown engines are rejected)
+- --debug (or DEBUG=true) for verbose output and stack traces, --obfuscate (or OBFUSCATE=true) to hash group names, ports and ids
+- IPv6 ranges and prefix lists are drawn as rule peers
+- --vpc-id is honoured for --source-file input
+- Tag-triggered release workflow using RubyGems trusted publishing, which also pushes a multi-arch (amd64 and arm64) image to ghcr.io/anaynayak/aws-security-viz tagged `<version>`, `<major>.<minor>` and `latest`. The image is built from this source and runs as a non-root user. Not yet verified locally (task-17: the Docker build and the release workflow have not been run)
 
 ### Changed
-- The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg); the default output is aws-security-viz.html. --renderer is deprecated, still works, and prints a warning; `--renderer navigator` writes the html viewer
-- CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser; the optimist dependency is removed
+- CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser
 - Warnings, errors and debug output go to stderr through a Logger, keeping stdout clean
+- Exit codes: 0 on success, 1 on error, 2 for --fail-on-risk, 130 on Ctrl-C
+- Graph building uses a small adjacency-list graph and DOT is generated directly; Graphviz is only needed for image formats
+- Rules that allow all traffic, ICMP, or a numeric protocol get readable labels, and all-traffic is labelled "all"
+- Boolean environment variables (DEBUG, OBFUSCATE) are parsed as booleans
+- The html asset is written next to the output file, not the current directory
+- Gemfile.lock is committed, the gemspec has no upper version caps, and CI tests Ruby 3.3, 3.4 and 4.0
 
 ### Removed
 - The navigator renderer, the old view.html and navigator.html viewers, --serve and the webrick dependency
-
-## [0.3.0] - 2026-10-03
-### Added
-- --layout option to pick the Graphviz layout engine (overrides `format` in opts.yml; unknown engines are rejected)
-- --profile selects the AWS profile; it no longer defaults to AWS_PROFILE, so explicit access keys are kept
-- --debug (or DEBUG=true) for verbose output and stack traces, --obfuscate (or OBFUSCATE=true) to hash group names and ports
-- IPv6 ranges and prefix lists are drawn as rule peers
-- --vpc-id is honoured for --source-file input
-
-### Changed
-- Region comes from the AWS SDK credential/config chain (AWS_REGION, profile, ...) instead of a hard-coded default
-- Node ids in JSON output are now security group ids; names are labels, and groups are clustered by VPC
-- Rules that allow all traffic, ICMP, or a numeric protocol get readable labels, and all-traffic is labelled "all"
-- Boolean environment variables (DEBUG, OBFUSCATE) are parsed as booleans
-- The default output file name is aws-security-viz.png (.json for json and navigator output), and the html asset is written next to the output file, not the current directory
-- Edges are blue for ingress and red for egress; `--color` is deprecated and ignored (the per-group colour palette is gone)
-- Obfuscation hashes are shorter (10 hex characters)
+- The `rake docker:push` task and the per-push alpha gem workflow, replaced by the tag-triggered release workflow
+- Support for Ruby older than 3.3
 
 ### Fixed
 - Security groups sharing a name in different VPCs no longer collapse into one node
 - Several rules between the same two groups are merged into a single edge with merged port labels
 - DescribeSecurityGroups is paginated and the VPC filter is applied server-side
-- Unknown renderers are rejected and errors are reported cleanly (exit 1, Ctrl-C exits 130)
+- Unknown renderers and layout engines are rejected, and errors are reported cleanly (exit 1, Ctrl-C exits 130)
+- The test suite loads on Ruby 4.0
 
 ## [0.2.4] - 2023-06-10
 - Matrix builds for Ruby v3.0 onwards only
@@ -132,7 +152,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Begin life as the gem [aws_security_viz](https://rubygems.org/gems/aws_security_viz)
 
 
-[Unreleased]: https://github.com/anaynayak/aws-security-viz/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/anaynayak/aws-security-viz/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/anaynayak/aws-security-viz/compare/v0.2.4...v1.0.0
 [0.1.3]: https://github.com/anaynayak/aws-security-viz/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/anaynayak/aws-security-viz/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/anaynayak/aws-security-viz/compare/v0.1.0...v0.1.1
