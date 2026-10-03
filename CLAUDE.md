@@ -49,7 +49,9 @@ When run as `/loop work the backlog per CLAUDE.md`, each iteration does exactly 
    and replies with findings only (or "no findings"). Real findings go back to the same coder (SendMessage) to fix.
 4. Blockers: if a task needs a user decision (product choice, credentials, a release step), leave it `In Progress`
    with a comment explaining the question, stop the loop, and ask the user.
-5. Main context stays small: never read diffs or test logs in the main loop - rely on the subagents' short reports.
+5. Only one agent writes to the repo at a time (a coder, or a coder fixing review findings). Reviewers are
+   read-only and may run alongside. Parallel writers swept each other's changes into the wrong commits.
+6. Main context stays small: never read diffs or test logs in the main loop - rely on the subagents' short reports.
    Give the user one line per completed task.
 
 <!-- BACKLOG.MD GUIDELINES START -->
