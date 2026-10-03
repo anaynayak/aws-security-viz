@@ -2,21 +2,24 @@ class ColorPicker
   def initialize(colored)
     @picker = colored ? NodeColors.new : DefaultColors.new
   end
+
   def color(index, ingress)
     @picker.color(index, ingress)
   end
+
   class NodeColors
     def color(index, ingress)
       ColorPicker::COLORS[index % ColorPicker::COLORS.length]
     end
   end
+
   class DefaultColors
     def color(index, ingress)
       ingress ? :blue : :red
     end
   end
 
-  COLORS = %w(
+  COLORS = %w[
     #00004c
     #000080
     #0000fb
@@ -241,5 +244,5 @@ class ColorPicker
     #ff7f7f
     #ffac45
     #fffaa0
-  )
+  ]
 end

@@ -1,6 +1,5 @@
-require 'set'
-require 'forwardable'
-require_relative 'ip_permission.rb'
+require "forwardable"
+require_relative "ip_permission"
 
 class SecurityGroups
   include Enumerable
@@ -66,13 +65,14 @@ class CidrGroupMapping
     traffic = all_traffic.collect { |traffic|
       traffic.copy(mapping(traffic.from), mapping(traffic.to))
     }
-    traffic.uniq.group_by {|t| [t.from, t.to, t.ingress]}.collect {|k,v| Traffic.grouped(v)}.uniq
+    traffic.uniq.group_by { |t| [t.from, t.to, t.ingress] }.collect { |k, v| Traffic.grouped(v) }.uniq
   end
 
   private
+
   def mapping(val)
     group = @all_groups.find { |g| g.group_id == val }
     name = group.nil? ? val : group.name
-    @user_groups[name] ? @user_groups[name] : name
+    @user_groups[name] || name
   end
 end

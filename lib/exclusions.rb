@@ -2,7 +2,7 @@ class Exclusions
   attr_reader :patterns
 
   def initialize(patterns)
-    @patterns = patterns.map {|p| /#{p}/} unless patterns.nil?
+    @patterns = patterns.map { |p| /#{p}/ } unless patterns.nil?
   end
 
   def match(str)

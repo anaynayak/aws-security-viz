@@ -1,12 +1,12 @@
-require 'yaml'
+require "yaml"
 
 class AwsConfig
-  def initialize(opts={})
+  def initialize(opts = {})
     @opts = opts
   end
 
   def exclusions
-    @exclusions ||=Exclusions.new(@opts[:exclude])
+    @exclusions ||= Exclusions.new(@opts[:exclude])
   end
 
   def egress?
@@ -18,7 +18,7 @@ class AwsConfig
   end
 
   def format
-    @opts[:format] || 'dot'
+    @opts[:format] || "dot"
   end
 
   def debug?
@@ -39,6 +39,6 @@ class AwsConfig
   end
 
   def self.write(file)
-    FileUtils.cp(File.expand_path('../opts.yml.sample', __FILE__), file)
+    FileUtils.cp(File.expand_path("../opts.yml.sample", __FILE__), file)
   end
 end

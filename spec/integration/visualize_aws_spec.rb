@@ -1,5 +1,5 @@
-require 'spec_helper'
-require 'tempfile'
+require "spec_helper"
+require "tempfile"
 
 RSpec::Matchers.define :be_graph_with do |nodes|
   match do |graphv|
@@ -10,102 +10,101 @@ end
 describe VisualizeAws do
   let(:opts) {
     {
-        :source_file => source_file,
-        :filename => temp_file
+      source_file: source_file,
+      filename: temp_file
     }
   }
-  let(:source_file) { File.join(File.dirname(__FILE__), 'dummy.json') }
-  let(:config) { AwsConfig.new({groups: {'0.0.0.0/0' => '*'}}) }
+  let(:source_file) { File.join(File.dirname(__FILE__), "dummy.json") }
+  let(:config) { AwsConfig.new({groups: {"0.0.0.0/0" => "*"}}) }
   let(:expected_content) { File.read(expected_file) }
   let(:actual_content) { temp_file.read }
 
-  context 'json to dot file' do
-    let(:temp_file) { Tempfile.new(%w(aws .dot)) }
-    let(:layout_attrs) { Set.new(%w(pos lp xlp head_lp tail_lp bb width height)) }
+  context "json to dot file" do
+    let(:temp_file) { Tempfile.new(%w[aws .dot]) }
+    let(:layout_attrs) { Set.new(%w[pos lp xlp head_lp tail_lp bb width height]) }
 
     # Parses laid-out DOT into structure only (nodes, edges, labels, styling),
     # dropping coordinates and sizes that vary with the Graphviz version and fonts.
     def statements_of(dot)
       dot.scan(/^\s*([^\s\[{}][^\[\n]*?)\s*\[(.*?)\];/m).to_h do |name, attrs|
         pairs = attrs.scan(/(\w+)=("(?:[^"\\]|\\.)*"|[^,\s\]]+)/)
-        kept = pairs.reject { |k, _| layout_attrs.include?(k) }.map { |k, v| [k, v.delete('"')] }.to_h
+        kept = pairs.map { |k, v| [k, v.delete('"')] }.to_h.except(*layout_attrs)
         [name.delete('"'), kept]
       end
     end
 
-    it 'should render nodes, edges and labels as dot' do
+    it "should render nodes, edges and labels as dot" do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
-      edge = {'color' => 'blue', 'style' => 'bold'}
+      edge = {"color" => "blue", "style" => "bold"}
       expect(statements_of(actual_content)).to eq(
-        'graph' => {'concentrate' => 'true', 'overlap' => 'false', 'rankdir' => 'LR', 'sep' => '1', 'splines' => 'true'},
-        'node' => {'label' => '\\N'},
-        'app' => {'label' => 'app'},
-        'db' => {'label' => 'db'},
-        'app -> db' => edge.merge('label' => '5984/tcp'),
-        '8.8.8.8/32' => {'label' => '8.8.8.8/32'},
-        '8.8.8.8/32 -> app' => edge.merge('label' => '80/tcp'),
-        'amazon-elb-sg' => {'label' => 'amazon-elb-sg'},
-        'amazon-elb-sg -> app' => edge.merge('label' => '80/tcp'),
-        '*' => {'label' => '*'},
-        '* -> app' => edge.merge('label' => '22/tcp')
+        "graph" => {"concentrate" => "true", "overlap" => "false", "rankdir" => "LR", "sep" => "1", "splines" => "true"},
+        "node" => {"label" => '\\N'},
+        "app" => {"label" => "app"},
+        "db" => {"label" => "db"},
+        "app -> db" => edge.merge("label" => "5984/tcp"),
+        "8.8.8.8/32" => {"label" => "8.8.8.8/32"},
+        "8.8.8.8/32 -> app" => edge.merge("label" => "80/tcp"),
+        "amazon-elb-sg" => {"label" => "amazon-elb-sg"},
+        "amazon-elb-sg -> app" => edge.merge("label" => "80/tcp"),
+        "*" => {"label" => "*"},
+        "* -> app" => edge.merge("label" => "22/tcp")
       )
     end
 
-    it 'should parse json input with stubbed out graphviz' do
+    it "should parse json input with stubbed out graphviz" do
       nodes = ["app", "8.8.8.8/32", "amazon-elb-sg", "*", "db"]
       expect(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
       VisualizeAws.new(config, opts).unleash(temp_file.path)
     end
   end
 
-  context 'json to json file' do
-    let(:expected_file) { File.join(File.dirname(__FILE__), 'expected.json') }
-    let(:temp_file) { Tempfile.new(%w(aws .json)) }
+  context "json to json file" do
+    let(:expected_file) { File.join(File.dirname(__FILE__), "expected.json") }
+    let(:temp_file) { Tempfile.new(%w[aws .json]) }
 
-    it 'should parse json input' do
+    it "should parse json input" do
       expect(FileUtils).to receive(:copy)
-      VisualizeAws.new(config, opts.merge(:renderer => 'json')).unleash(temp_file.path)
+      VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
 
-    it 'should parse json input with obfuscation' do
-      config = AwsConfig.new({groups: {'0.0.0.0/0' => '*'}, obfuscate: true})
+    it "should parse json input with obfuscation" do
+      config = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, obfuscate: true})
       expect(FileUtils).to receive(:copy)
-      VisualizeAws.new(config, opts.merge(:renderer => 'json')).unleash(temp_file.path)
+      VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
       expect(actual_content).not_to include('"amazon-elb-sg"', '"app"', '"db"')
     end
-
   end
 
-  context 'json to navigator file' do
-    let(:expected_file) { File.join(File.dirname(__FILE__), 'navigator.json') }
-    let(:temp_file) { Tempfile.new(%w(aws .json)) }
+  context "json to navigator file" do
+    let(:expected_file) { File.join(File.dirname(__FILE__), "navigator.json") }
+    let(:temp_file) { Tempfile.new(%w[aws .json]) }
 
-    it 'should parse json input' do
+    it "should parse json input" do
       expect(FileUtils).to receive(:copy)
-      VisualizeAws.new(config, opts.merge(:renderer => 'navigator')).unleash(temp_file.path)
+      VisualizeAws.new(config, opts.merge(renderer: "navigator")).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
   end
 
-  if ENV['TEST_ACCESS_KEY']
-    context 'ec2 to json file' do
-      let(:expected_file) { File.join(File.dirname(__FILE__), 'aws_expected.json') }
-      let(:temp_file) { Tempfile.new(%w(aws .json)) }
+  if ENV["TEST_ACCESS_KEY"]
+    context "ec2 to json file" do
+      let(:expected_file) { File.join(File.dirname(__FILE__), "aws_expected.json") }
+      let(:temp_file) { Tempfile.new(%w[aws .json]) }
       let(:opts) {
         {
-            :filename => temp_file,
-            :secret_key => ENV['TEST_SECRET_KEY'],
-            :access_key => ENV['TEST_ACCESS_KEY'],
-            :region => 'us-east-1'
+          filename: temp_file,
+          secret_key: ENV["TEST_SECRET_KEY"],
+          access_key: ENV["TEST_ACCESS_KEY"],
+          region: "us-east-1"
         }
       }
 
-      it 'should read from ec2 account', :integration => true do
+      it "should read from ec2 account", integration: true do
         expect(FileUtils).to receive(:copy)
         VisualizeAws.new(config, opts).unleash(temp_file.path)
-        expect(JSON.parse(expected_content)['edges']).to match_array(JSON.parse(actual_content)['edges'])
-        expect(JSON.parse(expected_content)['nodes']).to match_array(JSON.parse(actual_content)['nodes'])
+        expect(JSON.parse(expected_content)["edges"]).to match_array(JSON.parse(actual_content)["edges"])
+        expect(JSON.parse(expected_content)["nodes"]).to match_array(JSON.parse(actual_content)["nodes"])
       end
     end
   end

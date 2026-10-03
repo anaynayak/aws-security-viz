@@ -1,7 +1,6 @@
-require 'aws-sdk-ec2'
+require "aws-sdk-ec2"
 
 class Ec2Provider
-
   def initialize(options)
     @options = options
     conn_opts = {
@@ -9,7 +8,7 @@ class Ec2Provider
       access_key_id: options[:access_key],
       secret_access_key: options[:secret_key],
       session_token: options[:session_token]
-    }.delete_if {|k,v| v.nil?}
+    }.delete_if { |k, v| v.nil? }
 
     @client = Aws::EC2::Client.new(conn_opts)
   end
@@ -26,7 +25,8 @@ end
 module Ec2
   class SecurityGroup
     extend Forwardable
-    def_delegators :@sg, :name, :group_id, :vpc_id
+
+    def_delegators :@sg, :group_id, :vpc_id
     def initialize(sg)
       @sg = sg
     end
@@ -54,25 +54,25 @@ module Ec2
     end
 
     def protocol
-      @ip['ip_protocol']
+      @ip["ip_protocol"]
     end
 
     def from
-      @ip['from_port']
+      @ip["from_port"]
     end
 
     def to
-      @ip['to_port']
+      @ip["to_port"]
     end
 
     def ip_ranges
-      @ip['ip_ranges'].collect {|gp|
+      @ip["ip_ranges"].collect { |gp|
         Ec2::IpPermissionRange.new(gp)
       }
     end
 
     def groups
-      @ip['user_id_group_pairs'].collect {|gp|
+      @ip["user_id_group_pairs"].collect { |gp|
         Ec2::IpPermissionGroup.new(gp)
       }
     end
@@ -84,7 +84,7 @@ module Ec2
     end
 
     def cidr_ip
-      @range['cidr_ip']
+      @range["cidr_ip"]
     end
 
     def to_str
@@ -98,8 +98,7 @@ module Ec2
     end
 
     def name
-      @gp['group_name'] || @gp['group_id']
+      @gp["group_name"] || @gp["group_id"]
     end
   end
-
 end

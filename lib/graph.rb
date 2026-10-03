@@ -1,9 +1,9 @@
-require 'rgl/adjacency'
+require "rgl/adjacency"
 
 class Graph
   attr_reader :underlying
 
-  def initialize(config, underlying=RGL::DirectedAdjacencyGraph.new)
+  def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new)
     @config = config
     @underlying = underlying
     @edge_properties = {}
@@ -39,6 +39,7 @@ class Graph
   end
 
   private
+
   def opts(u, v)
     @edge_properties[[u, v]]
   end

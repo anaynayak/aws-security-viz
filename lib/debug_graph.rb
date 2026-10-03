@@ -1,5 +1,5 @@
-require 'digest'
-require_relative 'graph'
+require "digest"
+require_relative "graph"
 
 class DebugGraph
   def initialize(config)
@@ -23,6 +23,7 @@ class DebugGraph
   end
 
   private
+
   def h(msg)
     Digest::SHA256.hexdigest msg
   end

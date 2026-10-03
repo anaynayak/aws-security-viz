@@ -1,8 +1,8 @@
-require 'json'
+require "json"
 
 class JsonProvider
   def initialize(options)
-    @groups = JSON.parse(File.read(options[:source_file]))['SecurityGroups']
+    @groups = JSON.parse(File.read(options[:source_file]))["SecurityGroups"]
   end
 
   def security_groups
@@ -19,29 +19,25 @@ module Json
     end
 
     def name
-      @sg['GroupName']
+      @sg["GroupName"]
     end
 
     def group_id
-      @sg['GroupId']
+      @sg["GroupId"]
     end
 
     def vpc_id
-      @sg['VpcId']
+      @sg["VpcId"]
     end
 
     def ip_permissions
-      @sg['IpPermissions'].collect { |ip|
+      @sg["IpPermissions"].collect { |ip|
         Json::IpPermission.new(ip)
       }
     end
 
-    def group_id
-      @sg['GroupId']
-    end
-
     def ip_permissions_egress
-      @sg['IpPermissionsEgress'].collect { |ip|
+      @sg["IpPermissionsEgress"].collect { |ip|
         Json::IpPermission.new(ip)
       }
     end
@@ -53,29 +49,28 @@ module Json
     end
 
     def protocol
-      @ip['IpProtocol']
+      @ip["IpProtocol"]
     end
 
     def from
-      @ip['FromPort']
+      @ip["FromPort"]
     end
 
     def to
-      @ip['ToPort']
+      @ip["ToPort"]
     end
 
     def ip_ranges
-      @ip['IpRanges'].collect { |gp|
+      @ip["IpRanges"].collect { |gp|
         Json::IpPermissionRange.new(gp)
       }
     end
 
     def groups
-      @ip['UserIdGroupPairs'].collect { |pair|
+      @ip["UserIdGroupPairs"].collect { |pair|
         Json::IpPermissionGroup.new(pair)
       }
     end
-
   end
 
   class IpPermissionRange
@@ -84,7 +79,7 @@ module Json
     end
 
     def cidr_ip
-      @range['CidrIp']
+      @range["CidrIp"]
     end
 
     def to_str
@@ -98,7 +93,7 @@ module Json
     end
 
     def name
-      @gp['GroupName'] || @gp['GroupId']
+      @gp["GroupName"] || @gp["GroupId"]
     end
   end
 end

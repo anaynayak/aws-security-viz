@@ -1,42 +1,42 @@
 #!/usr/bin/env ruby
 
-require 'aws_security_viz'
-require 'optimist'
-require 'webrick'
-require 'version'
+require "aws_security_viz"
+require "optimist"
+require "webrick"
+require "version"
 
-opts = Optimist::options do
+opts = Optimist.options do
   version "aws_security_viz v#{AwsSecurityViz::VERSION}"
-  opt :access_key, 'AWS access key', :default => ENV['AWS_ACCESS_KEY'] || ENV['AWS_ACCESS_KEY_ID'], :type => :string
-  opt :secret_key, 'AWS secret key', :default => ENV['AWS_SECRET_KEY'] || ENV['AWS_SECRET_ACCESS_KEY'], :type => :string
-  opt :session_token, 'AWS session token', :default => ENV['AWS_SESSION_TOKEN'] || nil, :type => :string
-  opt :region, 'AWS region to query', :default => 'us-east-1', :type => :string
-  opt :vpc_id, 'AWS VPC id to show', :type => :string
-  opt :source_file, 'JSON source file containing security groups', :type => :string
-  opt :filename, 'Output file name', :type => :string, :default => 'aws-security-viz.png'
-  opt :config, 'Config file (opts.yml)', :type => :string, :default => 'opts.yml'
-  opt :color, 'Colored node edges', :default => false
-  opt :renderer, "Renderer (#{Renderer.all.join('|')})", :default => 'graphviz'
-  opt :source_filter, 'Source filter', :default => nil, :type => :string
-  opt :target_filter, 'Target filter', :default => nil, :type => :string
-  opt :serve, 'Serve a HTTP server', :default => nil, :type => :integer
+  opt :access_key, "AWS access key", default: ENV["AWS_ACCESS_KEY"] || ENV["AWS_ACCESS_KEY_ID"], type: :string
+  opt :secret_key, "AWS secret key", default: ENV["AWS_SECRET_KEY"] || ENV["AWS_SECRET_ACCESS_KEY"], type: :string
+  opt :session_token, "AWS session token", default: ENV["AWS_SESSION_TOKEN"] || nil, type: :string
+  opt :region, "AWS region to query", default: "us-east-1", type: :string
+  opt :vpc_id, "AWS VPC id to show", type: :string
+  opt :source_file, "JSON source file containing security groups", type: :string
+  opt :filename, "Output file name", type: :string, default: "aws-security-viz.png"
+  opt :config, "Config file (opts.yml)", type: :string, default: "opts.yml"
+  opt :color, "Colored node edges", default: false
+  opt :renderer, "Renderer (#{Renderer.all.join("|")})", default: "graphviz"
+  opt :source_filter, "Source filter", default: nil, type: :string
+  opt :target_filter, "Target filter", default: nil, type: :string
+  opt :serve, "Serve a HTTP server", default: nil, type: :integer
 end
 
 cmd = ARGV.shift
-if cmd=="setup"
+if cmd == "setup"
   AwsConfig.write(opts[:config])
   puts "#{opts[:config]} created in current directory."
   exit
 end
 
-config = AwsConfig.load(opts[:config]).merge(obfuscate: ENV['OBFUSCATE'], debug: ENV['DEBUG'])
+config = AwsConfig.load(opts[:config]).merge(obfuscate: ENV["OBFUSCATE"], debug: ENV["DEBUG"])
 begin
   VisualizeAws.new(config, opts).unleash(opts[:filename])
   if opts[:serve]
     puts "Navigate to http://localhost:#{opts[:serve]}/navigator.html##{opts[:filename]}"
-    WEBrick::HTTPServer.new({Port: opts[:serve], DocumentRoot: '.'}).start
+    WEBrick::HTTPServer.new({Port: opts[:serve], DocumentRoot: "."}).start
   end
-rescue Exception => e
+rescue Exception => e # standard:disable Lint/RescueException
   puts "[ERROR] #{e.message}"
   raise e if config.debug?
   exit 1

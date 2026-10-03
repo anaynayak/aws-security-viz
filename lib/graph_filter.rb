@@ -1,5 +1,5 @@
-require 'rgl/traversal'
-require 'rgl/implicit'
+require "rgl/traversal"
+require "rgl/implicit"
 
 class GraphFilter
   def initialize(graph)
@@ -18,6 +18,7 @@ class GraphFilter
   end
 
   private
+
   def reduce(graph, source)
     tree = graph.bfs_search_tree_from(source)
     graph.vertices_filtered_by { |v| tree.has_vertex? v }
@@ -30,7 +31,7 @@ class GraphFilter
     visitor.set_examine_vertex_event_handler { |x| path << x }
     visitor.set_finish_vertex_event_handler { |x| path.pop }
     visitor.set_examine_edge_event_handler { |x, y| paths << path.clone + [y] if y == destination }
-    graph.depth_first_visit(source, visitor) { |x|}
+    graph.depth_first_visit(source, visitor) { |x| }
     to_remove = graph.vertices - paths.flatten
     graph.remove_vertices(*to_remove)
     graph

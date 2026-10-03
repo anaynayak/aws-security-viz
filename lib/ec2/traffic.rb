@@ -21,12 +21,12 @@ class Traffic
   end
 
   def hash
-    @from.hash + @to.hash + @port_range.hash
+    @from.hash + @to.hash + @port_range.hash # standard:disable Security/CompoundHash (order-insensitive, matches eql?)
   end
 
   def self.grouped(traffic_list)
     t = traffic_list.first
-    port_range = traffic_list.collect(&:port_range).uniq.join(',')
+    port_range = traffic_list.collect(&:port_range).uniq.join(",")
     Traffic.new(t.ingress, t.from, t.to, port_range)
   end
 end
