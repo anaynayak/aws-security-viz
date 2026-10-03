@@ -6,7 +6,11 @@ Releases are cut by the maintainer. Pushing a `v*` tag runs `.github/workflows/r
 2. publishes the gem to RubyGems with trusted publishing (OIDC, no API key stored in GitHub);
 3. builds a multi-arch image (amd64 + arm64) and pushes it to `ghcr.io/anaynayak/aws-security-viz`, tagged
    `<version>`, `<major>.<minor>` and `latest`;
-4. creates the GitHub release for the tag, using the matching `CHANGELOG.md` section as the notes.
+4. attests build provenance for the `.gem` and the image, and a CycloneDX SBOM for the gem (see "Verifying a
+   release" below);
+5. creates the GitHub release for the tag, using the matching `CHANGELOG.md` section as the notes, with the
+   provenance bundle (`aws_security_viz-<version>.intoto.jsonl`) and the SBOM
+   (`aws_security_viz-<version>.sbom.cdx.json`) attached.
 
 Every pull request also builds the image and smoke-tests it (the `docker image` job in `ruby.yml`), so a broken
 Dockerfile shows up before a release.
@@ -59,3 +63,28 @@ New GHCR packages are private. After the first release pushes the image:
 4. Verify:
    1. `gem install aws_security_viz -v 1.0.0 && aws_security_viz --version`
    2. `docker run --rm ghcr.io/anaynayak/aws-security-viz:1.0.0 --version`
+
+## Verifying a release
+
+RubyGems.org also stores its own Sigstore attestation for the gem (published by `rubygems/release-gem`). The GitHub
+attestations below are separate and are checked with the `gh` CLI.
+
+1. Gem build provenance:
+   ```
+   gem fetch aws_security_viz -v 1.0.0
+   gh attestation verify aws_security_viz-1.0.0.gem --repo anaynayak/aws-security-viz
+   ```
+2. Gem SBOM attestation:
+   ```
+   gh attestation verify aws_security_viz-1.0.0.gem --repo anaynayak/aws-security-viz \
+     --predicate-type https://cyclonedx.org/bom
+   ```
+3. Image provenance (stored in the registry next to the image):
+   ```
+   gh attestation verify oci://ghcr.io/anaynayak/aws-security-viz:1.0.0 --repo anaynayak/aws-security-viz
+   ```
+4. Offline, using the bundle attached to the GitHub release:
+   ```
+   gh attestation verify aws_security_viz-1.0.0.gem --repo anaynayak/aws-security-viz \
+     --bundle aws_security_viz-1.0.0.intoto.jsonl
+   ```
