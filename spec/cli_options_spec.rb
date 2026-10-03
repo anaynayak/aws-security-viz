@@ -24,9 +24,9 @@ describe "exe/aws_security_viz options" do
   end
 
   it "prints the valid choices and exits 1 for an unknown renderer" do
-    out, _err, status = run_exe("--renderer", "bogus", "-f", File.join(@dir, "x"), dir: @dir)
+    _out, err, status = run_exe("--renderer", "bogus", "-f", File.join(@dir, "x"), dir: @dir)
     expect(status.exitstatus).to eq(1)
-    expect(out).to include("unknown renderer 'bogus'", "graphviz, json, navigator")
+    expect(err).to include("unknown renderer 'bogus'", "graphviz, json, navigator")
   end
 
   it "warns that --color is deprecated and still runs" do
@@ -36,16 +36,16 @@ describe "exe/aws_security_viz options" do
   end
 
   it "rejects an unknown layout engine" do
-    out, _err, status = run_exe("--layout", "bogus", "-f", File.join(@dir, "x.dot"), dir: @dir)
+    _out, err, status = run_exe("--layout", "bogus", "-f", File.join(@dir, "x.dot"), dir: @dir)
     expect(status.exitstatus).to eq(1)
-    expect(out).to include("unknown layout engine 'bogus'")
+    expect(err).to include("unknown layout engine 'bogus'")
   end
 
   it "takes the layout engine from opts.yml" do
     File.write(File.join(@dir, "opts.yml"), ":format: bogus\n")
-    out, _err, status = run_exe("-f", File.join(@dir, "x.dot"), dir: @dir)
+    _out, err, status = run_exe("-f", File.join(@dir, "x.dot"), dir: @dir)
     expect(status.exitstatus).to eq(1)
-    expect(out).to include("unknown layout engine 'bogus'")
+    expect(err).to include("unknown layout engine 'bogus'")
   end
 
   it "treats OBFUSCATE=false as off and OBFUSCATE=1 / --obfuscate as on" do
@@ -66,18 +66,19 @@ describe "exe/aws_security_viz options" do
 
   it "treats DEBUG=false as off, DEBUG=true and --debug as on" do
     base = ["--renderer", "json", "-f", File.join(@dir, "d.json")]
-    off, = run_exe(*base, env: {"DEBUG" => "false"}, dir: @dir)
-    expect(off).not_to include("node:")
-    on, = run_exe(*base, env: {"DEBUG" => "true"}, dir: @dir)
-    expect(on).to include("node:")
-    flagged, = run_exe(*base, "--debug", dir: @dir)
-    expect(flagged).to include("node:")
+    off, off_err = run_exe(*base, env: {"DEBUG" => "false"}, dir: @dir)
+    expect(off + off_err).not_to include("node:")
+    on, on_err = run_exe(*base, env: {"DEBUG" => "true"}, dir: @dir)
+    expect(on_err).to include("node:")
+    expect(on).not_to include("node:")
+    _flagged, flagged_err = run_exe(*base, "--debug", dir: @dir)
+    expect(flagged_err).to include("node:")
   end
 
   it "rejects an invalid boolean env value" do
-    out, _err, status = run_exe("--renderer", "json", "-f", File.join(@dir, "d.json"), env: {"DEBUG" => "maybe"}, dir: @dir)
+    _out, err, status = run_exe("--renderer", "json", "-f", File.join(@dir, "d.json"), env: {"DEBUG" => "maybe"}, dir: @dir)
     expect(status.exitstatus).to eq(1)
-    expect(out).to include("DEBUG must be true, false, 1 or 0")
+    expect(err).to include("DEBUG must be true, false, 1 or 0")
   end
 
   it "names the default output after the renderer" do

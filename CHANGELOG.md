@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- --input and --output aliases for -o/--source-file and -f/--filename; `init` alias for `setup`
+
+### Changed
+- CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser; the optimist dependency is removed
+- Warnings, errors and debug output go to stderr through a Logger, keeping stdout clean
+
 ## [0.3.0] - 2026-10-03
 ### Added
 - --layout option to pick the Graphviz layout engine (overrides `format` in opts.yml; unknown engines are rejected)

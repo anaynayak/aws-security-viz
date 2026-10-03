@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "aws-sdk-ec2"
+require_relative "logging"
 
 module AwsSecurityViz
   # Runs the CLI body and turns failures into a message and an exit status:
@@ -9,13 +10,13 @@ module AwsSecurityViz
   module CliGuard
     INTERRUPTED = 130
 
-    def self.run(debug: false, out: $stdout)
+    def self.run(debug: false, logger: AwsSecurityViz.logger)
       yield
       0
     rescue Interrupt
       INTERRUPTED
     rescue => e
-      out.puts "[ERROR] #{message(e)}"
+      logger.error(message(e))
       raise e if debug.respond_to?(:call) ? debug.call : debug
       1
     end

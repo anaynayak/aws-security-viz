@@ -2,54 +2,6 @@
 # frozen_string_literal: true
 
 require "aws_security_viz"
-require "optimist"
-require "webrick"
-require "aws_security_viz/version"
+require "aws_security_viz/cli"
 
-opts = Optimist.options do
-  version "aws_security_viz v#{AwsSecurityViz::VERSION}"
-  opt :access_key, "AWS access key", default: ENV["AWS_ACCESS_KEY"] || ENV["AWS_ACCESS_KEY_ID"], type: :string
-  opt :secret_key, "AWS secret key", default: ENV["AWS_SECRET_KEY"] || ENV["AWS_SECRET_ACCESS_KEY"], type: :string
-  opt :session_token, "AWS session token", default: ENV["AWS_SESSION_TOKEN"] || nil, type: :string
-  opt :region, "AWS region to query (default: SDK chain, e.g. AWS_REGION or profile)", type: :string
-  opt :profile, "AWS shared-config profile to use (AWS_PROFILE is read by the SDK)", type: :string
-  opt :vpc_id, "AWS VPC id to show", type: :string
-  opt :source_file, "JSON source file containing security groups", type: :string
-  opt :filename, "Output file name (default: aws-security-viz.png, or .json for json/navigator)", type: :string
-  opt :config, "Config file (opts.yml)", type: :string, default: "opts.yml"
-  opt :color, "Deprecated, ignored: edges are blue for ingress and red for egress", default: false
-  opt :renderer, "Renderer (#{AwsSecurityViz::Renderer.all.join("|")})", default: "graphviz"
-  opt :layout, "Graphviz layout engine (#{AwsSecurityViz::AwsConfig::LAYOUTS.join("|")}); overrides opts.yml format", type: :string
-  opt :debug, "Verbose output and stack traces (or DEBUG=true)", default: false
-  opt :obfuscate, "Hash group names and ports (or OBFUSCATE=true)", default: false
-  opt :source_filter, "Source filter", default: nil, type: :string
-  opt :target_filter, "Target filter", default: nil, type: :string
-  opt :serve, "Serve a HTTP server", default: nil, type: :integer
-end
-
-cmd = ARGV.shift
-if cmd == "setup"
-  AwsSecurityViz::AwsConfig.write(opts[:config])
-  puts "#{opts[:config]} created in current directory."
-  exit
-end
-
-debug = false
-status = AwsSecurityViz::CliGuard.run(debug: -> { debug }) do
-  warn "--color is deprecated and ignored; edges are blue (ingress) or red (egress)" if opts[:color]
-  debug = opts[:debug] || AwsSecurityViz::AwsConfig.boolean(ENV["DEBUG"], "DEBUG")
-  overrides = {
-    obfuscate: opts[:obfuscate] || AwsSecurityViz::AwsConfig.boolean(ENV["OBFUSCATE"], "OBFUSCATE"),
-    debug: debug,
-    layout: opts[:layout]
-  }.compact
-  config = AwsSecurityViz::AwsConfig.load(opts[:config]).merge(overrides)
-  AwsSecurityViz::Renderer.validate!(opts[:renderer])
-  filename = opts[:filename] || AwsSecurityViz::Renderer.default_file(opts[:renderer])
-  AwsSecurityViz::VisualizeAws.new(config, opts).unleash(filename)
-  if opts[:serve]
-    puts "Navigate to http://localhost:#{opts[:serve]}/navigator.html##{filename}"
-    WEBrick::HTTPServer.new({Port: opts[:serve], DocumentRoot: "."}).start
-  end
-end
-exit status
+exit AwsSecurityViz::CLI.new(ARGV).run

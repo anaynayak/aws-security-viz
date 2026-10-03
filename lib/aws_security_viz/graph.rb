@@ -3,6 +3,7 @@
 require_relative "directed_graph"
 require_relative "port_label"
 require_relative "obfuscation"
+require_relative "logging"
 
 module AwsSecurityViz
   class Graph
@@ -47,7 +48,7 @@ module AwsSecurityViz
     end
 
     def log(msg)
-      puts msg if @config.debug?
+      AwsSecurityViz.logger.debug(msg) if @config.debug?
     end
 
     private

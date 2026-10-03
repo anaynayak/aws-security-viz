@@ -25,7 +25,6 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_runtime_dependency "rexml", ">= 3.4.4"
-  s.add_runtime_dependency "optimist", ">= 3.0"
   s.add_runtime_dependency "webrick", ">= 1.8.1"
   s.add_runtime_dependency "aws-sdk-ec2", ">= 1.400"
 

@@ -27,7 +27,7 @@ describe AwsSecurityViz::Graph, "debug logging under obfuscation" do
   it "logs hashed ids, names and vpc ids, never the real ones" do
     config = AwsSecurityViz::AwsConfig.new(debug: true, obfuscate: true)
     graph = described_class.new(config)
-    out = capture_stdout {
+    out = capture_log {
       graph.add_node("sg-1", {label: "web", vpc_id: "vpc-1", group_id: "sg-1"})
       graph.add_edge("sg-1", "10.0.0.0/8", {label: "80", color: :blue})
     }
@@ -35,12 +35,12 @@ describe AwsSecurityViz::Graph, "debug logging under obfuscation" do
     expect(out).not_to match(/sg-|vpc-|web|10\.0/)
   end
 
-  def capture_stdout
-    original = $stdout
-    $stdout = StringIO.new
+  def capture_log
+    io = StringIO.new
+    AwsSecurityViz.logger = AwsSecurityViz.build_logger(io)
     yield
-    $stdout.string
+    io.string
   ensure
-    $stdout = original
+    AwsSecurityViz.logger = nil
   end
 end
