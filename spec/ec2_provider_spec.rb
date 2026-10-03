@@ -29,14 +29,10 @@ describe Ec2Provider do
   end
 
   describe "client options" do
-    it "leaves region to the SDK chain when not given" do
-      ENV["AWS_REGION"] = "eu-west-2"
-      begin
-        provider = Ec2Provider.new({access_key: "a", secret_key: "b"})
-        expect(provider.instance_variable_get(:@client).config.region).to eq("eu-west-2")
-      ensure
-        ENV.delete("AWS_REGION")
-      end
+    it "passes no region unless one is given, so the SDK chain decides" do
+      allow(Aws::EC2::Client).to receive(:new).and_return(client)
+      Ec2Provider.new({access_key: "a", secret_key: "b"})
+      expect(Aws::EC2::Client).to have_received(:new).with({access_key_id: "a", secret_access_key: "b"})
     end
 
     it "uses the named profile" do
