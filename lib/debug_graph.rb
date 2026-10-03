@@ -5,7 +5,7 @@ require_relative "graph"
 
 class DebugGraph
   def initialize(config)
-    @g = Graph.new(config, wildcard: h("*"))
+    @g = Graph.new(config, wildcard: h(PortLabel::ALL))
   end
 
   def add_node(name, opts)

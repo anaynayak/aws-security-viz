@@ -37,7 +37,7 @@ describe VisualizeAws do
     data = render("navigator")["data"]
     id_of = ->(label) { data["nodes"].find { |n| n["label"] == label }["id"] }
     edge = data["edges"].find { |e| e["from"] == id_of.call("app") && e["to"] == id_of.call("db") }
-    expect(edge["label"]).to eq("*")
+    expect(edge["label"]).to eq("all")
   end
 
   it "B4: writes the html asset next to the output file" do

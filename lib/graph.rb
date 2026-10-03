@@ -6,7 +6,7 @@ require_relative "port_label"
 class Graph
   attr_reader :underlying
 
-  def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new, wildcard: "*")
+  def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new, wildcard: PortLabel::ALL)
     @config = config
     @wildcard = wildcard
     @underlying = underlying

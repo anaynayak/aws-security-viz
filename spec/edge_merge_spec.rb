@@ -39,10 +39,10 @@ describe Graph do
     expect(rendered[:label]).to eq("22/tcp,80/tcp,80/udp,443/tcp")
   end
 
-  it "collapses to * when all traffic is present" do
+  it "collapses to all when all traffic is present" do
     edge("a", "b", :blue, "22/tcp")
-    edge("a", "b", :red, "*")
-    expect(rendered[:label]).to eq("*")
+    edge("a", "b", :red, "all")
+    expect(rendered[:label]).to eq("all")
   end
 
   it "is blue when any merged rule is ingress, whichever came first" do
@@ -66,9 +66,9 @@ describe Graph do
     label = renderer.edges.fetch([h.call("a"), h.call("b")])[:label]
     expect(label.split(",")).to match_array([h.call("22/tcp"), h.call("80/tcp")])
 
-    obfuscated.add_edge("a", "b", color: :red, label: "*")
+    obfuscated.add_edge("a", "b", color: :red, label: "all")
     obfuscated.output(renderer)
-    expect(renderer.edges.fetch([h.call("a"), h.call("b")])[:label]).to eq(h.call("*"))
+    expect(renderer.edges.fetch([h.call("a"), h.call("b")])[:label]).to eq(h.call("all"))
   end
 end
 

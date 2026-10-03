@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "traffic"
+require_relative "../port_label"
 
 class IpPermission
   def initialize(group, ip, ingress, exclusions)
@@ -24,7 +25,7 @@ class IpPermission
   private
 
   def port_range
-    (@ip.protocol == "-1") ? "*" : [@ip.from, @ip.to].uniq.join("-") + "/" + @ip.protocol
+    PortLabel.format(@ip.protocol, @ip.from, @ip.to)
   end
 
   # IPv4 ranges, IPv6 ranges and prefix lists; each peer is named by its CIDR or prefix list id.
