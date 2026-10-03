@@ -21,14 +21,12 @@ describe VisualizeAws do
 
   context 'json to dot file' do
     let(:temp_file) { Tempfile.new(%w(aws .dot)) }
-    let(:layout_attrs) { %w(pos lp bb width height) }
+    let(:layout_attrs) { Set.new(%w(pos lp xlp head_lp tail_lp bb width height)) }
 
     # Parses laid-out DOT into structure only (nodes, edges, labels, styling),
     # dropping coordinates and sizes that vary with the Graphviz version and fonts.
-    def structure_of(dot)
-      statements = dot.scan(/^\t(\S.*?)\s*\[(.*?)\];/m)
-      statements = statements.reject { |name, _| %w(graph node edge).include?(name) }
-      statements.map do |name, attrs|
+    def statements_of(dot)
+      dot.scan(/^\s*([^\s\[{}][^\[\n]*?)\s*\[(.*?)\];/m).to_h do |name, attrs|
         pairs = attrs.scan(/(\w+)=("(?:[^"\\]|\\.)*"|[^,\s\]]+)/)
         kept = pairs.reject { |k, _| layout_attrs.include?(k) }.map { |k, v| [k, v.delete('"')] }.to_h
         [name.delete('"'), kept]
@@ -37,23 +35,25 @@ describe VisualizeAws do
 
     it 'should render nodes, edges and labels as dot' do
       VisualizeAws.new(config, opts).unleash(temp_file.path)
-      expect(structure_of(actual_content)).to contain_exactly(
-        ['app', {'label' => 'app'}],
-        ['db', {'label' => 'db'}],
-        ['app -> db', {'label' => '5984/tcp', 'color' => 'blue', 'style' => 'bold'}],
-        ['8.8.8.8/32', {'label' => '8.8.8.8/32'}],
-        ['8.8.8.8/32 -> app', {'label' => '80/tcp', 'color' => 'blue', 'style' => 'bold'}],
-        ['amazon-elb-sg', {'label' => 'amazon-elb-sg'}],
-        ['amazon-elb-sg -> app', {'label' => '80/tcp', 'color' => 'blue', 'style' => 'bold'}],
-        ['*', {'label' => '*'}],
-        ['* -> app', {'label' => '22/tcp', 'color' => 'blue', 'style' => 'bold'}]
+      edge = {'color' => 'blue', 'style' => 'bold'}
+      expect(statements_of(actual_content)).to eq(
+        'graph' => {'concentrate' => 'true', 'overlap' => 'false', 'rankdir' => 'LR', 'sep' => '1', 'splines' => 'true'},
+        'node' => {'label' => '\\N'},
+        'app' => {'label' => 'app'},
+        'db' => {'label' => 'db'},
+        'app -> db' => edge.merge('label' => '5984/tcp'),
+        '8.8.8.8/32' => {'label' => '8.8.8.8/32'},
+        '8.8.8.8/32 -> app' => edge.merge('label' => '80/tcp'),
+        'amazon-elb-sg' => {'label' => 'amazon-elb-sg'},
+        'amazon-elb-sg -> app' => edge.merge('label' => '80/tcp'),
+        '*' => {'label' => '*'},
+        '* -> app' => edge.merge('label' => '22/tcp')
       )
-      expect(actual_content).to match(/rankdir=LR/)
     end
 
     it 'should parse json input with stubbed out graphviz' do
       nodes = ["app", "8.8.8.8/32", "amazon-elb-sg", "*", "db"]
-      allow(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
+      expect(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
       VisualizeAws.new(config, opts).unleash(temp_file.path)
     end
   end
