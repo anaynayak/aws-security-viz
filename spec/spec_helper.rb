@@ -12,7 +12,7 @@ require "bundler"
 Bundler.require
 require "rspec"
 require "rubygems"
-require File.expand_path(File.dirname(__FILE__) + "/../config/boot")
+require "aws_security_viz"
 Dir[File.dirname(__FILE__) + "/support/**/*.rb"].each { |f| require f }
 
 def group name, *ingress
