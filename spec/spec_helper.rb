@@ -16,11 +16,11 @@ require File.expand_path(File.dirname(__FILE__) + "/../config/boot")
 Dir[File.dirname(__FILE__) + "/support/**/*.rb"].each { |f| require f }
 
 def group name, *ingress
-  {group_name: name, group_id: "some group", ip_permissions: ingress, ip_permissions_egress: []}
+  {group_name: name, group_id: "sg-#{name}", ip_permissions: ingress, ip_permissions_egress: []}
 end
 
 def group_ingress port, name
-  {user_id_group_pairs: [{user_id: "userId", group_id: "sg-groupId", group_name: name}], ip_ranges: [], ip_protocol: "tcp", from_port: port, to_port: port}
+  {user_id_group_pairs: [{user_id: "userId", group_id: "sg-#{name}", group_name: name}], ip_ranges: [], ip_protocol: "tcp", from_port: port, to_port: port}
 end
 
 def cidr_ingress port, cidr_ip

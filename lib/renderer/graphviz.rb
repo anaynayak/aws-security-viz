@@ -12,26 +12,31 @@ module Renderer
         rankdir: "LR")
       @file_name = file_name
       @config = config
+      @nodes = {}
+      @clusters = {}
     end
 
     def add_node(name, opts)
-      @g.add_node(name, label: name)
+      @nodes[name] ||= parent_for(opts[:vpc_id]).add_node(name, label: opts[:label] || name)
     end
 
     def add_edge(from, to, opts)
-      from_node = create_if_missing(from)
-      to_node = create_if_missing(to)
+      from_node = add_node(from, {})
+      to_node = add_node(to, {})
       options = {style: "bold"}.merge(opts)
-      from_node.connect(to_node, options)
-    end
-
-    def create_if_missing(name)
-      n = @g.get_node(name).first
-      n.nil? ? add_node(name, {}) : n
+      # Edges live in the root graph: an edge inside a cluster would pull its other endpoint in.
+      Graphviz::Edge.new(@g, from_node, to_node, options)
     end
 
     def output
       Graphviz.output(@g, path: @file_name, format: nil) # format: nil to force detection based on extension.
+    end
+
+    private
+
+    def parent_for(vpc_id)
+      return @g if vpc_id.nil?
+      @clusters[vpc_id] ||= @g.add_subgraph(vpc_id, cluster: true, label: vpc_id)
     end
   end
 end

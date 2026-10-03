@@ -7,14 +7,17 @@ class DummyRenderer
 
   def initialize
     @output = []
+    @labels = {}
   end
 
+  # Records group names rather than ids so expectations stay readable.
   def add_node(name, opts)
-    @output << [:node, name]
+    @labels[name] = opts[:label] || name
+    @output << [:node, @labels[name]]
   end
 
   def add_edge(from, to, opts)
-    @output << [:edge, from, to, opts]
+    @output << [:edge, @labels.fetch(from, from), @labels.fetch(to, to), opts]
   end
 end
 

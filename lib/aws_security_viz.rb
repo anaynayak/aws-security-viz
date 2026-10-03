@@ -27,9 +27,11 @@ class VisualizeAws
 
   def build
     g = @config.obfuscate? ? DebugGraph.new(@config) : Graph.new(@config)
+    peer_names = {}
     @security_groups.each_with_index { |group, index|
       picker = ColorPicker.new(@options[:color])
-      g.add_node(group.name, {vpc_id: group.vpc_id, group_id: group.group_id})
+      peer_names.merge!(group.peer_names)
+      g.add_node(group.group_id, {label: group.name, vpc_id: group.vpc_id, group_id: group.group_id})
       group.traffic.each { |traffic|
         if traffic.ingress
           g.add_edge(traffic.from, traffic.to, color: picker.color(index, traffic.ingress), label: traffic.port_range)
@@ -38,6 +40,7 @@ class VisualizeAws
         end
       }
     }
+    peer_names.each { |id, name| g.describe_node(id, {label: name}) }
     g
   end
 end

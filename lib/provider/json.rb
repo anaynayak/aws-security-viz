@@ -97,5 +97,9 @@ module Json
     def name
       @gp["GroupName"] || @gp["GroupId"]
     end
+
+    def group_id
+      @gp["GroupId"]
+    end
   end
 end

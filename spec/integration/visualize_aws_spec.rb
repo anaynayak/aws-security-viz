@@ -41,20 +41,20 @@ describe VisualizeAws do
       expect(statements_of(actual_content)).to eq(
         "graph" => {"concentrate" => "true", "overlap" => "false", "rankdir" => "LR", "sep" => "1", "splines" => "true"},
         "node" => {"label" => '\\N'},
-        "app" => {"label" => "app"},
-        "db" => {"label" => "db"},
-        "app -> db" => edge.merge("label" => "5984/tcp"),
+        "sg-appgrp" => {"label" => "app"},
+        "sg-dbgrp" => {"label" => "db"},
+        "sg-appgrp -> sg-dbgrp" => edge.merge("label" => "5984/tcp"),
         "8.8.8.8/32" => {"label" => "8.8.8.8/32"},
-        "8.8.8.8/32 -> app" => edge.merge("label" => "80/tcp"),
-        "amazon-elb-sg" => {"label" => "amazon-elb-sg"},
-        "amazon-elb-sg -> app" => edge.merge("label" => "80/tcp"),
+        "8.8.8.8/32 -> sg-appgrp" => edge.merge("label" => "80/tcp"),
+        "sg-amzelb" => {"label" => "amazon-elb-sg"},
+        "sg-amzelb -> sg-appgrp" => edge.merge("label" => "80/tcp"),
         "*" => {"label" => "*"},
-        "* -> app" => edge.merge("label" => "22/tcp")
+        "* -> sg-appgrp" => edge.merge("label" => "22/tcp")
       )
     end
 
     it "should parse json input with stubbed out graphviz" do
-      nodes = ["app", "8.8.8.8/32", "amazon-elb-sg", "*", "db"]
+      nodes = ["sg-appgrp", "8.8.8.8/32", "sg-amzelb", "*", "sg-dbgrp"]
       expect(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
       VisualizeAws.new(config, opts).unleash(temp_file.path)
     end
@@ -74,7 +74,7 @@ describe VisualizeAws do
       config = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, obfuscate: true})
       expect(FileUtils).to receive(:copy)
       VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
-      expect(actual_content).not_to include('"amazon-elb-sg"', '"app"', '"db"')
+      expect(actual_content).not_to include('"amazon-elb-sg"', '"app"', '"db"', "sg-appgrp")
     end
   end
 

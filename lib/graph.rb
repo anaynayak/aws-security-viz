@@ -18,6 +18,12 @@ class Graph
     @node_properties[name] = opts
   end
 
+  # Labels a node that only appears as an edge endpoint (e.g. a group outside the
+  # described set); a node already added with properties is left alone.
+  def describe_node(key, opts)
+    @node_properties[key] ||= opts if @underlying.has_vertex?(key)
+  end
+
   def add_edge(from, to, opts)
     log("edge: #{from} -> #{to}")
     @underlying.add_edge(from, to)
@@ -25,7 +31,7 @@ class Graph
   end
 
   def filter(source, destination)
-    @underlying = GraphFilter.new(underlying).filter(source, destination)
+    @underlying = GraphFilter.new(underlying).filter(resolve(source), resolve(destination))
   end
 
   def output(renderer)
@@ -41,6 +47,14 @@ class Graph
   end
 
   private
+
+  # A filter may be a group id (a node key) or a group name (a node label).
+  def resolve(filter)
+    return filter if filter.nil? || @underlying.has_vertex?(filter)
+    keys = @underlying.vertices.select { |v| @node_properties.dig(v, :label) == filter }
+    raise ArgumentError, "'#{filter}' matches several groups (#{keys.join(", ")}); use a group id" if keys.size > 1
+    keys.first || filter
+  end
 
   def opts(u, v)
     @edge_properties[[u, v]]

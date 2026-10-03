@@ -12,8 +12,9 @@ module Renderer
 
     def add_node(name, opts)
       vpc = opts[:vpc_id] || "default"
-      info = "<b>Security group</b>: #{name}, <br/><b>VPC:</b> #{vpc}"
-      @nodes << {id: name, label: name, categories: [vpc], info: info}
+      label = opts[:label] || name
+      info = "<b>Security group</b>: #{label}, <br/><b>VPC:</b> #{vpc}"
+      @nodes << {id: name, label: label, categories: [vpc], info: info}
       @categories.add(vpc)
     end
 

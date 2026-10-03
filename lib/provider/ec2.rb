@@ -102,5 +102,9 @@ module Ec2
     def name
       @gp["group_name"] || @gp["group_id"]
     end
+
+    def group_id
+      @gp["group_id"]
+    end
   end
 end

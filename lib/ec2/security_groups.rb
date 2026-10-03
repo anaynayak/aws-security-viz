@@ -49,6 +49,10 @@ class SecurityGroup
     ingress_permissions + egress_permissions
   end
 
+  def peer_names
+    permissions.map(&:peer_names).reduce({}, :merge)
+  end
+
   def traffic
     all_traffic = permissions.collect { |permission|
       permission.traffic
@@ -74,7 +78,6 @@ class CidrGroupMapping
 
   def mapping(val)
     group = @all_groups.find { |g| g.group_id == val }
-    name = group.nil? ? val : group.name
-    @user_groups[name] || name
+    @user_groups[val] || (group && @user_groups[group.name]) || val
   end
 end

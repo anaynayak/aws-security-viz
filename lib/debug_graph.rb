@@ -9,7 +9,11 @@ class DebugGraph
   end
 
   def add_node(name, opts)
-    @g.add_node(h(name), opts) if name
+    @g.add_node(h(name), hide_label(opts)) if name
+  end
+
+  def describe_node(key, opts)
+    @g.describe_node(h(key), hide_label(opts))
   end
 
   def add_edge(from, to, opts)
@@ -25,6 +29,10 @@ class DebugGraph
   end
 
   private
+
+  def hide_label(opts)
+    opts.key?(:label) ? opts.merge(label: h(opts[:label])) : opts
+  end
 
   def h(msg)
     Digest::SHA256.hexdigest msg

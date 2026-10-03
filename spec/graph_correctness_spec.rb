@@ -26,7 +26,6 @@ describe VisualizeAws do
   end
 
   it "B1: keeps same-named groups in different VPCs as separate nodes" do
-    pending "B1: nodes are keyed by group name, so the two 'default' groups merge"
     nodes = render("navigator")["data"]["nodes"]
     expect(nodes.count { |n| n["label"] == "default" }).to eq(2)
   end
