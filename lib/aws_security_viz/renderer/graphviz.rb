@@ -8,6 +8,7 @@ module AwsSecurityViz
     # any other extension is rendered by piping the text through `dot -T<ext> -K<layout>`.
     class GraphViz
       DOT_EXTENSIONS = %w[dot gv].freeze
+      IMAGE_EXTENSIONS = %w[png svg pdf jpg jpeg gif webp bmp tiff ps eps json].freeze
       GRAPH_ATTRS = {overlap: false, splines: true, sep: 1, concentrate: true, rankdir: "LR"}.freeze
 
       def initialize(file_name, config)
@@ -57,6 +58,10 @@ module AwsSecurityViz
         format = File.extname(@file_name.to_s).delete_prefix(".").downcase
         return File.write(@file_name, to_dot) if DOT_EXTENSIONS.include?(format)
 
+        unless IMAGE_EXTENSIONS.include?(format)
+          shown = format.empty? ? "no file extension" : "unknown file extension '.#{format}'"
+          raise ArgumentError, "cannot pick an output format from #{@file_name.to_s.inspect}: #{shown} (use e.g. .png, .svg, .pdf, .dot)"
+        end
         raise ArgumentError, "Graphviz 'dot' not found; install graphviz" unless on_path?("dot")
         image, err, status = Open3.capture3("dot", "-T#{format}", "-K#{engine}", stdin_data: to_dot, binmode: true)
         raise ArgumentError, "Graphviz failed: #{err.strip}" unless status.success?
@@ -77,9 +82,12 @@ module AwsSecurityViz
       end
 
       def on_path?(command)
+        suffixes = [""] + ENV.fetch("PATHEXT", "").split(File::PATH_SEPARATOR).reject(&:empty?)
         ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? { |dir|
-          path = File.join(dir, command)
-          File.file?(path) && File.executable?(path)
+          suffixes.any? { |suffix|
+            path = File.join(dir, command + suffix)
+            File.file?(path) && File.executable?(path)
+          }
         }
       end
     end

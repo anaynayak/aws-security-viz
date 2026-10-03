@@ -2,6 +2,7 @@
 
 require "spec_helper"
 require "tempfile"
+require "tmpdir"
 
 RSpec::Matchers.define :be_graph_with do |nodes|
   match do |graphv|
@@ -65,6 +66,28 @@ describe AwsSecurityViz::VisualizeAws do
       expect { AwsSecurityViz::VisualizeAws.new(config, opts.merge(filename: png)).unleash(png.path) }
         .to raise_error(ArgumentError, "Graphviz 'dot' not found; install graphviz")
       expect(File.exist?(png.path)).to be(false)
+    end
+
+    it "fails clearly, without calling dot, for a missing or unknown output extension" do
+      expect(Open3).not_to receive(:capture3)
+      ["out", "out.xyz"].each do |name|
+        renderer = AwsSecurityViz::Renderer::GraphViz.new(File.join(Dir.tmpdir, name), config)
+        expect { renderer.output }.to raise_error(ArgumentError, /cannot pick an output format.*\.png, \.svg/)
+      end
+    end
+
+    it "finds dot through PATHEXT variants such as dot.exe" do
+      Dir.mktmpdir { |dir|
+        exe = File.join(dir, "dot.exe")
+        File.write(exe, "")
+        File.chmod(0o755, exe)
+        stub_const("ENV", ENV.to_h.merge("PATH" => dir, "PATHEXT" => ".COM:.EXE"))
+        svg = Tempfile.new(%w[aws .svg])
+        expect(Open3).to receive(:capture3)
+          .and_return(["<svg/>", "", instance_double(Process::Status, success?: true)])
+        AwsSecurityViz::VisualizeAws.new(config, opts.merge(filename: svg)).unleash(svg.path)
+        expect(File.read(svg.path)).to eq("<svg/>")
+      }
     end
 
     it "renders svg through dot with the configured layout engine" do
