@@ -27,7 +27,7 @@ class Graph
   def add_edge(from, to, opts)
     log("edge: #{from} -> #{to}")
     @underlying.add_edge(from, to)
-    @edge_properties[[from, to]] = opts
+    @edge_properties[[from, to]] = merge_edge(@edge_properties[[from, to]], opts)
   end
 
   def filter(source, destination)
@@ -54,6 +54,14 @@ class Graph
     keys = @underlying.vertices.select { |v| @node_properties.dig(v, :label) == filter }
     raise ArgumentError, "'#{filter}' matches several groups (#{keys.join(", ")}); use a group id" if keys.size > 1
     keys.first || filter
+  end
+
+  # Rules from several groups (or egress and ingress) can map to one edge: keep the
+  # first colour and union the port labels in a stable order.
+  def merge_edge(existing, opts)
+    return opts unless existing
+    labels = [existing[:label], opts[:label]].compact.flat_map { |l| l.split(",") }
+    existing.merge(label: labels.uniq.sort.join(","))
   end
 
   def opts(u, v)
