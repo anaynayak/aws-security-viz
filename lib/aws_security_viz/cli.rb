@@ -55,8 +55,8 @@ module AwsSecurityViz
         config: "opts.yml",
         color: false,
         renderer: "graphviz",
-        debug: false,
-        obfuscate: false
+        debug: nil,
+        obfuscate: nil
       }
     end
 
@@ -103,9 +103,10 @@ module AwsSecurityViz
       debug = false
       CliGuard.run(debug: -> { debug }) do
         AwsSecurityViz.logger.warn("--color is deprecated and ignored; edges are blue (ingress) or red (egress)") if opts[:color]
-        debug = opts[:debug] || AwsConfig.boolean(@env["DEBUG"], "DEBUG")
+        # An explicit --[no-]debug / --[no-]obfuscate beats the env var; nil means "not given".
+        debug = opts[:debug].nil? ? AwsConfig.boolean(@env["DEBUG"], "DEBUG") : opts[:debug]
         overrides = {
-          obfuscate: opts[:obfuscate] || AwsConfig.boolean(@env["OBFUSCATE"], "OBFUSCATE"),
+          obfuscate: opts[:obfuscate].nil? ? AwsConfig.boolean(@env["OBFUSCATE"], "OBFUSCATE") : opts[:obfuscate],
           debug: debug,
           layout: opts[:layout]
         }.compact

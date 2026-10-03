@@ -92,7 +92,7 @@ module AwsSecurityViz
       # Quotes an ID or label for DOT: backslash and double quote are escaped, newlines become \n.
       # A backslash is escaped too, so a literal "\N" in data cannot be read as a Graphviz escape.
       def quote(value)
-        escaped = value.to_s.gsub("\\") { "\\\\" }.gsub('"') { '\\"' }.gsub(/\r?\n/) { "\\n" }
+        escaped = value.to_s.gsub("\\") { "\\\\" }.gsub('"') { '\\"' }.gsub(/\r\n|\r|\n/) { "\\n" }
         "\"#{escaped}\""
       end
 

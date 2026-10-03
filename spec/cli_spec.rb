@@ -68,6 +68,13 @@ describe AwsSecurityViz::CLI do
     expect(File.read("d.json")).not_to include("sg-appgrp")
   end
 
+  it "lets an explicit --no-debug and --no-obfuscate override DEBUG=true and OBFUSCATE=true" do
+    env = {"DEBUG" => "true", "OBFUSCATE" => "true"}
+    expect(cli("-o", source, "-n", "json", "-f", "n.json", "--no-debug", "--no-obfuscate", env: env).run).to eq(0)
+    expect(err.string).not_to include("[DEBUG]")
+    expect(File.read("n.json")).to include("sg-appgrp")
+  end
+
   it "returns 1 for an unknown renderer and invalid boolean env" do
     expect(cli("-o", source, "-n", "bogus").run).to eq(1)
     expect(err.string).to include("unknown renderer 'bogus'")
