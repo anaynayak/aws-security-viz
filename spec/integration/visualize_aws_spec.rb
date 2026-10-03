@@ -55,8 +55,20 @@ describe VisualizeAws do
 
     it "should parse json input with stubbed out graphviz" do
       nodes = ["sg-appgrp", "8.8.8.8/32", "sg-amzelb", "*", "sg-dbgrp"]
-      expect(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil)
+      expect(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil, dot: "dot")
       VisualizeAws.new(config, opts).unleash(temp_file.path)
+    end
+
+    it "passes the configured layout engine to graphviz" do
+      neato = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "neato"})
+      expect(Graphviz).to receive(:output).with(anything, path: temp_file.path, format: nil, dot: "neato")
+      VisualizeAws.new(neato, opts).unleash(temp_file.path)
+    end
+
+    it "prefers the layout option over opts.yml format" do
+      neato = AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "dot", layout: "sfdp"})
+      expect(Graphviz).to receive(:output).with(anything, path: temp_file.path, format: nil, dot: "sfdp")
+      VisualizeAws.new(neato, opts).unleash(temp_file.path)
     end
   end
 

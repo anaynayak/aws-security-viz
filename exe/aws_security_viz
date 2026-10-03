@@ -15,10 +15,13 @@ opts = Optimist.options do
   opt :profile, "AWS shared-config profile to use (AWS_PROFILE is read by the SDK)", type: :string
   opt :vpc_id, "AWS VPC id to show", type: :string
   opt :source_file, "JSON source file containing security groups", type: :string
-  opt :filename, "Output file name", type: :string, default: "aws-security-viz.png"
+  opt :filename, "Output file name (default: aws-security-viz.png, or .json for json/navigator)", type: :string
   opt :config, "Config file (opts.yml)", type: :string, default: "opts.yml"
   opt :color, "Colored node edges", default: false
   opt :renderer, "Renderer (#{Renderer.all.join("|")})", default: "graphviz"
+  opt :layout, "Graphviz layout engine (#{AwsConfig::LAYOUTS.join("|")}); overrides opts.yml format", type: :string
+  opt :debug, "Verbose output and stack traces (or DEBUG=true)", default: false
+  opt :obfuscate, "Hash group names and ports (or OBFUSCATE=true)", default: false
   opt :source_filter, "Source filter", default: nil, type: :string
   opt :target_filter, "Target filter", default: nil, type: :string
   opt :serve, "Serve a HTTP server", default: nil, type: :integer
@@ -31,15 +34,21 @@ if cmd == "setup"
   exit
 end
 
-config = AwsConfig.load(opts[:config]).merge(obfuscate: ENV["OBFUSCATE"], debug: ENV["DEBUG"])
-begin
-  VisualizeAws.new(config, opts).unleash(opts[:filename])
+debug = false
+status = CliGuard.run(debug: -> { debug }) do
+  debug = opts[:debug] || AwsConfig.boolean(ENV["DEBUG"], "DEBUG")
+  overrides = {
+    obfuscate: opts[:obfuscate] || AwsConfig.boolean(ENV["OBFUSCATE"], "OBFUSCATE"),
+    debug: debug,
+    layout: opts[:layout]
+  }.compact
+  config = AwsConfig.load(opts[:config]).merge(overrides)
+  Renderer.validate!(opts[:renderer])
+  filename = opts[:filename] || Renderer.default_file(opts[:renderer])
+  VisualizeAws.new(config, opts).unleash(filename)
   if opts[:serve]
-    puts "Navigate to http://localhost:#{opts[:serve]}/navigator.html##{opts[:filename]}"
+    puts "Navigate to http://localhost:#{opts[:serve]}/navigator.html##{filename}"
     WEBrick::HTTPServer.new({Port: opts[:serve], DocumentRoot: "."}).start
   end
-rescue Exception => e # standard:disable Lint/RescueException
-  puts "[ERROR] #{e.message}"
-  raise e if config.debug?
-  exit 1
 end
+exit status

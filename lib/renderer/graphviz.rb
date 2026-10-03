@@ -29,7 +29,8 @@ module Renderer
     end
 
     def output
-      Graphviz.output(@g, path: @file_name, format: nil) # format: nil to force detection based on extension.
+      # format: nil to force detection based on extension; the layout engine is the executable.
+      Graphviz.output(@g, path: @file_name, format: nil, dot: @config.layout)
     end
 
     private

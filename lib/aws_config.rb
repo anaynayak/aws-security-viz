@@ -19,8 +19,13 @@ class AwsConfig
     @opts[:groups] || {}
   end
 
-  def format
-    @opts[:format] || "dot"
+  LAYOUTS = %w[dot neato sfdp fdp twopi circo].freeze
+
+  # Graphviz layout engine: --layout, else `format` in opts.yml, else dot.
+  def layout
+    engine = (@opts[:layout] || @opts[:format] || "dot").to_s
+    return engine if LAYOUTS.include?(engine)
+    raise ArgumentError, "unknown layout engine '#{engine}' (choose from: #{LAYOUTS.join(", ")})"
   end
 
   def debug?
@@ -29,6 +34,15 @@ class AwsConfig
 
   def obfuscate?
     @opts[:obfuscate] || false
+  end
+
+  # Parses an env-style flag: nil/empty is unset, true/1/yes/on and false/0/no/off are booleans.
+  def self.boolean(value, name = "value")
+    text = value.to_s.strip.downcase
+    return nil if text.empty?
+    return true if %w[true 1 yes on].include?(text)
+    return false if %w[false 0 no off].include?(text)
+    raise ArgumentError, "#{name} must be true, false, 1 or 0 (got '#{value}')"
   end
 
   def self.load(file)

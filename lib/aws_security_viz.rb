@@ -10,6 +10,7 @@ require_relative "exclusions"
 require_relative "debug_graph"
 require_relative "color_picker"
 require_relative "aws_config"
+require_relative "cli_guard"
 
 class VisualizeAws
   def initialize(config, options = {})
