@@ -3,9 +3,10 @@
 require_relative "navigator"
 require_relative "json"
 require_relative "graphviz"
+require_relative "mermaid"
 module AwsSecurityViz
   module Renderer
-    ALL = {graphviz: Renderer::GraphViz, json: Renderer::Json, navigator: Renderer::Navigator}
+    ALL = {graphviz: Renderer::GraphViz, json: Renderer::Json, navigator: Renderer::Navigator, mermaid: Renderer::Mermaid}
     DEFAULT = "graphviz"
 
     def self.pick(r, output_file, config)
@@ -19,9 +20,13 @@ module AwsSecurityViz
       raise ArgumentError, "unknown renderer '#{name}' (choose from: #{all.join(", ")})"
     end
 
-    # Default output file name: an image for graphviz, JSON data for the viewer renderers.
+    # Default output file name: an image for graphviz, text for mermaid, JSON data for the viewer renderers.
     def self.default_file(r)
-      (validate!(r) == :graphviz) ? "aws-security-viz.png" : "aws-security-viz.json"
+      case validate!(r)
+      when :graphviz then "aws-security-viz.png"
+      when :mermaid then "aws-security-viz.#{Renderer::Mermaid::DEFAULT_EXTENSION}"
+      else "aws-security-viz.json"
+      end
     end
 
     def self.copy_asset(asset, file_name)

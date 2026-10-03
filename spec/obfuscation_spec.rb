@@ -6,10 +6,10 @@ require "tmpdir"
 describe AwsSecurityViz::Obfuscation do
   let(:source) { File.expand_path("integration/dummy.json", __dir__) }
 
-  %w[json navigator graphviz].each do |renderer|
+  %w[json navigator graphviz mermaid].each do |renderer|
     it "leaves no vpc- or sg- ids in #{renderer} output" do
       Dir.mktmpdir { |dir|
-        out = File.join(dir, (renderer == "graphviz") ? "o.dot" : "o.json")
+        out = File.join(dir, {"graphviz" => "o.dot", "mermaid" => "o.mmd"}.fetch(renderer, "o.json"))
         config = AwsSecurityViz::AwsConfig.new(obfuscate: true)
         AwsSecurityViz::VisualizeAws.new(config, source_file: source, renderer: renderer).unleash(out)
         expect(File.read(out)).not_to match(/vpc-|sg-/)
