@@ -31,6 +31,18 @@ describe "--show-unused" do
       expect(groups.to_h { |g| [g.id, g.unused] }).to eq("sg-1" => false, "sg-2" => true, "sg-3" => false)
     end
 
+    it "keeps the groups and warns when DescribeNetworkInterfaces is not permitted" do
+      client.stub_responses(:describe_network_interfaces, "UnauthorizedOperation")
+      err = StringIO.new
+      AwsSecurityViz.logger = AwsSecurityViz.build_logger(err)
+      groups = described_class.new({show_unused: true}, client: client).security_groups
+      expect(groups.map(&:id)).to eq(%w[sg-1 sg-2 sg-3])
+      expect(groups.map(&:unused)).to eq([false, false, false])
+      expect(err.string).to include("--show-unused needs ec2:DescribeNetworkInterfaces")
+    ensure
+      AwsSecurityViz.logger = nil
+    end
+
     it "makes no network interface call without the flag" do
       calls = []
       client.handle(step: :initialize) { |ctx|

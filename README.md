@@ -121,7 +121,7 @@ Options:
 
 #### Configuration 
 
-aws-security-viz only uses the `ec2:DescribeSecurityGroups` api (plus `ec2:DescribeRegions` for `--all-regions`) so a minimal IAM policy which grants only those two actions should be enough. `--show-unused` additionally calls `ec2:DescribeNetworkInterfaces` (paginated, per region) and is the only reason that action is needed; without the flag no such call is made.
+aws-security-viz only uses the `ec2:DescribeSecurityGroups` api (plus `ec2:DescribeRegions` for `--all-regions`) so a minimal IAM policy which grants only those two actions should be enough. `--show-unused` additionally calls `ec2:DescribeNetworkInterfaces` (paginated, per region); add that action to the policy only if you use the flag. Without the permission the run still succeeds and logs a warning, but no groups are marked unused.
 
 ```json
 {
@@ -129,7 +129,7 @@ aws-security-viz only uses the `ec2:DescribeSecurityGroups` api (plus `ec2:Descr
     "Statement": [
         {
             "Effect": "Allow",
-            "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeRegions", "ec2:DescribeNetworkInterfaces"],
+            "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeRegions"],
             "Resource": "*"
         }
     ]

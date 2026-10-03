@@ -39,7 +39,13 @@ module AwsSecurityViz
         page.security_groups.collect { |sg| SecurityGroup.from_hash(Model.normalize(sg.to_h)).with(region: region) }
       }
       return groups unless @options[:show_unused]
-      used = attached_group_ids(client, params)
+      used = begin
+        attached_group_ids(client, params)
+      rescue Aws::EC2::Errors::UnauthorizedOperation
+        # Without the permission the groups are still worth drawing; just leave them unmarked.
+        AwsSecurityViz.logger.warn("--show-unused needs ec2:DescribeNetworkInterfaces; no groups are marked unused#{" in #{region}" if region}")
+        return groups
+      end
       groups.map { |g| g.with(unused: !used.include?(g.id)) }
     end
 
