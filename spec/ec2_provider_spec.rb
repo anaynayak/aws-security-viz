@@ -87,6 +87,15 @@ describe AwsSecurityViz::Ec2Provider, "multi-region" do
       }
     end
 
+    it "hashes the region in the skip warning when obfuscating" do
+      fail_region(%w[eu-west-1], "AuthFailure")
+      err = StringIO.new
+      AwsSecurityViz.logger = AwsSecurityViz.build_logger(err)
+      described_class.new({all_regions: true, obfuscate: true}).security_groups
+      expect(err.string).to include("skipping region #{AwsSecurityViz::Obfuscation.hash("eu-west-1")}")
+      expect(err.string).not_to include("eu-west-1")
+    end
+
     it "warns and continues when a region is not enabled or not permitted" do
       %w[UnauthorizedOperation AuthFailure OptInRequired].each do |code|
         fail_region(%w[eu-west-1], code)

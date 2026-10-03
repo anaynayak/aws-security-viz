@@ -24,6 +24,12 @@ describe AwsSecurityViz::CLI do
     described_class.new(argv, env: env, out: out, err: err)
   end
 
+  it "describes everything --obfuscate hashes in its help text" do
+    cli("--help").run
+    line = out.string.lines.grep(/--\[no-\]obfuscate/).first
+    expect(line).to include("ids", "group names", "VPC ids", "regions", "ports", "rule descriptions")
+  end
+
   it "prints usage and exits 0 for --help and -h" do
     %w[--help -h].each do |flag|
       expect(cli(flag).run).to eq(0)

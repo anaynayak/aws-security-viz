@@ -4,12 +4,27 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Documentation site at https://anaynayak.github.io/aws-security-viz/ (MkDocs Material, built strictly in CI and deployed from `main`); the README is now a short summary that links to it
+- `SECURITY.md`: supported versions, private vulnerability reporting, scope, disclosure timeline, data handling and release verification
+- Releases attest SLSA build provenance for the gem and the GHCR image, attach a CycloneDX SBOM and the provenance bundle (`.intoto.jsonl`) to the GitHub release, and create that release from this changelog
+- Reproducible gem builds: `script/build-reproducible` normalises file permissions and sets `SOURCE_DATE_EPOCH`; CI builds the gem twice under different umask, timezone and directory and compares checksums
+- CodeQL scanning for Ruby and GitHub Actions workflows, and an OpenSSF Scorecard workflow with a README badge
+- CI builds and smoke-tests the Docker image on every pull request
+
+### Changed
+- The Docker base image is pinned by digest
+- `--obfuscate` help text lists everything it hashes
+
+### Fixed
+- With `--obfuscate`, the warnings for skipped regions and for `--show-unused` without `ec2:DescribeNetworkInterfaces` printed the raw region name
+
 ## [1.0.0] - 2026-10-03
 This release also covers the 0.3.0 work, which was never tagged or published.
 
 ### Breaking changes
 - Ruby 3.3 or newer is required (it was 3.0 or newer in 0.2.4)
-- The default output is now `aws-security-viz.html`, a self-contained page, instead of `aws-security-viz.png` (`.json` for json and navigator output). The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg). Image output still needs the Graphviz `dot` binary
+- The default output is now `aws-security-viz.html`, a self-contained page, instead of `aws-security-viz.png`. The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg). Image output still needs the Graphviz `dot` binary
 - The old html viewers and the navigator renderer are removed, along with `--serve`
 - There is no default region (it used to be us-east-1); the region comes from the AWS SDK credential/config chain (AWS_REGION, profile, ...) or -r, and a missing region fails with an error
 - --profile no longer defaults to AWS_PROFILE, so explicit access keys are kept
@@ -35,7 +50,7 @@ This release also covers the 0.3.0 work, which was never tagged or published.
 - --debug (or DEBUG=true) for verbose output and stack traces, --obfuscate (or OBFUSCATE=true) to hash group names, ports and ids
 - IPv6 ranges and prefix lists are drawn as rule peers
 - --vpc-id is honoured for --source-file input
-- Tag-triggered release workflow using RubyGems trusted publishing, which also pushes a multi-arch (amd64 and arm64) image to ghcr.io/anaynayak/aws-security-viz tagged `<version>`, `<major>.<minor>` and `latest`. The image is built from this source and runs as a non-root user. Not yet verified locally (task-17: the Docker build and the release workflow have not been run)
+- Tag-triggered release workflow using RubyGems trusted publishing, which also pushes a multi-arch (amd64 and arm64) image to ghcr.io/anaynayak/aws-security-viz tagged `<version>`, `<major>.<minor>` and `latest`. The image is built from this source and runs as a non-root user
 
 ### Changed
 - CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser
@@ -44,7 +59,6 @@ This release also covers the 0.3.0 work, which was never tagged or published.
 - Graph building uses a small adjacency-list graph and DOT is generated directly; Graphviz is only needed for image formats
 - Rules that allow all traffic, ICMP, or a numeric protocol get readable labels, and all-traffic is labelled "all"
 - Boolean environment variables (DEBUG, OBFUSCATE) are parsed as booleans
-- The html asset is written next to the output file, not the current directory
 - Gemfile.lock is committed, the gemspec has no upper version caps, and CI tests Ruby 3.3, 3.4 and 4.0
 
 ### Removed

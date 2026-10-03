@@ -43,6 +43,14 @@ aws.json
 # local reports and generated output; viewer templates shipped in the gem are exempt
 *.html
 !/lib/**/*.html
+!/overrides/*.html
 
 # Backlog.md task tracking stays local
 /backlog/
+
+# docs tooling
+/.venv/
+/site/
+
+# documentation screenshots and the sample input
+!/docs/assets/*.png

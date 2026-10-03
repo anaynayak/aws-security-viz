@@ -15,7 +15,7 @@ module AwsSecurityViz
     def initialize(config, options = {})
       @options = options
       @config = config
-      provider = options[:source_file].nil? ? Ec2Provider.new(options) : JsonProvider.new(options)
+      provider = options[:source_file].nil? ? Ec2Provider.new(options.merge(obfuscate: config.obfuscate?)) : JsonProvider.new(options)
       @security_groups = SecurityGroups.new(provider, config)
     end
 

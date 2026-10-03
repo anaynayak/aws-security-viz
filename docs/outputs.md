@@ -1,0 +1,124 @@
+---
+description: Output formats of aws-security-viz (html, svg and png images, dot, json, mermaid), what each contains, and a tour of the HTML viewer.
+---
+
+# Outputs
+
+The format follows the extension of `-f/--output`. Without `-f` the tool writes `aws-security-viz.html`. An unknown
+extension is rejected with a message listing the supported ones.
+
+| Extension | Format | Needs Graphviz |
+| --- | --- | --- |
+| `.html`, `.htm` | Self-contained interactive viewer (default) | No |
+| `.json` | Nodes and edges as data | No |
+| `.mmd` | Mermaid flowchart | No |
+| `.dot`, `.gv` | Graphviz DOT text | No |
+| `.png`, `.svg`, `.pdf`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.bmp`, `.tiff`, `.ps`, `.eps` | Rendered image | Yes (`dot` on the path) |
+
+The older `--renderer` flag is deprecated. It still works and prints a warning; use the extension instead.
+
+Edge colours are the same in every format: blue for ingress, red for egress, and a thick dashed crimson edge for
+[risky public ingress](filtering-and-risk-checks.md#what-counts-as-risky). With `--show-unused`, groups that no network
+interface uses are marked: dashed grey in DOT, an `unused` class in Mermaid, and `unused: true` in JSON and HTML data.
+Colour is never the only signal: the viewer legend and the JSON `risky` flag state the same facts in text.
+
+## HTML viewer
+
+`-f out.html` writes one file with Cytoscape.js and the graph data inlined. Open it from disk in a browser; no web
+server and no network access are needed.
+
+```
+aws_security_viz -o security_groups.json -f viz.html
+```
+
+![HTML viewer overview: five nodes and a dashed crimson edge from 0.0.0.0/0 to app](assets/viewer-overview.png)
+
+1. Search. Type in the search box to find and centre matching groups.
+2. Ingress, Egress and Risky only toggles. Risky only keeps the risky edges and hides the rest.
+3. Reset view clears the search and fits the whole graph.
+4. Click a group or an edge to see its details. For an edge the panel shows the direction, the ports, any rule
+   descriptions, and a risk note.
+5. The legend under the toolbar explains the edge styles.
+
+![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
+
+![Details panel for the risky edge: direction ingress, ports 22/tcp, risky public ingress](assets/viewer-details.png)
+
+![Search for "app": the matching group is centred and the rest dimmed](assets/viewer-search.png)
+
+The page has a Content-Security-Policy and makes no network requests; see [Security](security.md#4-data-handling).
+
+!!! warning
+    The output describes your network exposure. Treat the files as sensitive, or use
+    [`--obfuscate`](configuration.md#obfuscation) before sharing them.
+
+## Images
+
+Image formats pipe DOT through the `dot` binary, so Graphviz must be installed. The layout engine defaults to `dot`;
+change it with `-y/--layout` (`dot`, `neato`, `sfdp`, `fdp`, `twopi`, `circo`) or `:format:` in `opts.yml`.
+
+```
+aws_security_viz -o security_groups.json -f viz.svg
+aws_security_viz -o security_groups.json -f viz.png --layout neato
+```
+
+## JSON
+
+Nodes carry the security group id as `id` and the name as `label`; edges carry `source`, `target`, `label` and, when
+risky, `"risky": true`. With several regions each node also carries its region.
+
+```
+aws_security_viz -o security_groups.json -f viz.json
+```
+
+```json
+{"nodes":[{"id":"sg-appgrp","label":"app"},{"id":"0.0.0.0/0","label":"0.0.0.0/0"}],"edges":[{"id":"0.0.0.0/0-sg-appgrp","source":"0.0.0.0/0","target":"sg-appgrp","label":"22/tcp","risky":true}]}
+```
+
+The example is shortened to two of the five nodes.
+
+## Mermaid
+
+```
+aws_security_viz -o security_groups.json -f viz.mmd
+```
+
+```
+flowchart LR
+  n0["app"]
+  n1["8.8.8.8/32"]
+  n2["amazon-elb-sg"]
+  n3["0.0.0.0/0"]
+  n4["db"]
+  n0 -->|"5984/tcp"| n4
+  n1 -->|"80/tcp"| n0
+  n2 -->|"80/tcp"| n0
+  n3 -->|"22/tcp"| n0
+  linkStyle 0 stroke:#1f5fbf
+  linkStyle 1 stroke:#1f5fbf
+  linkStyle 2 stroke:#1f5fbf
+  linkStyle 3 stroke:#dc143c,stroke-width:4px,stroke-dasharray:6 3
+```
+
+Paste the file into a Markdown code fence tagged `mermaid`; GitHub renders it. Mermaid's defaults allow 500 edges and
+50,000 characters of text. When the diagram exceeds either, the tool prints a warning and GitHub or `mmdc` may refuse
+to render it. Use the HTML viewer for large accounts.
+
+## DOT
+
+`.dot` and `.gv` files are the DOT text itself and need no Graphviz:
+
+```
+aws_security_viz -o security_groups.json -f viz.dot
+```
+
+```
+digraph "G" {
+  graph [overlap="false", splines="true", sep="1", concentrate="true", rankdir="LR"];
+  "sg-appgrp" [label="app"];
+  "0.0.0.0/0" [label="0.0.0.0/0"];
+  "0.0.0.0/0" -> "sg-appgrp" [style="dashed", color="crimson", label="22/tcp", penwidth="3"];
+}
+```
+
+The example is shortened to two of the five nodes.

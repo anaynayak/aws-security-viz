@@ -3,6 +3,7 @@
 require "aws-sdk-ec2"
 require_relative "../model"
 require_relative "../logging"
+require_relative "../obfuscation"
 
 module AwsSecurityViz
   class Ec2Provider
@@ -22,7 +23,7 @@ module AwsSecurityViz
         describe(@client || build_client(region), (regions.size > 1) ? region : nil)
       rescue *SKIPPABLE_ERRORS => e
         raise if regions.size == 1
-        AwsSecurityViz.logger.warn("skipping region #{region}: #{e.class.name.split("::").last}: #{e.message}")
+        AwsSecurityViz.logger.warn("skipping region #{loggable(region)}: #{e.class.name.split("::").last}: #{e.message}")
         errors << e
         []
       end
@@ -31,6 +32,11 @@ module AwsSecurityViz
     end
 
     private
+
+    # Region names are hashed in diagnostics when --obfuscate is on.
+    def loggable(region)
+      @options[:obfuscate] ? Obfuscation.hash(region) : region
+    end
 
     def describe(client, region)
       params = {}
@@ -43,7 +49,7 @@ module AwsSecurityViz
         attached_group_ids(client, params)
       rescue Aws::EC2::Errors::UnauthorizedOperation
         # Without the permission the groups are still worth drawing; just leave them unmarked.
-        AwsSecurityViz.logger.warn("--show-unused needs ec2:DescribeNetworkInterfaces; no groups are marked unused#{" in #{region}" if region}")
+        AwsSecurityViz.logger.warn("--show-unused needs ec2:DescribeNetworkInterfaces; no groups are marked unused#{" in #{loggable(region)}" if region}")
         return groups
       end
       groups.map { |g| g.with(unused: !used.include?(g.id)) }

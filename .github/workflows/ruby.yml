@@ -31,6 +31,8 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+      # Graphviz comes from the runner's distro/Homebrew repositories and is deliberately unpinned: the specs only
+      # need a working `dot`, and pinning a distro version would break when the package index rotates.
       - name: Install Graphviz (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y graphviz
@@ -65,3 +67,35 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/out:/work" aws-security-viz:ci -o dummy.json -f viz.html
           grep -q "<svg" out/viz.svg
           grep -q "cytoscape" out/viz.html
+
+  reproducible-gem:
+    name: reproducible gem build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.4"
+      - name: Build the gem twice and compare
+        run: |
+          # Same commit, different umask, TZ and directory depth: script/build-reproducible must give the same checksum.
+          git worktree add --detach "$RUNNER_TEMP/first" HEAD
+          (umask 002; git worktree add --detach "$RUNNER_TEMP/nested/second" HEAD)
+          (cd "$RUNNER_TEMP/first" && TZ=UTC script/build-reproducible "$RUNNER_TEMP/first.gem")
+          (cd "$RUNNER_TEMP/nested/second" && TZ=Asia/Kolkata script/build-reproducible "$RUNNER_TEMP/second.gem")
+          sha256sum "$RUNNER_TEMP/first.gem" "$RUNNER_TEMP/second.gem"
+          [ "$(sha256sum < "$RUNNER_TEMP/first.gem")" = "$(sha256sum < "$RUNNER_TEMP/second.gem")" ]
+
+  docs:
+    name: docs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Build the docs (strict)
+        run: uv run --locked --group docs mkdocs build --strict

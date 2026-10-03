@@ -1,0 +1,64 @@
+{
+  "SecurityGroups": [
+    {
+      "IpPermissionsEgress": [],
+      "Description": "app",
+      "IpPermissions": [
+        {
+          "ToPort": 80,
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "8.8.8.8/32"
+            }
+          ],
+          "UserIdGroupPairs": [
+            {
+              "GroupName": "amazon-elb-sg",
+              "UserId": "amazon-elb",
+              "GroupId": "sg-amzelb"
+            }
+          ],
+          "FromPort": 80
+        },
+        {
+          "ToPort": 22,
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "UserIdGroupPairs": [],
+          "FromPort": 22
+        }
+      ],
+      "GroupName": "app",
+      "OwnerId": "owner1",
+      "GroupId": "sg-appgrp"
+    },
+    {
+      "IpPermissionsEgress": [],
+      "Description": "db",
+      "IpPermissions": [
+        {
+          "ToPort": 5984,
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupName": "app",
+              "UserId": "owner1",
+              "GroupId": "sg-appgrp"
+            }
+          ],
+          "FromPort": 5984
+        }
+      ],
+      "GroupName": "db",
+      "OwnerId": "owner1",
+      "GroupId": "sg-dbgrp"
+    }
+  ]
+}
+

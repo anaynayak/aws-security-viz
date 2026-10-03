@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Make the gem build independent of the checkout's umask and timestamps.
+#
+# Usage, from the repository root:
+#   script/build-reproducible              normalise permissions, print SOURCE_DATE_EPOCH=<n> on stdout
+#   script/build-reproducible OUT.gem      the same, then build the gem to OUT.gem
+#
+# RubyGems stores each file's raw mode in the gem, so files are set to 644 (755 where already executable).
+# SOURCE_DATE_EPOCH is the commit time of HEAD. The gem's checksum also depends on the RubyGems version
+# (metadata records rubygems_version), so compare builds made with the same Ruby and RubyGems.
+set -euo pipefail
+
+epoch="$(git log -1 --format=%ct)"
+export SOURCE_DATE_EPOCH="$epoch"
+
+ruby -e 'puts Gem::Specification.load("aws_security_viz.gemspec").files' | xargs chmod u=rwX,go=rX
+echo "SOURCE_DATE_EPOCH=${epoch}"
+
+if [ $# -ge 1 ]; then
+  gem build aws_security_viz.gemspec --output "$1" >&2
+fi

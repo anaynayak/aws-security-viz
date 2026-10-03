@@ -76,7 +76,7 @@ module AwsSecurityViz
         o.on("-n", "--renderer=NAME", "Deprecated, use the -f extension instead: renderer (#{Renderer.all.join("|")})") { |v| opts[:renderer] = v }
         o.on("-y", "--layout=ENGINE", "Graphviz layout engine (#{AwsConfig::LAYOUTS.join("|")}); overrides opts.yml format") { |v| opts[:layout] = v }
         o.on("-d", "--[no-]debug", "Verbose output and stack traces (or DEBUG=true)") { |v| opts[:debug] = v }
-        o.on("-b", "--[no-]obfuscate", "Hash group names and ports (or OBFUSCATE=true)") { |v| opts[:obfuscate] = v }
+        o.on("-b", "--[no-]obfuscate", "Hash ids, group names, VPC ids, regions, ports and rule descriptions in all output (or OBFUSCATE=true)") { |v| opts[:obfuscate] = v }
         o.on("-u", "--source-filter=FILTER", "Source filter") { |v| opts[:source_filter] = v }
         o.on("-t", "--target-filter=FILTER", "Target filter") { |v| opts[:target_filter] = v }
         o.on("--show-unused", "Mark groups with no attached network interfaces (needs ec2:DescribeNetworkInterfaces; ignored with --source-file)") { opts[:show_unused] = true }
