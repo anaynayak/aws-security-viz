@@ -27,7 +27,16 @@ module AwsSecurityViz
       end
       return 0 if opts[:exit]
       command = @argv.shift
-      return setup(opts) if %w[setup init].include?(command)
+      unknown = [command, *@argv].compact.reject { |a| a == command && %w[setup init].include?(a) }
+      unless unknown.empty?
+        AwsSecurityViz.logger.error("unknown command '#{unknown.first}' (expected setup or init; try --help)")
+        return 1
+      end
+      return setup(opts) if command
+      if opts[:serve] && !(1..65535).cover?(opts[:serve])
+        AwsSecurityViz.logger.error("--serve port must be between 1 and 65535, got #{opts[:serve]}")
+        return 1
+      end
       visualize(opts)
     end
 
@@ -59,11 +68,11 @@ module AwsSecurityViz
         o.on("-o", "--source-file=FILE", "--input=FILE", "JSON source file containing security groups") { |v| opts[:source_file] = v }
         o.on("-f", "--filename=FILE", "--output=FILE", "Output file name (default: aws-security-viz.png, or .json for json/navigator)") { |v| opts[:filename] = v }
         o.on("-c", "--config=FILE", "Config file (opts.yml)") { |v| opts[:config] = v }
-        o.on("-l", "--color", "Deprecated, ignored: edges are blue for ingress and red for egress") { opts[:color] = true }
+        o.on("-l", "--[no-]color", "Deprecated, ignored: edges are blue for ingress and red for egress") { |v| opts[:color] = v }
         o.on("-n", "--renderer=NAME", "Renderer (#{Renderer.all.join("|")}) (default: graphviz)") { |v| opts[:renderer] = v }
         o.on("-y", "--layout=ENGINE", "Graphviz layout engine (#{AwsConfig::LAYOUTS.join("|")}); overrides opts.yml format") { |v| opts[:layout] = v }
-        o.on("-d", "--debug", "Verbose output and stack traces (or DEBUG=true)") { opts[:debug] = true }
-        o.on("-b", "--obfuscate", "Hash group names and ports (or OBFUSCATE=true)") { opts[:obfuscate] = true }
+        o.on("-d", "--[no-]debug", "Verbose output and stack traces (or DEBUG=true)") { |v| opts[:debug] = v }
+        o.on("-b", "--[no-]obfuscate", "Hash group names and ports (or OBFUSCATE=true)") { |v| opts[:obfuscate] = v }
         o.on("-u", "--source-filter=FILTER", "Source filter") { |v| opts[:source_filter] = v }
         o.on("-t", "--target-filter=FILTER", "Target filter") { |v| opts[:target_filter] = v }
         o.on("--serve=PORT", Integer, "Serve a HTTP server") { |v| opts[:serve] = v }

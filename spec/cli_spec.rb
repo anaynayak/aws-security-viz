@@ -102,3 +102,38 @@ describe AwsSecurityViz::CLI, "--all-regions" do
     expect(seen).to include(all_regions: true)
   end
 end
+
+describe AwsSecurityViz::CLI, "argument validation" do
+  let(:source) { File.expand_path("integration/dummy.json", __dir__) }
+  let(:err) { StringIO.new }
+
+  around do |example|
+    Dir.mktmpdir { |dir| Dir.chdir(dir) { example.run } }
+  end
+
+  after { AwsSecurityViz.logger = nil }
+
+  def run_cli(*argv)
+    described_class.new(argv, env: {}, out: StringIO.new, err: err).run
+  end
+
+  it "accepts --no-debug, --no-obfuscate and --no-color" do
+    %w[--no-debug --no-obfuscate --no-color].each do |flag|
+      expect(run_cli(flag, "-o", source, "-n", "json", "-f", "x.json")).to eq(0), flag
+    end
+  end
+
+  it "rejects a --serve port outside 1-65535 before rendering" do
+    ["0", "65536", "-1"].each do |port|
+      expect(run_cli("--serve=#{port}", "-o", source, "-n", "json", "-f", "x.json")).to eq(1)
+      expect(err.string).to include("--serve port must be between 1 and 65535")
+    end
+    expect(File.exist?("x.json")).to be(false)
+  end
+
+  it "rejects an unknown positional argument with exit 1" do
+    expect(run_cli("bogus", "-o", source, "-n", "json", "-f", "x.json")).to eq(1)
+    expect(err.string).to include("unknown command 'bogus'")
+    expect(File.exist?("x.json")).to be(false)
+  end
+end
