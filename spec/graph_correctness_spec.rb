@@ -12,12 +12,8 @@ describe VisualizeAws do
   let(:out_dir) { Dir.mktmpdir }
   let(:out_file) { File.join(out_dir, "out.json") }
 
-  # While B4 is unfixed the html asset lands in the cwd; remove it if this example created it.
-  let!(:stray_asset_existed) { File.exist?("navigator.html") }
-
   after do
     FileUtils.remove_entry(out_dir)
-    FileUtils.rm_f("navigator.html") unless stray_asset_existed
   end
 
   def render(renderer)
@@ -44,8 +40,8 @@ describe VisualizeAws do
   end
 
   it "B4: writes the html asset next to the output file" do
-    pending "B4: Renderer.copy_asset uses a nil @file_name and copies into the cwd"
     render("navigator")
     expect(File.exist?(File.join(out_dir, "navigator.html"))).to be(true)
+    expect(File.exist?("navigator.html")).to be(false)
   end
 end

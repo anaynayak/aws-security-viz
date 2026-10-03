@@ -11,7 +11,7 @@ module Renderer
 
   def self.copy_asset(asset, file_name)
     FileUtils.copy(File.expand_path("../../export/html/#{asset}", __FILE__),
-      File.expand_path(asset, @file_name))
+      File.join(File.dirname(File.expand_path(file_name)), asset))
   end
 
   def self.all
