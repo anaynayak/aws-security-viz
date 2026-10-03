@@ -9,8 +9,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - --show-unused marks security groups with no attached network interface (dashed grey in DOT, `unused` class in Mermaid, `unused: true` in JSON and navigator output); it needs `ec2:DescribeNetworkInterfaces` and is ignored with --source-file
 
 ### Changed
+- The output format is inferred from the -f/--output extension (.html, .json, .mmd, .dot/.gv, or an image such as .png/.svg); the default output is aws-security-viz.html. --renderer is deprecated, still works, and prints a warning; `--renderer navigator` writes the html viewer
 - CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser; the optimist dependency is removed
 - Warnings, errors and debug output go to stderr through a Logger, keeping stdout clean
+
+### Removed
+- The navigator renderer, the old view.html and navigator.html viewers, --serve and the webrick dependency
 
 ## [0.3.0] - 2026-10-03
 ### Added

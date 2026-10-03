@@ -35,7 +35,6 @@ opts.yml
 # in case you run the sample commands in this directory..
 viz.svg
 aws.json
-navigator.html
 *.png
 *.dot
 *.svg
