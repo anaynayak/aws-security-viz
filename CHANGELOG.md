@@ -16,7 +16,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Rules that allow all traffic, ICMP, or a numeric protocol get readable labels, and all-traffic is labelled "all"
 - Boolean environment variables (DEBUG, OBFUSCATE) are parsed as booleans
 - The default output file name is aws-security-viz.png (.json for json and navigator output), and the html asset is written next to the output file, not the current directory
-
 - Edges are blue for ingress and red for egress; `--color` is deprecated and ignored (the per-group colour palette is gone)
 - Obfuscation hashes are shorter (10 hex characters)
 

@@ -30,13 +30,13 @@ aws-security-viz -- A tool to visualize aws security groups
 To generate the graph directly using AWS keys
 
 ```
-  $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f viz.svg --color=true
+  $ aws_security_viz -a your_aws_key -s your_aws_secret_key -f viz.svg
 ```
 
 To generate the graph using an existing security_groups.json (created using aws-cli)
 
 ```
-  $ aws_security_viz -o data/security_groups.json -f viz.svg --color
+  $ aws_security_viz -o data/security_groups.json -f viz.svg
 ```
 
 To generate a web view

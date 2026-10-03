@@ -16,7 +16,7 @@ module AwsSecurityViz
     end
 
     def add_node(name, opts)
-      log("node: #{name}, opts: #{opts}")
+      log("node: #{loggable(name)}, opts: #{@config.obfuscate? ? Obfuscation.node_opts(opts) : opts}")
       @underlying.add_vertex(name)
       @node_properties[name] = opts
     end
@@ -28,7 +28,7 @@ module AwsSecurityViz
     end
 
     def add_edge(from, to, opts)
-      log("edge: #{from} -> #{to}")
+      log("edge: #{loggable(from)} -> #{loggable(to)}")
       @underlying.add_edge(from, to)
       @edge_properties[[from, to]] = merge_edge(@edge_properties[[from, to]], opts)
     end
@@ -51,6 +51,11 @@ module AwsSecurityViz
     end
 
     private
+
+    # Debug output is what users paste into bug reports, so it is hashed like the rest.
+    def loggable(value)
+      @config.obfuscate? ? Obfuscation.hash(value) : value
+    end
 
     # A filter may be a group id (a node key) or a group name (a node label).
     def resolve(filter)
