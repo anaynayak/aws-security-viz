@@ -2,6 +2,7 @@
 
 require "spec_helper"
 require "tmpdir"
+require "stringio"
 require "open3"
 
 describe AwsSecurityViz::Renderer::Mermaid do
@@ -60,5 +61,37 @@ describe AwsSecurityViz::Renderer::Mermaid do
       _, err, status = Open3.capture3("mmdc", "-i", File.join(dir, "in.mmd"), "-o", File.join(dir, "out.svg"))
       expect(status).to be_success, err
     }
+  end
+end
+
+describe AwsSecurityViz::Renderer::Mermaid, "size warning" do
+  let(:err) { StringIO.new }
+
+  around { |ex| Dir.mktmpdir { |dir| Dir.chdir(dir) { ex.run } } }
+  before { AwsSecurityViz.logger = AwsSecurityViz.build_logger(err) }
+  after { AwsSecurityViz.logger = nil }
+
+  def render(edges)
+    renderer = described_class.new("big.mmd", AwsSecurityViz::AwsConfig.new)
+    edges.times { |i| renderer.add_edge("a#{i}", "b#{i}", label: "80/tcp") }
+    renderer.output
+  end
+
+  it "warns above 500 edges" do
+    render(501)
+    expect(err.string).to include("[WARN]", "501 edges", "GitHub and mmdc may refuse")
+    expect(File.exist?("big.mmd")).to be(true)
+  end
+
+  it "warns above 50000 characters" do
+    renderer = described_class.new("big.mmd", AwsSecurityViz::AwsConfig.new)
+    renderer.add_edge("a", "b", label: "x" * 50_000)
+    renderer.output
+    expect(err.string).to include("maxTextSize")
+  end
+
+  it "stays quiet at the limits" do
+    render(500)
+    expect(err.string).to be_empty
   end
 end

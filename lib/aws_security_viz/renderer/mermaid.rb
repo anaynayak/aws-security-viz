@@ -9,6 +9,8 @@ module AwsSecurityViz
       DEFAULT_EXTENSION = "mmd"
       RISKY_STYLE = "stroke:#dc143c,stroke-width:4px,stroke-dasharray:6 3"
       UNUSED_STYLE = "fill:#eeeeee,stroke:#888888,stroke-dasharray:4 2,color:#555555"
+      MAX_EDGES = 500 # Mermaid's default maxEdges
+      MAX_TEXT_SIZE = 50_000 # Mermaid's default maxTextSize
       EDGE_STYLES = {blue: "stroke:#1f5fbf", red: "stroke:#c0392b"}.freeze
 
       def initialize(file_name, config)
@@ -67,10 +69,17 @@ module AwsSecurityViz
       end
 
       def output
-        File.write(@file_name, to_mermaid)
+        text = to_mermaid
+        warn_if_large(text)
+        File.write(@file_name, text)
       end
 
       private
+
+      def warn_if_large(text)
+        return if @edges.size <= MAX_EDGES && text.size <= MAX_TEXT_SIZE
+        AwsSecurityViz.logger.warn("mermaid output has #{@edges.size} edges and #{text.size} characters (Mermaid defaults: maxEdges #{MAX_EDGES}, maxTextSize #{MAX_TEXT_SIZE}); GitHub and mmdc may refuse to render it")
+      end
 
       def node_id(name)
         @ids[name] ||= "n#{@ids.size}"
