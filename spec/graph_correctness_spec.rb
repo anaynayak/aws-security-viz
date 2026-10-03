@@ -12,7 +12,13 @@ describe VisualizeAws do
   let(:out_dir) { Dir.mktmpdir }
   let(:out_file) { File.join(out_dir, "out.json") }
 
-  after { FileUtils.remove_entry(out_dir) }
+  # While B4 is unfixed the html asset lands in the cwd; remove it if this example created it.
+  let!(:stray_asset_existed) { File.exist?("navigator.html") }
+
+  after do
+    FileUtils.remove_entry(out_dir)
+    FileUtils.rm_f("navigator.html") unless stray_asset_existed
+  end
 
   def render(renderer)
     VisualizeAws.new(config, source_file: fixture, renderer: renderer).unleash(out_file)
@@ -33,7 +39,9 @@ describe VisualizeAws do
 
   it "B3: keeps the 5432/tcp label when an egress rule maps to the same edge" do
     pending "B3: the later egress rule overwrites the label with *"
-    edge = render("navigator")["data"]["edges"].find { |e| e["from"] == "app" && e["to"] == "db" }
+    data = render("navigator")["data"]
+    id_of = ->(label) { data["nodes"].find { |n| n["label"] == label }["id"] }
+    edge = data["edges"].find { |e| e["from"] == id_of.call("app") && e["to"] == id_of.call("db") }
     expect(edge["label"]).to include("5432/tcp")
   end
 
