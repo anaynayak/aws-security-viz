@@ -2,9 +2,13 @@
 
 require "aws-sdk-ec2"
 require_relative "../model"
+require_relative "../logging"
 
 module AwsSecurityViz
   class Ec2Provider
+    # Per-region failures that must not abort a multi-region run (region not enabled, no permission).
+    SKIPPABLE_ERRORS = [Aws::EC2::Errors::UnauthorizedOperation, Aws::EC2::Errors::AuthFailure, Aws::EC2::Errors::OptInRequired].freeze
+
     # client: a single injected client (used as-is, one region); otherwise one client is built per region.
     def initialize(options, client: nil)
       @options = options
@@ -13,7 +17,16 @@ module AwsSecurityViz
 
     def security_groups
       regions = @client ? [nil] : region_list
-      groups = regions.flat_map { |region| describe(@client || build_client(region), (regions.size > 1) ? region : nil) }
+      errors = []
+      groups = regions.flat_map do |region|
+        describe(@client || build_client(region), (regions.size > 1) ? region : nil)
+      rescue *SKIPPABLE_ERRORS => e
+        raise if regions.size == 1
+        AwsSecurityViz.logger.warn("skipping region #{region}: #{e.class.name.split("::").last}: #{e.message}")
+        errors << e
+        []
+      end
+      raise errors.first if errors.size == regions.size
       Model.resolve_peer_names(groups)
     end
 
@@ -29,9 +42,9 @@ module AwsSecurityViz
 
     # [nil] means one client on the SDK default region chain (AWS_REGION, profile).
     def region_list
-      raise ArgumentError, "--region and --all-regions cannot be combined" if @options[:all_regions] && @options[:region]
-      return build_client(nil).describe_regions.regions.map(&:region_name).sort if @options[:all_regions]
       names = @options[:region].to_s.split(",").map(&:strip).reject(&:empty?).uniq
+      # With --all-regions, -r only names the region used to call DescribeRegions.
+      return build_client(names.first).describe_regions.regions.map(&:region_name).sort if @options[:all_regions]
       names.empty? ? [nil] : names
     end
 

@@ -72,7 +72,7 @@ docker run --rm --user $(id -u):$(id -g) -v "$(pwd)/aws-viz:/work" ghcr.io/anayn
 
 3. To build the image from a checkout instead: `docker build -t sec-viz .` and use `sec-viz` in place of the ghcr.io name.
 
-With several regions (`--region us-east-1,eu-west-1` or `--all-regions`) nodes are grouped by region, then VPC. The region comes from `-r/--region`, or otherwise from the AWS SDK chain (`AWS_REGION`, a profile); there is no built-in default, so a missing region fails with `MissingRegionError`.
+With several regions (`--region us-east-1,eu-west-1` or `--all-regions`) nodes are grouped by region, then VPC. The region comes from `-r/--region`, or otherwise from the AWS SDK chain (`AWS_REGION`, a profile); there is no built-in default, so a missing region fails with `MissingRegionError`. With `--all-regions`, `-r` (first name if a list) is only the region used to call `DescribeRegions`. A region that fails with `UnauthorizedOperation`, `AuthFailure` or `OptInRequired` is skipped with a warning; the run fails only if every region fails. The JSON and navigator outputs carry the region on each node. `--region` and `--all-regions` are ignored (with a warning) when `--source-file` is used.
 
 Notes:
 * `-v "$(pwd)/aws-viz:/work"` is the local directory where output is written. Create it first (`mkdir aws-viz`).

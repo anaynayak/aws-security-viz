@@ -13,10 +13,12 @@ module AwsSecurityViz
 
       def add_node(name, opts)
         vpc = opts[:vpc_id] || "default"
+        category = opts[:region] ? "#{opts[:region]} / #{vpc}" : vpc
         label = opts[:label] || name
         info = "<b>Security group</b>: #{label}, <br/><b>VPC:</b> #{vpc}"
-        @nodes << {id: name, label: label, categories: [vpc], info: info}
-        @categories.add(vpc)
+        info += "<br/><b>Region:</b> #{opts[:region]}" if opts[:region]
+        @nodes << {id: name, label: label, categories: [category], info: info}.tap { |n| n[:region] = opts[:region] if opts[:region] }
+        @categories.add(category)
       end
 
       def add_edge(from, to, opts)

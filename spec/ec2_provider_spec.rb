@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "stringio"
 
 describe AwsSecurityViz::Ec2Provider do
   def group(id)
@@ -71,8 +72,47 @@ describe AwsSecurityViz::Ec2Provider, "multi-region" do
     expect(groups.map(&:region)).to eq(%w[eu-west-1 us-east-1])
   end
 
-  it "rejects --region together with --all-regions" do
-    expect { described_class.new({all_regions: true, region: "eu-west-1"}).security_groups }
-      .to raise_error(ArgumentError, /cannot be combined/)
+  it "uses -r as the bootstrap region for DescribeRegions with --all-regions" do
+    described_class.new({all_regions: true, region: "ap-south-1"}).security_groups
+    expect(Aws::EC2::Client).to have_received(:new).with(hash_including(region: "ap-south-1")).at_least(:once)
+  end
+
+  describe "failing regions" do
+    def fail_region(bad_region, code)
+      allow(Aws::EC2::Client).to receive(:new).and_wrap_original { |original, opts|
+        region = opts[:region] || "us-east-1"
+        c = stub_client(original, region, "sg-#{region}")
+        c.stub_responses(:describe_security_groups, code) if bad_region.include?(region)
+        c
+      }
+    end
+
+    it "warns and continues when a region is not enabled or not permitted" do
+      %w[UnauthorizedOperation AuthFailure OptInRequired].each do |code|
+        fail_region(%w[eu-west-1], code)
+        err = StringIO.new
+        AwsSecurityViz.logger = AwsSecurityViz.build_logger(err)
+        groups = described_class.new({all_regions: true}).security_groups
+        expect(groups.map(&:region)).to eq(%w[us-east-1])
+        expect(err.string).to include("skipping region eu-west-1", code)
+      end
+    ensure
+      AwsSecurityViz.logger = nil
+    end
+
+    it "raises when every region fails" do
+      fail_region(%w[eu-west-1 us-east-1], "UnauthorizedOperation")
+      AwsSecurityViz.logger = AwsSecurityViz.build_logger(StringIO.new)
+      expect { described_class.new({all_regions: true}).security_groups }
+        .to raise_error(Aws::EC2::Errors::UnauthorizedOperation)
+    ensure
+      AwsSecurityViz.logger = nil
+    end
+
+    it "does not swallow the error for a single region" do
+      fail_region(%w[eu-west-1], "UnauthorizedOperation")
+      expect { described_class.new({region: "eu-west-1"}).security_groups }
+        .to raise_error(Aws::EC2::Errors::UnauthorizedOperation)
+    end
   end
 end

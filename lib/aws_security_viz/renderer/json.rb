@@ -11,7 +11,7 @@ module AwsSecurityViz
       end
 
       def add_node(name, opts)
-        @nodes << {id: name, label: opts[:label] || name}
+        @nodes << {id: name, label: opts[:label] || name, region: opts[:region]}.compact
       end
 
       def add_edge(from, to, opts)

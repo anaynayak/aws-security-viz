@@ -136,4 +136,12 @@ describe AwsSecurityViz::CLI, "argument validation" do
     expect(err.string).to include("unknown command 'bogus'")
     expect(File.exist?("x.json")).to be(false)
   end
+
+  it "warns when --region or --all-regions is used with --source-file" do
+    ["--region=eu-west-1", "--all-regions"].each do |flag|
+      err.truncate(0)
+      expect(run_cli(flag, "-o", source, "-n", "json", "-f", "x.json")).to eq(0)
+      expect(err.string).to include("--region and --all-regions are ignored with --source-file")
+    end
+  end
 end

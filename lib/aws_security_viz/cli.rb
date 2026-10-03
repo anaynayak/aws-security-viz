@@ -33,6 +33,9 @@ module AwsSecurityViz
         return 1
       end
       return setup(opts) if command
+      if opts[:source_file] && (opts[:region] || opts[:all_regions])
+        AwsSecurityViz.logger.warn("--region and --all-regions are ignored with --source-file")
+      end
       if opts[:serve] && !(1..65535).cover?(opts[:serve])
         AwsSecurityViz.logger.error("--serve port must be between 1 and 65535, got #{opts[:serve]}")
         return 1
