@@ -24,7 +24,7 @@ It reads either the live AWS API (`aws-sdk-ec2`) or `aws ec2 describe-security-g
 
 ## Modernization goal
 
-The backlog (`backlog/tasks`, labels `phase-0` .. `phase-6`) holds the full plan: fix correctness bugs, clean up
+The local, git-ignored backlog (`backlog/tasks`, labels `phase-0` .. `phase-6`) holds the full plan: fix correctness bugs, clean up
 dependencies and packaging, namespace and simplify the code, add 1.0 features, replace the two web viewers with
 one self-contained HTML file, and update the docs. Each task is self-contained: read it, not the old HTML report.
 Settled decisions are in `backlog/docs/doc-1 - Settled-decisions.md`.
@@ -43,7 +43,7 @@ When run as `/loop work the backlog per CLAUDE.md`, each iteration does exactly 
    1. sets the task `In Progress`, assignee `@claude`, records a plan;
    2. implements in small commits on `main` (tests + lint green at each commit);
    3. verifies every acceptance criterion with command output, checks ACs/DoD, writes the final summary,
-      sets `Done`, and commits the backlog file change with the last code commit;
+      sets `Done`. The `backlog/` directory is git-ignored local tracking: never commit it;
    4. replies with at most 10 lines: commits made, test result, anything blocked.
 3. Review: one fresh general-purpose subagent reviews the task's commit range for correctness bugs and scope creep
    and replies with findings only (or "no findings"). Real findings go back to the same coder (SendMessage) to fix.
