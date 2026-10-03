@@ -35,8 +35,18 @@ module AwsSecurityViz
     def describe(client, region)
       params = {}
       params[:filters] = [{name: "vpc-id", values: [@options[:vpc_id]]}] if @options[:vpc_id]
-      client.describe_security_groups(params).flat_map { |page|
+      groups = client.describe_security_groups(params).flat_map { |page|
         page.security_groups.collect { |sg| SecurityGroup.from_hash(Model.normalize(sg.to_h)).with(region: region) }
+      }
+      return groups unless @options[:show_unused]
+      used = attached_group_ids(client, params)
+      groups.map { |g| g.with(unused: !used.include?(g.id)) }
+    end
+
+    # Ids of groups attached to at least one network interface (extra call, only for --show-unused).
+    def attached_group_ids(client, params)
+      client.describe_network_interfaces(params).each_with_object(Set.new) { |page, ids|
+        page.network_interfaces.each { |eni| eni.groups.each { |g| ids << g.group_id } }
       }
     end
 

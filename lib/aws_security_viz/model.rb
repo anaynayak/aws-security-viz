@@ -19,8 +19,9 @@ module AwsSecurityViz
   end
 
   # region is only set when several regions are queried, so nodes can be grouped by region.
-  SecurityGroup = Data.define(:id, :name, :vpc_id, :ingress, :egress, :region) do
-    def initialize(id:, name:, vpc_id:, ingress:, egress:, region: nil)
+  # unused is true only when --show-unused found no network interface attached to the group.
+  SecurityGroup = Data.define(:id, :name, :vpc_id, :ingress, :egress, :region, :unused) do
+    def initialize(id:, name:, vpc_id:, ingress:, egress:, region: nil, unused: false)
       super
     end
 

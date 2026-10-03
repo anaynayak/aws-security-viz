@@ -8,6 +8,7 @@ module AwsSecurityViz
     class Mermaid
       DEFAULT_EXTENSION = "mmd"
       RISKY_STYLE = "stroke:#dc143c,stroke-width:4px,stroke-dasharray:6 3"
+      UNUSED_STYLE = "fill:#eeeeee,stroke:#888888,stroke-dasharray:4 2,color:#555555"
       EDGE_STYLES = {blue: "stroke:#1f5fbf", red: "stroke:#c0392b"}.freeze
 
       def initialize(file_name, config)
@@ -15,6 +16,7 @@ module AwsSecurityViz
         @config = config
         @ids = {}
         @labels = {}
+        @unused = []
         @groups = {}
         @edges = []
       end
@@ -23,6 +25,7 @@ module AwsSecurityViz
         id = node_id(name)
         return if @labels.key?(id)
         @labels[id] = opts[:label] || name
+        @unused << id if opts[:unused]
         (@groups[[opts[:region], opts[:vpc_id]]] ||= []) << id if opts[:vpc_id] || opts[:region]
       end
 
@@ -55,6 +58,10 @@ module AwsSecurityViz
         @edges.each_with_index do |(_, _, opts), index|
           style = opts[:risky] ? RISKY_STYLE : EDGE_STYLES[opts[:color]]
           lines << "  linkStyle #{index} #{style}" if style
+        end
+        unless @unused.empty?
+          lines << "  classDef unused #{UNUSED_STYLE}"
+          lines << "  class #{@unused.join(",")} unused"
         end
         lines.join("\n") + "\n"
       end

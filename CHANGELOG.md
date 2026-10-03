@@ -6,6 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - --input and --output aliases for -o/--source-file and -f/--filename; `init` alias for `setup`
 - Rule descriptions are kept: JSON edges carry a `descriptions` list and DOT edges a `tooltip` (hashed under --obfuscate)
+- --show-unused marks security groups with no attached network interface (dashed grey in DOT, `unused` class in Mermaid, `unused: true` in JSON and navigator output); it needs `ec2:DescribeNetworkInterfaces` and is ignored with --source-file
 
 ### Changed
 - CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser; the optimist dependency is removed

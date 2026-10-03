@@ -17,7 +17,11 @@ module AwsSecurityViz
         label = opts[:label] || name
         info = "<b>Security group</b>: #{label}, <br/><b>VPC:</b> #{vpc}"
         info += "<br/><b>Region:</b> #{opts[:region]}" if opts[:region]
-        @nodes << {id: name, label: label, categories: [category], info: info}.tap { |n| n[:region] = opts[:region] if opts[:region] }
+        info += "<br/><b>Unused:</b> no network interfaces attached" if opts[:unused]
+        @nodes << {id: name, label: label, categories: [category], info: info}.tap { |n|
+          n[:region] = opts[:region] if opts[:region]
+          n[:unused] = true if opts[:unused]
+        }
         @categories.add(category)
       end
 

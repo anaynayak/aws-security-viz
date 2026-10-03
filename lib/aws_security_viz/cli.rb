@@ -38,6 +38,10 @@ module AwsSecurityViz
       if opts[:source_file] && (opts[:region] || opts[:all_regions])
         AwsSecurityViz.logger.warn("--region and --all-regions are ignored with --source-file")
       end
+      if opts[:source_file] && opts[:show_unused]
+        AwsSecurityViz.logger.warn("--show-unused is ignored with --source-file: network interfaces are not part of describe-security-groups output")
+        opts.delete(:show_unused)
+      end
       if opts[:serve] && !(1..65535).cover?(opts[:serve])
         AwsSecurityViz.logger.error("--serve port must be between 1 and 65535, got #{opts[:serve]}")
         return 1
@@ -84,6 +88,7 @@ module AwsSecurityViz
         o.on("-b", "--[no-]obfuscate", "Hash group names and ports (or OBFUSCATE=true)") { |v| opts[:obfuscate] = v }
         o.on("-u", "--source-filter=FILTER", "Source filter") { |v| opts[:source_filter] = v }
         o.on("-t", "--target-filter=FILTER", "Target filter") { |v| opts[:target_filter] = v }
+        o.on("--show-unused", "Mark groups with no attached network interfaces (needs ec2:DescribeNetworkInterfaces; ignored with --source-file)") { opts[:show_unused] = true }
         o.on("--fail-on-risk", "Exit 2 when 0.0.0.0/0 or ::/0 can reach a sensitive port (the output is still written)") { opts[:fail_on_risk] = true }
         o.on("--serve=PORT", Integer, "Serve a HTTP server") { |v| opts[:serve] = v }
         o.on("-i", "--version", "Print version and exit") {

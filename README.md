@@ -111,6 +111,9 @@ Options:
   -b, --obfuscate            Hash group names and ports (or OBFUSCATE=true)
   -u, --source-filter=<s>    Source filter
   -t, --target-filter=<s>    Target filter
+  --show-unused              Mark groups with no attached network interfaces
+                             (needs ec2:DescribeNetworkInterfaces; ignored with
+                             --source-file)
   --serve=<i>                Serve a HTTP server
   -i, --version              Print version and exit
   -h, --help                 Show this message
@@ -118,7 +121,7 @@ Options:
 
 #### Configuration 
 
-aws-security-viz only uses the `ec2:DescribeSecurityGroups` api (plus `ec2:DescribeRegions` for `--all-regions`) so a minimal IAM policy which grants only those two actions should be enough.
+aws-security-viz only uses the `ec2:DescribeSecurityGroups` api (plus `ec2:DescribeRegions` for `--all-regions`) so a minimal IAM policy which grants only those two actions should be enough. `--show-unused` additionally calls `ec2:DescribeNetworkInterfaces` (paginated, per region) and is the only reason that action is needed; without the flag no such call is made.
 
 ```json
 {
@@ -126,7 +129,7 @@ aws-security-viz only uses the `ec2:DescribeSecurityGroups` api (plus `ec2:Descr
     "Statement": [
         {
             "Effect": "Allow",
-            "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeRegions"],
+            "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeRegions", "ec2:DescribeNetworkInterfaces"],
             "Resource": "*"
         }
     ]

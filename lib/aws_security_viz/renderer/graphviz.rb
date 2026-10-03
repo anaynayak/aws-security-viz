@@ -9,6 +9,7 @@ module AwsSecurityViz
     class GraphViz
       DOT_EXTENSIONS = %w[dot gv].freeze
       IMAGE_EXTENSIONS = %w[png svg pdf jpg jpeg gif webp bmp tiff ps eps json].freeze
+      UNUSED_ATTRS = {style: "dashed,filled", fillcolor: "lightgrey", fontcolor: "gray30", tooltip: "Unused: no network interfaces attached"}.freeze
       GRAPH_ATTRS = {overlap: false, splines: true, sep: 1, concentrate: true, rankdir: "LR"}.freeze
 
       def initialize(file_name, config)
@@ -22,7 +23,9 @@ module AwsSecurityViz
 
       def add_node(name, opts)
         @nodes[name] ||= begin
-          line = "#{quote(name)} [#{attrs(label: opts[:label] || name)}];"
+          node_attrs = {label: opts[:label] || name}
+          node_attrs.merge!(UNUSED_ATTRS) if opts[:unused]
+          line = "#{quote(name)} [#{attrs(node_attrs)}];"
           if opts[:vpc_id].nil? && opts[:region].nil?
             @root_nodes << line
           else
