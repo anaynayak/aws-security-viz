@@ -49,15 +49,16 @@ The statements below describe the code in `lib/aws_security_viz`.
    It never creates, modifies or deletes anything. With `--source-file` it reads a local JSON file and makes no AWS
    calls. Resolving credentials is done by the AWS SDK for Ruby, so depending on your setup the SDK may also contact
    the instance metadata service, STS or SSO endpoints; the tool does not control that.
-2. Credentials. They come from `-a/-s`, the `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN`
-   environment variables, or a profile, and are passed straight to the SDK client. The tool does not write them to disk,
+2. Credentials. They come from `-a/--access-key`, `-s/--secret-key` and `-e/--session-token`, the `AWS_ACCESS_KEY_ID`,
+   `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` environment variables (or the legacy `AWS_ACCESS_KEY` and
+   `AWS_SECRET_KEY`), or a profile, and are passed straight to the SDK client. The tool does not write them to disk,
    to the output file, or to its logs, and the SDK's HTTP wire trace is not enabled. Two things remain your
    responsibility:
-   1. Keys given as `-a/-s` are visible in the process list and shell history. Prefer environment variables, a
+   1. Keys and tokens given as `-a`, `-s` or `-e` are visible in the process list and shell history. Prefer environment variables, a
       profile or SSO, or short-lived session credentials.
    2. Diagnostics go to stderr. Error messages from AWS (including region, permission and request details) are printed,
       and `--debug` adds stack traces. Review stderr before pasting it into a public issue.
-3. Local files. The tool writes only the output file you name and, with `setup`, an `opts.yml` containing no secrets.
+3. Local files. The tool writes only the output file you name (`aws-security-viz.html` when `-f` is not given) and, with `setup`, an `opts.yml` containing no secrets.
    It reads the file given by `--source-file` and `opts.yml`.
 4. Report contents. Outputs contain security group names, ids, VPC ids, regions, CIDR ranges, ports and rule
    descriptions. This describes your network exposure, so treat the files as sensitive and share them accordingly.
@@ -76,8 +77,9 @@ The statements below describe the code in `lib/aws_security_viz`.
    1. Small value spaces such as port numbers and IPv4 addresses can be recovered by hashing candidates.
    2. The graph's shape, the number of nodes and edges, the ingress or egress direction, and the risky and unused
       flags remain visible.
-   3. `--obfuscate` does not scrub stderr messages from AWS or from option validation, which can echo values
-      you typed such as a group name passed as a filter.
+   3. With `--obfuscate`, the tool's own warnings and `--debug` output hash names, ids and regions, but AWS error
+      messages and option-validation messages are printed as received and may still contain raw values, such as a
+      group name passed as a filter.
 
    Inspect an obfuscated report before sharing it outside your organisation.
 

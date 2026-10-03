@@ -82,25 +82,26 @@ New GHCR packages are private. After the first release pushes the image:
 
 ## Verifying a release
 
+Attestations, the SBOM and reproducible builds exist from the release after 1.0.0; 1.0.0 predates them.
 RubyGems.org also stores its own Sigstore attestation for the gem (published by `rubygems/release-gem`). The GitHub
 attestations below are separate and are checked with the `gh` CLI.
 
 1. Gem build provenance:
    ```
-   gem fetch aws_security_viz -v 1.0.0
-   gh attestation verify aws_security_viz-1.0.0.gem --repo anaynayak/aws-security-viz
+   gem fetch aws_security_viz -v <version>
+   gh attestation verify aws_security_viz-<version>.gem --repo anaynayak/aws-security-viz
    ```
 2. Gem SBOM attestation:
    ```
-   gh attestation verify aws_security_viz-1.0.0.gem --repo anaynayak/aws-security-viz \
+   gh attestation verify aws_security_viz-<version>.gem --repo anaynayak/aws-security-viz \
      --predicate-type https://cyclonedx.org/bom
    ```
 3. Image provenance (stored in the registry next to the image):
    ```
-   gh attestation verify oci://ghcr.io/anaynayak/aws-security-viz:1.0.0 --repo anaynayak/aws-security-viz
+   gh attestation verify oci://ghcr.io/anaynayak/aws-security-viz:<version> --repo anaynayak/aws-security-viz
    ```
 4. Offline, using the bundle attached to the GitHub release:
    ```
-   gh attestation verify aws_security_viz-1.0.0.gem --repo anaynayak/aws-security-viz \
-     --bundle aws_security_viz-1.0.0.intoto.jsonl
+   gh attestation verify aws_security_viz-<version>.gem --repo anaynayak/aws-security-viz \
+     --bundle aws_security_viz-<version>.intoto.jsonl
    ```
