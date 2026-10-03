@@ -74,17 +74,33 @@ describe "risk marking" do
     expect(count).to eq(2)
   end
 
-  it "draws risky edges red and bold in DOT" do
+  it "draws risky edges dashed crimson, distinct from the red egress colour, in DOT" do
     path = "#{fixture}.dot"
     AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new({}), source_file: fixture, renderer: "graphviz").unleash(path)
     lines = File.read(path).lines
-    expect(lines.grep(/0\.0\.0\.0\/0" ->/).first).to include('color="red"', 'penwidth="3"')
+    expect(lines.grep(/0\.0\.0\.0\/0" ->/).first).to include('color="crimson"', 'style="dashed"', 'penwidth="3"')
     expect(lines.grep(/1\.2\.3\.4\/32" ->/).first).to include('color="blue"')
   end
 
   it "reads the port list from opts.yml (:risky_ports)" do
     count, = edges(AwsSecurityViz::AwsConfig.new(risky_ports: [80]))
     expect(count).to eq(1) # only the ::/0 all-traffic rule; port 22 is no longer listed
+  end
+
+  it "accepts decimal port numbers as integers or strings" do
+    expect(AwsSecurityViz::AwsConfig.new(risky_ports: [22, "8080", 65535]).risky_ports).to eq([22, 8080, 65535])
+  end
+
+  ["0x16", "022x", 0, 65536, -1, 22.5, "", nil, "22 ", true].each do |bad|
+    it "rejects risky_ports entry #{bad.inspect} when the config is built" do
+      expect { AwsSecurityViz::AwsConfig.new(risky_ports: [22, bad]) }
+        .to raise_error(ArgumentError, "risky_ports: invalid entry '#{bad}' (expected a port number 1-65535)")
+    end
+  end
+
+  it "parses the list once" do
+    config = AwsSecurityViz::AwsConfig.new(risky_ports: ["22"])
+    expect(config.risky_ports).to equal(config.risky_ports)
   end
 end
 
@@ -106,6 +122,18 @@ describe AwsSecurityViz::CLI, "--fail-on-risk" do
   it "exits 2 with the flag, still writing the output" do
     expect(run_cli("-o", source, "-n", "json", "-f", "x.json", "--fail-on-risk")).to eq(2)
     expect(File.exist?("x.json")).to be true
+  end
+
+  it "rejects --serve together with --fail-on-risk" do
+    expect(run_cli("-o", source, "-n", "json", "-f", "x.json", "--serve", "9999", "--fail-on-risk")).to eq(1)
+    expect(err.string).to include("--serve and --fail-on-risk cannot be combined")
+    expect(File.exist?("x.json")).to be false
+  end
+
+  it "reports an invalid risky_ports entry as a clean error" do
+    File.write("opts.yml", {risky_ports: ["ssh"]}.to_yaml)
+    expect(run_cli("-o", source, "-n", "json", "-f", "x.json")).to eq(1)
+    expect(err.string).to include("risky_ports: invalid entry 'ssh'")
   end
 
   it "exits 0 with the flag when nothing is risky" do

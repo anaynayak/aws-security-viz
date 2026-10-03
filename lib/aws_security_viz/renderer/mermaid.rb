@@ -7,7 +7,7 @@ module AwsSecurityViz
     # Rule descriptions have no Mermaid equivalent (no tooltips) and are left out.
     class Mermaid
       DEFAULT_EXTENSION = "mmd"
-      RISKY_STYLE = "stroke:#d00,stroke-width:4px"
+      RISKY_STYLE = "stroke:#dc143c,stroke-width:4px,stroke-dasharray:6 3"
       EDGE_STYLES = {blue: "stroke:#1f5fbf", red: "stroke:#c0392b"}.freeze
 
       def initialize(file_name, config)

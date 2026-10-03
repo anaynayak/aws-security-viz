@@ -7,6 +7,7 @@ module AwsSecurityViz
   class AwsConfig
     def initialize(opts = {})
       @opts = opts
+      @risky_ports = parse_risky_ports(opts[:risky_ports])
     end
 
     def exclusions
@@ -22,9 +23,8 @@ module AwsSecurityViz
     end
 
     # Ports whose exposure to 0.0.0.0/0 or ::/0 is flagged (opts.yml :risky_ports); all traffic always is.
-    def risky_ports
-      Array(@opts[:risky_ports] || Risk::DEFAULT_PORTS).map { |p| Integer(p) }
-    end
+    # Validated once when the config is built.
+    attr_reader :risky_ports
 
     LAYOUTS = %w[dot neato sfdp fdp twopi circo].freeze
 
@@ -63,6 +63,18 @@ module AwsSecurityViz
 
     def self.write(file)
       FileUtils.cp(File.expand_path("../opts.yml.sample", __FILE__), file)
+    end
+
+    private
+
+    # Decimal integers 1-65535 only (an Integer, or a string of digits); anything else is an error.
+    def parse_risky_ports(entries)
+      return Risk::DEFAULT_PORTS if entries.nil?
+      Array(entries).map do |entry|
+        port = Integer(entry.to_s, 10) if entry.to_s.match?(/\A\d+\z/)
+        raise ArgumentError, "risky_ports: invalid entry '#{entry}' (expected a port number 1-65535)" unless port&.between?(1, 65535)
+        port
+      end.freeze
     end
   end
 end

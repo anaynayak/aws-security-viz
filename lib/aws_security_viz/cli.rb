@@ -42,6 +42,10 @@ module AwsSecurityViz
         AwsSecurityViz.logger.error("--serve port must be between 1 and 65535, got #{opts[:serve]}")
         return 1
       end
+      if opts[:serve] && opts[:fail_on_risk]
+        AwsSecurityViz.logger.error("--serve and --fail-on-risk cannot be combined: the server never returns, so the exit status would never be 2")
+        return 1
+      end
       visualize(opts)
     end
 
@@ -73,7 +77,7 @@ module AwsSecurityViz
         o.on("-o", "--source-file=FILE", "--input=FILE", "JSON source file containing security groups") { |v| opts[:source_file] = v }
         o.on("-f", "--filename=FILE", "--output=FILE", "Output file name (default: aws-security-viz.png, .mmd for mermaid, .json for json/navigator)") { |v| opts[:filename] = v }
         o.on("-c", "--config=FILE", "Config file (opts.yml)") { |v| opts[:config] = v }
-        o.on("-l", "--[no-]color", "Deprecated, ignored: edges are blue for ingress and red for egress") { |v| opts[:color] = v }
+        o.on("-l", "--[no-]color", "Deprecated, ignored: edges are blue for ingress and red for egress, risky public ingress is dashed crimson") { |v| opts[:color] = v }
         o.on("-n", "--renderer=NAME", "Renderer (#{Renderer.all.join("|")}) (default: graphviz)") { |v| opts[:renderer] = v }
         o.on("-y", "--layout=ENGINE", "Graphviz layout engine (#{AwsConfig::LAYOUTS.join("|")}); overrides opts.yml format") { |v| opts[:layout] = v }
         o.on("-d", "--[no-]debug", "Verbose output and stack traces (or DEBUG=true)") { |v| opts[:debug] = v }

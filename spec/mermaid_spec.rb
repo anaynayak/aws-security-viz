@@ -31,7 +31,7 @@ describe AwsSecurityViz::Renderer::Mermaid do
         n0 -->|"5432/tcp"| n1
         n3 -->|"22/tcp"| n2
         linkStyle 0 stroke:#1f5fbf
-        linkStyle 1 stroke:#d00,stroke-width:4px
+        linkStyle 1 stroke:#dc143c,stroke-width:4px,stroke-dasharray:6 3
     MMD
   end
 
