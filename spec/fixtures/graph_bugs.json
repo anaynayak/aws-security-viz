@@ -1,0 +1,80 @@
+{
+  "SecurityGroups": [
+    {
+      "GroupName": "default",
+      "GroupId": "sg-default-a",
+      "VpcId": "vpc-a",
+      "IpPermissionsEgress": [],
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "FromPort": 22,
+          "ToPort": 22,
+          "IpRanges": [],
+          "Ipv6Ranges": [
+            {
+              "CidrIpv6": "::/0"
+            }
+          ],
+          "PrefixListIds": [
+            {
+              "PrefixListId": "pl-123"
+            }
+          ],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "default",
+      "GroupId": "sg-default-b",
+      "VpcId": "vpc-b",
+      "IpPermissionsEgress": [],
+      "IpPermissions": []
+    },
+    {
+      "GroupName": "db",
+      "GroupId": "sg-db",
+      "VpcId": "vpc-a",
+      "IpPermissionsEgress": [],
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "FromPort": 5432,
+          "ToPort": 5432,
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-app",
+              "GroupName": "app",
+              "UserId": "owner1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "GroupName": "app",
+      "GroupId": "sg-app",
+      "VpcId": "vpc-a",
+      "IpPermissions": [],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-db",
+              "GroupName": "db",
+              "UserId": "owner1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
