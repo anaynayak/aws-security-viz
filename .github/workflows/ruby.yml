@@ -1,7 +1,9 @@
 name: Ruby
 
 on:
+  # Branch pushes are covered by pull_request; running both doubled every check.
   push:
+    branches: [main]
   pull_request:
   schedule:
     - cron:  '0 0 * * SAT'
