@@ -11,9 +11,15 @@ module AwsSecurityViz
 
     def self.apply(nodes, edges)
       [
-        nodes.map { |key, opts| [hash(key), opts.key?(:label) ? opts.merge(label: hash(opts[:label])) : opts] },
+        nodes.map { |key, opts| [hash(key), node_opts(opts)] },
         edges.map { |from, to, opts| [hash(from), hash(to), opts.merge(label: hash_tokens(opts[:label]))] }
       ]
+    end
+
+    def self.node_opts(opts)
+      %i[label vpc_id group_id].each_with_object(opts.dup) { |field, hashed|
+        hashed[field] = hash(opts[field]) if opts.key?(field) && !opts[field].nil?
+      }
     end
 
     # Hash each comma-separated port token so that one token always maps to the same value.
