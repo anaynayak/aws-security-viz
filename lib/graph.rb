@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
 require "rgl/adjacency"
+require_relative "port_label"
 
 class Graph
   attr_reader :underlying
 
-  def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new)
+  def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new, wildcard: "*")
     @config = config
+    @wildcard = wildcard
     @underlying = underlying
     @edge_properties = {}
     @node_properties = {}
@@ -56,12 +58,14 @@ class Graph
     keys.first || filter
   end
 
-  # Rules from several groups (or egress and ingress) can map to one edge: keep the
-  # first colour and union the port labels in a stable order.
+  # Rules from several groups (or egress and ingress) can map to one edge: union the
+  # port labels and pick the colour independently of rule order (blue wins in the
+  # default scheme, otherwise the smallest colour).
   def merge_edge(existing, opts)
     return opts unless existing
-    labels = [existing[:label], opts[:label]].compact.flat_map { |l| l.split(",") }
-    existing.merge(label: labels.uniq.sort.join(","))
+    colors = [existing[:color], opts[:color]].compact
+    color = colors.include?(:blue) ? :blue : colors.min_by(&:to_s)
+    existing.merge(opts).merge(color: color, label: PortLabel.normalise("#{existing[:label]},#{opts[:label]}", wildcard: @wildcard))
   end
 
   def opts(u, v)

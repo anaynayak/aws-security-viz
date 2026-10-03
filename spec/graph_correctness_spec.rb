@@ -31,12 +31,11 @@ describe VisualizeAws do
     expect(labels).to include("::/0", "pl-123")
   end
 
-  it "B3: keeps the 5432/tcp label when an egress rule maps to the same edge" do
+  it "B3: merges the ingress 5432/tcp rule and the egress all-traffic rule into one edge" do
     data = render("navigator")["data"]
     id_of = ->(label) { data["nodes"].find { |n| n["label"] == label }["id"] }
     edge = data["edges"].find { |e| e["from"] == id_of.call("app") && e["to"] == id_of.call("db") }
-    expect(edge["label"]).to include("5432/tcp")
-    expect(edge["label"].split(",")).to eq(edge["label"].split(",").uniq.sort)
+    expect(edge["label"]).to eq("*")
   end
 
   it "B4: writes the html asset next to the output file" do

@@ -5,7 +5,7 @@ require_relative "graph"
 
 class DebugGraph
   def initialize(config)
-    @g = Graph.new(config)
+    @g = Graph.new(config, wildcard: h("*"))
   end
 
   def add_node(name, opts)
@@ -17,7 +17,7 @@ class DebugGraph
   end
 
   def add_edge(from, to, opts)
-    @g.add_edge(h(from), h(to), opts.update(label: h(opts[:label])))
+    @g.add_edge(h(from), h(to), opts.merge(label: hide_tokens(opts[:label])))
   end
 
   def filter(source, destination)
@@ -32,6 +32,11 @@ class DebugGraph
 
   def hide_label(opts)
     opts.key?(:label) ? opts.merge(label: h(opts[:label])) : opts
+  end
+
+  # Hash each comma-separated port token so that merged edges still deduplicate.
+  def hide_tokens(label)
+    label.to_s.split(",").map { |token| h(token) }.join(",")
   end
 
   def h(msg)
