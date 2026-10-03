@@ -23,10 +23,10 @@ module AwsSecurityViz
       def add_node(name, opts)
         @nodes[name] ||= begin
           line = "#{quote(name)} [#{attrs(label: opts[:label] || name)}];"
-          if opts[:vpc_id].nil?
+          if opts[:vpc_id].nil? && opts[:region].nil?
             @root_nodes << line
           else
-            (@clusters[opts[:vpc_id]] ||= []) << line
+            (@clusters[[opts[:region], opts[:vpc_id]]] ||= []) << line
           end
           true
         end
@@ -42,11 +42,10 @@ module AwsSecurityViz
       def to_dot
         lines = ["digraph \"G\" {"]
         lines << "  graph [#{attrs(GRAPH_ATTRS)}];"
-        @clusters.each do |vpc_id, node_lines|
-          lines << "  subgraph #{quote("cluster_#{vpc_id}")} {"
-          lines << "    label=#{quote(vpc_id)};"
-          node_lines.each { |l| lines << "    #{l}" }
-          lines << "  }"
+        @clusters.group_by { |(region, _), _| region }.each do |region, entries|
+          indent = region ? "    " : "  "
+          body = entries.flat_map { |(_, vpc_id), node_lines| vpc_block(vpc_id, region, node_lines, indent) }
+          lines.concat(region ? cluster(region, body) : body)
         end
         (@root_nodes + @edges).each { |l| lines << "  #{l}" }
         lines << "}"
@@ -69,6 +68,18 @@ module AwsSecurityViz
       end
 
       private
+
+      # Nodes of one VPC (or loose nodes of a region without a VPC), indented.
+      def vpc_block(vpc_id, region, node_lines, indent)
+        return node_lines.map { |l| "#{indent}#{l}" } unless vpc_id
+        id = region ? "cluster_#{region}/#{vpc_id}" : "cluster_#{vpc_id}"
+        ["#{indent}subgraph #{quote(id)} {", "#{indent}  label=#{quote(vpc_id)};"] +
+          node_lines.map { |l| "#{indent}  #{l}" } + ["#{indent}}"]
+      end
+
+      def cluster(region, body)
+        ["  subgraph #{quote("cluster_#{region}")} {", "    label=#{quote(region)};"] + body + ["  }"]
+      end
 
       # Quotes an ID or label for DOT: backslash and double quote are escaped, newlines become \n.
       # A backslash is escaped too, so a literal "\N" in data cannot be read as a Graphviz escape.

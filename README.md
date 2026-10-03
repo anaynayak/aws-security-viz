@@ -72,7 +72,7 @@ docker run --rm --user $(id -u):$(id -g) -v "$(pwd)/aws-viz:/work" ghcr.io/anayn
 
 3. To build the image from a checkout instead: `docker build -t sec-viz .` and use `sec-viz` in place of the ghcr.io name.
 
-The region comes from `-r/--region`, or otherwise from the AWS SDK chain (`AWS_REGION`, a profile); there is no built-in default, so a missing region fails with `MissingRegionError`.
+With several regions (`--region us-east-1,eu-west-1` or `--all-regions`) nodes are grouped by region, then VPC. The region comes from `-r/--region`, or otherwise from the AWS SDK chain (`AWS_REGION`, a profile); there is no built-in default, so a missing region fails with `MissingRegionError`.
 
 Notes:
 * `-v "$(pwd)/aws-viz:/work"` is the local directory where output is written. Create it first (`mkdir aws-viz`).
@@ -91,8 +91,9 @@ Options:
   -a, --access-key=<s>       AWS access key
   -s, --secret-key=<s>       AWS secret key
   -e, --session-token=<s>    AWS session token
-  -r, --region=<s>           AWS region to query (default: SDK chain, e.g.
-                             AWS_REGION or profile)
+  -r, --region=<s>           AWS region(s) to query, comma-separated (default:
+                             SDK chain, e.g. AWS_REGION or profile)
+      --all-regions          Query every region returned by DescribeRegions
   -p, --profile=<s>          AWS shared-config profile to use (AWS_PROFILE is
                              read by the SDK)
   -v, --vpc-id=<s>           AWS VPC id to show
@@ -117,7 +118,7 @@ Options:
 
 #### Configuration 
 
-aws-security-viz only uses the `ec2:DescribeSecurityGroups` api so a minimal IAM policy which grants only `ec2:DescribeSecurityGroups` access should be enough.
+aws-security-viz only uses the `ec2:DescribeSecurityGroups` api (plus `ec2:DescribeRegions` for `--all-regions`) so a minimal IAM policy which grants only those two actions should be enough.
 
 ```json
 {
@@ -125,7 +126,7 @@ aws-security-viz only uses the `ec2:DescribeSecurityGroups` api so a minimal IAM
     "Statement": [
         {
             "Effect": "Allow",
-            "Action": "ec2:DescribeSecurityGroups",
+            "Action": ["ec2:DescribeSecurityGroups", "ec2:DescribeRegions"],
             "Resource": "*"
         }
     ]

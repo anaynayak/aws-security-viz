@@ -30,7 +30,7 @@ module AwsSecurityViz
       peer_names = {}
       @security_groups.each { |group|
         peer_names.merge!(@security_groups.peer_names(group))
-        g.add_node(group.id, {label: group.name, vpc_id: group.vpc_id, group_id: group.id})
+        g.add_node(group.id, {label: group.name, vpc_id: group.vpc_id, region: group.region, group_id: group.id})
         @security_groups.traffic(group).each { |traffic|
           color = traffic.ingress ? :blue : :red
           if traffic.ingress

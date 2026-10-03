@@ -17,7 +17,12 @@ module AwsSecurityViz
     end
   end
 
-  SecurityGroup = Data.define(:id, :name, :vpc_id, :ingress, :egress) do
+  # region is only set when several regions are queried, so nodes can be grouped by region.
+  SecurityGroup = Data.define(:id, :name, :vpc_id, :ingress, :egress, :region) do
+    def initialize(id:, name:, vpc_id:, ingress:, egress:, region: nil)
+      super
+    end
+
     # Builds a group from a describe-security-groups hash with snake_case keys (see Model.normalize).
     def self.from_hash(hash)
       new(

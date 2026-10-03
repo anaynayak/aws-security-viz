@@ -17,7 +17,7 @@ module AwsSecurityViz
     end
 
     def self.node_opts(opts)
-      %i[label vpc_id group_id].each_with_object(opts.dup) { |field, hashed|
+      %i[label vpc_id region group_id].each_with_object(opts.dup) { |field, hashed|
         hashed[field] = hash(opts[field]) if opts.key?(field) && !opts[field].nil?
       }
     end

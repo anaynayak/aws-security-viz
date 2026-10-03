@@ -99,3 +99,29 @@ describe AwsSecurityViz::Graph, "filters on degenerate shapes" do
     expect(graph.filter("a", "c").edges.map { |e| [e.source, e.target] }).to include(%w[b b])
   end
 end
+
+describe AwsSecurityViz::Renderer::GraphViz, "regions" do
+  let(:config) { AwsSecurityViz::AwsConfig.new }
+
+  def dot_for(nodes, obfuscate: false)
+    graph = AwsSecurityViz::Graph.new(AwsSecurityViz::AwsConfig.new(obfuscate: obfuscate))
+    nodes.each { |id, opts| graph.add_node(id, opts) }
+    renderer = described_class.new("x.dot", config)
+    graph.output(Struct.new(:r) {
+      def add_node(*a) = r.add_node(*a)
+      def add_edge(*a) = r.add_edge(*a)
+      def output = r.to_dot
+    }.new(renderer))
+  end
+
+  it "nests vpc clusters inside region clusters" do
+    dot = dot_for([["sg-1", {label: "a", region: "eu-west-1", vpc_id: "vpc-1"}], ["sg-2", {label: "b", region: "us-east-1", vpc_id: "vpc-1"}]])
+    expect(dot).to match(/subgraph "cluster_eu-west-1" \{.*subgraph "cluster_eu-west-1\/vpc-1" \{.*"sg-1".*\}\s*\}\s*subgraph "cluster_us-east-1"/m)
+    expect(dot).to include('subgraph "cluster_us-east-1/vpc-1"')
+  end
+
+  it "hashes region names under obfuscation" do
+    dot = dot_for([["sg-1", {label: "a", region: "eu-west-1", vpc_id: "vpc-1"}]], obfuscate: true)
+    expect(dot).not_to match(/eu-west|vpc-|sg-/)
+  end
+end

@@ -31,14 +31,48 @@ describe AwsSecurityViz::Ec2Provider do
   describe "client options" do
     it "passes no region unless one is given, so the SDK chain decides" do
       allow(Aws::EC2::Client).to receive(:new).and_return(client)
-      AwsSecurityViz::Ec2Provider.new({access_key: "a", secret_key: "b"})
+      AwsSecurityViz::Ec2Provider.new({access_key: "a", secret_key: "b"}).security_groups
       expect(Aws::EC2::Client).to have_received(:new).with({access_key_id: "a", secret_access_key: "b"})
     end
 
     it "uses the named profile" do
       allow(Aws::EC2::Client).to receive(:new).and_return(client)
-      AwsSecurityViz::Ec2Provider.new({profile: "dev", access_key: "a", secret_key: "b"})
+      AwsSecurityViz::Ec2Provider.new({profile: "dev", access_key: "a", secret_key: "b"}).security_groups
       expect(Aws::EC2::Client).to have_received(:new).with({profile: "dev"})
     end
+  end
+end
+
+describe AwsSecurityViz::Ec2Provider, "multi-region" do
+  def stub_client(original, region, id)
+    original.call(stub_responses: {
+      describe_security_groups: {security_groups: [{group_id: id, group_name: id, vpc_id: "vpc-#{region}"}]},
+      describe_regions: {regions: [{region_name: "us-east-1"}, {region_name: "eu-west-1"}]}
+    }, region: region)
+  end
+
+  before do
+    allow(Aws::EC2::Client).to receive(:new).and_wrap_original { |original, opts|
+      stub_client(original, opts[:region] || "us-east-1", "sg-#{opts[:region]}")
+    }
+  end
+
+  it "queries each region in a comma-separated list and tags groups with their region" do
+    groups = described_class.new({region: "eu-west-1, us-west-2"}).security_groups
+    expect(groups.map { |g| [g.id, g.region] }).to eq([%w[sg-eu-west-1 eu-west-1], %w[sg-us-west-2 us-west-2]])
+  end
+
+  it "leaves the region unset for a single region" do
+    expect(described_class.new({region: "eu-west-1"}).security_groups.map(&:region)).to eq([nil])
+  end
+
+  it "uses DescribeRegions for all_regions" do
+    groups = described_class.new({all_regions: true}).security_groups
+    expect(groups.map(&:region)).to eq(%w[eu-west-1 us-east-1])
+  end
+
+  it "rejects --region together with --all-regions" do
+    expect { described_class.new({all_regions: true, region: "eu-west-1"}).security_groups }
+      .to raise_error(ArgumentError, /cannot be combined/)
   end
 end

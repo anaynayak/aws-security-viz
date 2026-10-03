@@ -52,7 +52,8 @@ module AwsSecurityViz
         o.on("-a", "--access-key=KEY", "AWS access key") { |v| opts[:access_key] = v }
         o.on("-s", "--secret-key=KEY", "AWS secret key") { |v| opts[:secret_key] = v }
         o.on("-e", "--session-token=TOKEN", "AWS session token") { |v| opts[:session_token] = v }
-        o.on("-r", "--region=REGION", "AWS region to query (default: SDK chain, e.g. AWS_REGION or profile)") { |v| opts[:region] = v }
+        o.on("-r", "--region=REGION", "AWS region(s) to query, comma-separated (default: SDK chain, e.g. AWS_REGION or profile)") { |v| opts[:region] = v }
+        o.on("--all-regions", "Query every region returned by DescribeRegions") { opts[:all_regions] = true }
         o.on("-p", "--profile=NAME", "AWS shared-config profile to use (AWS_PROFILE is read by the SDK)") { |v| opts[:profile] = v }
         o.on("-v", "--vpc-id=ID", "AWS VPC id to show") { |v| opts[:vpc_id] = v }
         o.on("-o", "--source-file=FILE", "--input=FILE", "JSON source file containing security groups") { |v| opts[:source_file] = v }

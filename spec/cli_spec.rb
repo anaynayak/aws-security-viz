@@ -90,3 +90,15 @@ describe AwsSecurityViz::CLI do
     expect(seen).to include(profile: "work", region: "eu-west-2", vpc_id: "vpc-1", renderer: "json")
   end
 end
+
+describe AwsSecurityViz::CLI, "--all-regions" do
+  it "sets all_regions in the provider options" do
+    seen = nil
+    allow(AwsSecurityViz::VisualizeAws).to receive(:new) { |_config, opts|
+      seen = opts
+      instance_double(AwsSecurityViz::VisualizeAws, unleash: nil)
+    }
+    described_class.new(%w[--all-regions -n json -f x.json], env: {}, out: StringIO.new, err: StringIO.new).run
+    expect(seen).to include(all_regions: true)
+  end
+end
