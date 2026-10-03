@@ -1,27 +1,36 @@
 name: Ruby Gem Release
 
 on:
-  release:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  release:
     name: Build + Publish
     runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write # release-gem pushes the tag if missing
+      id-token: write # RubyGems trusted publishing (OIDC)
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Ruby 3
-        uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ruby-version: 3.2
-
-      - name: Publish to RubyGems
+          persist-credentials: true
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - name: Check tag matches gem version
         run: |
-          mkdir -p $HOME/.gem
-          touch $HOME/.gem/credentials
-          chmod 0600 $HOME/.gem/credentials
-          printf -- "---\n:rubygems_api_key: ${GEM_HOST_API_KEY}\n" > $HOME/.gem/credentials
-          gem build *.gemspec
-          gem push *.gem
-        env:
-          GEM_HOST_API_KEY: "${{secrets.RUBYGEMS_AUTH_TOKEN}}"
+          version="$(ruby -Ilib -e 'require "version"; print AwsSecurityViz::VERSION')"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match lib/version.rb (v${version})" >&2
+            exit 1
+          fi
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@7f9650160c1a4e7989fdc9855807bdbd421d8b6b # v1.4.1
