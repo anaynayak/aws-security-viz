@@ -99,3 +99,6 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Build the docs (strict)
         run: uv run --locked --group docs mkdocs build --strict
+      - name: Check theme assets are in the built site
+        # --strict does not check theme.logo / theme.favicon, and they only exist if committed
+        run: test -f site/assets/favicon.svg
