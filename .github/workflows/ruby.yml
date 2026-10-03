@@ -27,8 +27,12 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{matrix.ruby}}
-      - name: Install Graphviz
+      - name: Install Graphviz (Linux)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y graphviz
+      - name: Install Graphviz (macOS)
+        if: runner.os == 'macOS'
+        run: brew install graphviz
       - name: Install dependencies
         run: bundle install
       - name: Run tests
