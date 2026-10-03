@@ -5,7 +5,8 @@ Releases are cut by the maintainer. Pushing a `v*` tag runs `.github/workflows/r
 1. checks the tag matches `lib/aws_security_viz/version.rb`;
 2. publishes the gem to RubyGems with trusted publishing (OIDC, no API key stored in GitHub);
 3. builds a multi-arch image (amd64 + arm64) and pushes it to `ghcr.io/anaynayak/aws-security-viz`, tagged
-   `<version>`, `<major>.<minor>` and `latest`.
+   `<version>`, `<major>.<minor>` and `latest`;
+4. creates the GitHub release for the tag, using the matching `CHANGELOG.md` section as the notes.
 
 Every pull request also builds the image and smoke-tests it (the `docker image` job in `ruby.yml`), so a broken
 Dockerfile shows up before a release.

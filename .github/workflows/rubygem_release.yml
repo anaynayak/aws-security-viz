@@ -70,3 +70,36 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  github-release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+    needs: [release, image]
+    permissions:
+      contents: write # create the GitHub release for the tag
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Create release from the CHANGELOG entry
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          # The section between "## [<version>]" (or "## <version>") and the next "## " heading.
+          awk -v v="$version" '
+            /^## / { if (found) exit; if ($0 ~ "^## \\[?" v "\\]?([^0-9.]|$)") { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "No CHANGELOG.md section for ${version}" >&2
+            exit 1
+          fi
+          {
+            echo
+            echo "### Install"
+            echo "- Gem: \`gem install aws_security_viz -v ${version}\`"
+            echo "- Image: \`docker run --rm ghcr.io/${GITHUB_REPOSITORY}:${version} --help\`"
+          } >> notes.md
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md
