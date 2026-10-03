@@ -76,6 +76,11 @@ describe AwsSecurityViz::VisualizeAws do
       end
     end
 
+    it "lists .json once in the supported extensions" do
+      renderer = AwsSecurityViz::Renderer::GraphViz.new(File.join(Dir.tmpdir, "out.xyz"), config)
+      expect { renderer.output }.to raise_error(ArgumentError) { |e| expect(e.message.scan(".json").size).to eq(1) }
+    end
+
     it "finds dot through PATHEXT variants such as dot.exe" do
       Dir.mktmpdir { |dir|
         exe = File.join(dir, "dot.exe")

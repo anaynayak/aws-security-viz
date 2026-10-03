@@ -74,7 +74,7 @@ Ingress from `0.0.0.0/0` or `::/0` on a sensitive port (22, 3389, 3306, 5432, 14
 
 ## DOCKER USAGE
 
-Run aws-security-viz from the published image instead of installing Ruby and Graphviz. Releases push a multi-arch (amd64 and arm64) image to `ghcr.io/anaynayak/aws-security-viz`, tagged `<version>` (for example `1.0.0`) and `<major>.<minor>` (for example `1.0`). There is no `latest` tag, so pick one of those. The image's entrypoint is `bundle exec aws_security_viz`, so everything after the image name is a normal CLI argument. It runs as a non-root user with `/work` as the working directory; mount a local directory there to get the output files.
+Run aws-security-viz from the published image instead of installing Ruby and Graphviz. Releases push a multi-arch (amd64 and arm64) image to `ghcr.io/anaynayak/aws-security-viz`, tagged `<version>` (for example `1.0.0`), `<major>.<minor>` (for example `1.0`) and `latest` (stable releases only). Pin a version tag for reproducible runs. The image's entrypoint is `bundle exec aws_security_viz`, so everything after the image name is a normal CLI argument. It runs as a non-root user with `/work` as the working directory; mount a local directory there to get the output files.
 
 1. With aws-vault (recommended):
 
