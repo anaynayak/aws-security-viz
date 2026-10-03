@@ -238,3 +238,7 @@ Generated from `spec/integration/dummy.json` with `aws_security_viz -o spec/inte
 ```
   $ aws_security_viz --region us-west-1 -f aws.mmd
 ```
+
+## LICENSE
+
+MIT, see [LICENSE.md](LICENSE.md). The HTML viewer inlines a vendored copy of Cytoscape.js, which is also MIT licensed; its notice is in [lib/aws_security_viz/vendor/cytoscape/LICENSE](lib/aws_security_viz/vendor/cytoscape/LICENSE) and ships inside the gem.
