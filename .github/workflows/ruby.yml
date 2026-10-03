@@ -81,15 +81,10 @@ jobs:
           ruby-version: "3.4"
       - name: Build the gem twice and compare
         run: |
-          # Same commit, different directories and file mtimes: the checksums must still match.
-          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
-          export SOURCE_DATE_EPOCH
-          mkdir first second
-          git archive HEAD | tar -x -C first
-          git archive HEAD | tar -x -C second
-          (cd first && gem build aws_security_viz.gemspec --output ../first.gem)
-          sleep 2
-          find second -type f -exec touch {} +
-          (cd second && gem build aws_security_viz.gemspec --output ../second.gem)
-          sha256sum first.gem second.gem
-          [ "$(sha256sum < first.gem)" = "$(sha256sum < second.gem)" ]
+          # Same commit, different umask, TZ and directory depth: script/build-reproducible must give the same checksum.
+          git worktree add --detach "$RUNNER_TEMP/first" HEAD
+          (umask 002; git worktree add --detach "$RUNNER_TEMP/nested/second" HEAD)
+          (cd "$RUNNER_TEMP/first" && TZ=UTC script/build-reproducible "$RUNNER_TEMP/first.gem")
+          (cd "$RUNNER_TEMP/nested/second" && TZ=Asia/Kolkata script/build-reproducible "$RUNNER_TEMP/second.gem")
+          sha256sum "$RUNNER_TEMP/first.gem" "$RUNNER_TEMP/second.gem"
+          [ "$(sha256sum < "$RUNNER_TEMP/first.gem")" = "$(sha256sum < "$RUNNER_TEMP/second.gem")" ]

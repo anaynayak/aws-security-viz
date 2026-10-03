@@ -33,8 +33,8 @@ jobs:
             echo "Tag ${GITHUB_REF_NAME} does not match lib/aws_security_viz/version.rb (v${version})" >&2
             exit 1
           fi
-      - name: Set SOURCE_DATE_EPOCH from the tagged commit
-        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - name: Normalise file permissions and set SOURCE_DATE_EPOCH from the tagged commit
+        run: script/build-reproducible >> "$GITHUB_ENV"
       - name: Publish to RubyGems
         uses: rubygems/release-gem@7f9650160c1a4e7989fdc9855807bdbd421d8b6b # v1.4.1
       # release-gem already publishes the RubyGems-side Sigstore attestation. The steps below add the GitHub-side

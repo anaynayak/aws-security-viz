@@ -2,8 +2,9 @@
 
 Releases are cut by the maintainer. Pushing a `v*` tag runs `.github/workflows/rubygem_release.yml`, which:
 
-1. checks the tag matches `lib/aws_security_viz/version.rb`, and sets `SOURCE_DATE_EPOCH` to the tagged commit's
-   time so the gem build is reproducible;
+1. checks the tag matches `lib/aws_security_viz/version.rb`, then runs `script/build-reproducible`, which
+   normalises file permissions and sets `SOURCE_DATE_EPOCH` to the tagged commit's time so the gem build is
+   reproducible;
 2. publishes the gem to RubyGems with trusted publishing (OIDC, no API key stored in GitHub);
 3. builds a multi-arch image (amd64 + arm64) and pushes it to `ghcr.io/anaynayak/aws-security-viz`, tagged
    `<version>`, `<major>.<minor>` and `latest`;
@@ -16,11 +17,19 @@ Releases are cut by the maintainer. Pushing a `v*` tag runs `.github/workflows/r
 Every pull request also builds the image and smoke-tests it (the `docker image` job in `ruby.yml`), so a broken
 Dockerfile shows up before a release.
 
-The `reproducible gem build` job in `ruby.yml` builds the gem twice from the same commit, in different directories
-and with different file mtimes, with `SOURCE_DATE_EPOCH` set to the commit time, and fails if the two sha256
-checksums differ. To check a published gem yourself, check out the tag, run
-`SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) gem build aws_security_viz.gemspec` and compare
-`sha256sum` with the gem from `gem fetch aws_security_viz -v <version>`.
+The `reproducible gem build` job in `ruby.yml` builds the gem twice from the same commit with
+`script/build-reproducible`, in different directories, with different umasks (022 and 002) and time zones, and
+fails if the two sha256 checksums differ.
+
+To check a published gem yourself (applies from the first release made after this script was added; 1.0.0 predates
+it and is not reproducible this way):
+
+1. Use the same Ruby and RubyGems as the release job: Ruby 3.4 from `ruby/setup-ruby` on `ubuntu-latest`. The gem
+   metadata records `rubygems_version`, so a different RubyGems gives a different checksum. Check the release
+   job's log for the exact versions.
+2. Make a clean checkout of the release tag (`git clone --branch v<version> https://github.com/anaynayak/aws-security-viz`).
+3. Run `script/build-reproducible /tmp/rebuilt.gem` from the checkout root.
+4. Compare `sha256sum /tmp/rebuilt.gem` with the gem from `gem fetch aws_security_viz -v <version>`.
 
 ## One-time setup
 
