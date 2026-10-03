@@ -74,11 +74,11 @@ New GHCR packages are private. After the first release pushes the image:
 ## Cutting a release
 
 1. Bump `lib/aws_security_viz/version.rb`, finish the `CHANGELOG.md` entry, commit on `main`, and wait for CI.
-2. Tag and push: `git tag v1.0.0 && git push origin main v1.0.0` (the tag must be `v` + the version).
+2. Tag and push: `git tag v<version> && git push origin main v<version>` (the tag must be `v` + the version).
 3. Watch Actions -> "Ruby Gem Release". If you added required reviewers, approve the `release` deployment.
 4. Verify:
-   1. `gem install aws_security_viz -v 1.0.0 && aws_security_viz --version`
-   2. `docker run --rm ghcr.io/anaynayak/aws-security-viz:1.0.0 --version`
+   1. `gem install aws_security_viz -v <version> && aws_security_viz --version`
+   2. `docker run --rm ghcr.io/anaynayak/aws-security-viz:<version> --version`
 
 ## Verifying a release
 
