@@ -52,5 +52,6 @@ aws.json
 /.venv/
 /site/
 
-# documentation screenshots and the sample input
+# documentation screenshots, logo and the sample input
 !/docs/assets/*.png
+!/docs/assets/*.svg
