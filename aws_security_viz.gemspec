@@ -21,11 +21,6 @@ Gem::Specification.new do |s|
   s.test_files    = s.files.grep(%r{^(test|spec|features)/})
   s.require_paths = ['lib']
 
-  s.add_development_dependency 'rake', '>= 12.0.0', '~> 13.0'
-  s.add_development_dependency 'rspec', '~> 3.5', '>= 3.5.0'
-  if ENV["COVERAGE"]
-    s.add_development_dependency "simplecov"
-  end
   s.add_runtime_dependency 'rexml', '~> 3.2', '>= 3.2.2'
   s.add_runtime_dependency 'graphviz', '~> 1.1', '>= 1.1.0'
   s.add_runtime_dependency 'optimist', '>= 3.0', '< 3.3'
