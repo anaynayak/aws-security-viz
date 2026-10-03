@@ -3,17 +3,19 @@
 require "spec_helper"
 require "tmpdir"
 
-# Regression specs for known graph correctness bugs (B1-B4). Each is marked
-# pending: it documents the bug and fails if the bug is fixed without removing
-# the `pending` call. Un-pend each spec in the task that fixes its bug.
+# Regression specs for graph correctness bugs B1-B4, all fixed; each guards its fix.
 describe VisualizeAws do
   let(:fixture) { File.expand_path("fixtures/graph_bugs.json", __dir__) }
   let(:config) { AwsConfig.new({egress: true}) }
   let(:out_dir) { Dir.mktmpdir }
   let(:out_file) { File.join(out_dir, "out.json") }
 
+  # Remember any navigator.html already in the cwd so a B4 regression can be told apart from it.
+  let!(:cwd_asset_before) { File.exist?("navigator.html") && [File.mtime("navigator.html"), File.read("navigator.html")] }
+
   after do
     FileUtils.remove_entry(out_dir)
+    FileUtils.rm_f("navigator.html") unless cwd_asset_before
   end
 
   def render(renderer)
@@ -41,6 +43,7 @@ describe VisualizeAws do
   it "B4: writes the html asset next to the output file" do
     render("navigator")
     expect(File.exist?(File.join(out_dir, "navigator.html"))).to be(true)
-    expect(File.exist?("navigator.html")).to be(false)
+    cwd_asset_after = File.exist?("navigator.html") && [File.mtime("navigator.html"), File.read("navigator.html")]
+    expect(cwd_asset_after).to eq(cwd_asset_before)
   end
 end
