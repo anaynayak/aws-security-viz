@@ -65,3 +65,29 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/out:/work" aws-security-viz:ci -o dummy.json -f viz.html
           grep -q "<svg" out/viz.svg
           grep -q "cytoscape" out/viz.html
+
+  reproducible-gem:
+    name: reproducible gem build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.4"
+      - name: Build the gem twice and compare
+        run: |
+          # Same commit, different directories and file mtimes: the checksums must still match.
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          mkdir first second
+          git archive HEAD | tar -x -C first
+          git archive HEAD | tar -x -C second
+          (cd first && gem build aws_security_viz.gemspec --output ../first.gem)
+          sleep 2
+          find second -type f -exec touch {} +
+          (cd second && gem build aws_security_viz.gemspec --output ../second.gem)
+          sha256sum first.gem second.gem
+          [ "$(sha256sum < first.gem)" = "$(sha256sum < second.gem)" ]

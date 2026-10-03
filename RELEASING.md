@@ -2,7 +2,8 @@
 
 Releases are cut by the maintainer. Pushing a `v*` tag runs `.github/workflows/rubygem_release.yml`, which:
 
-1. checks the tag matches `lib/aws_security_viz/version.rb`;
+1. checks the tag matches `lib/aws_security_viz/version.rb`, and sets `SOURCE_DATE_EPOCH` to the tagged commit's
+   time so the gem build is reproducible;
 2. publishes the gem to RubyGems with trusted publishing (OIDC, no API key stored in GitHub);
 3. builds a multi-arch image (amd64 + arm64) and pushes it to `ghcr.io/anaynayak/aws-security-viz`, tagged
    `<version>`, `<major>.<minor>` and `latest`;
@@ -14,6 +15,12 @@ Releases are cut by the maintainer. Pushing a `v*` tag runs `.github/workflows/r
 
 Every pull request also builds the image and smoke-tests it (the `docker image` job in `ruby.yml`), so a broken
 Dockerfile shows up before a release.
+
+The `reproducible gem build` job in `ruby.yml` builds the gem twice from the same commit, in different directories
+and with different file mtimes, with `SOURCE_DATE_EPOCH` set to the commit time, and fails if the two sha256
+checksums differ. To check a published gem yourself, check out the tag, run
+`SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) gem build aws_security_viz.gemspec` and compare
+`sha256sum` with the gem from `gem fetch aws_security_viz -v <version>`.
 
 ## One-time setup
 
