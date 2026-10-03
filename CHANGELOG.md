@@ -4,6 +4,21 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Documentation site at https://anaynayak.github.io/aws-security-viz/ (MkDocs Material, built strictly in CI and deployed from `main`); the README is now a short summary that links to it
+- `SECURITY.md`: supported versions, private vulnerability reporting, scope, disclosure timeline, data handling and release verification
+- Releases attest SLSA build provenance for the gem and the GHCR image, attach a CycloneDX SBOM and the provenance bundle (`.intoto.jsonl`) to the GitHub release, and create that release from this changelog
+- Reproducible gem builds: `script/build-reproducible` normalises file permissions and sets `SOURCE_DATE_EPOCH`; CI builds the gem twice under different umask, timezone and directory and compares checksums
+- CodeQL scanning for Ruby and GitHub Actions workflows, and an OpenSSF Scorecard workflow with a README badge
+- CI builds and smoke-tests the Docker image on every pull request
+
+### Changed
+- The Docker base image is pinned by digest
+- `--obfuscate` help text lists everything it hashes
+
+### Fixed
+- With `--obfuscate`, the warnings for skipped regions and for `--show-unused` without `ec2:DescribeNetworkInterfaces` printed the raw region name
+
 ## [1.0.0] - 2026-10-03
 This release also covers the 0.3.0 work, which was never tagged or published.
 
