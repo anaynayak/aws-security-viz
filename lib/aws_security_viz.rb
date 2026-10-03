@@ -32,11 +32,12 @@ module AwsSecurityViz
         peer_names.merge!(@security_groups.peer_names(group))
         g.add_node(group.id, {label: group.name, vpc_id: group.vpc_id, region: group.region, group_id: group.id})
         @security_groups.traffic(group).each { |traffic|
-          color = traffic.ingress ? :blue : :red
+          edge = {color: traffic.ingress ? :blue : :red, label: traffic.port_range}
+          edge[:descriptions] = traffic.descriptions unless traffic.descriptions.empty?
           if traffic.ingress
-            g.add_edge(traffic.from, traffic.to, color: color, label: traffic.port_range)
+            g.add_edge(traffic.from, traffic.to, edge)
           else
-            g.add_edge(traffic.to, traffic.from, color: color, label: traffic.port_range)
+            g.add_edge(traffic.to, traffic.from, edge)
           end
         }
       }

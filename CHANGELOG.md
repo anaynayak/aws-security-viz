@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Added
 - --input and --output aliases for -o/--source-file and -f/--filename; `init` alias for `setup`
+- Rule descriptions are kept: JSON edges carry a `descriptions` list and DOT edges a `tooltip` (hashed under --obfuscate)
 
 ### Changed
 - CLI moved into `AwsSecurityViz::CLI` on stdlib OptionParser; the optimist dependency is removed

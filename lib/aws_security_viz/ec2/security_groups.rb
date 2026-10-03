@@ -40,7 +40,9 @@ module AwsSecurityViz
 
     def rule_traffic(group, rule, ingress)
       rule.peers.reject { |peer| @config.exclusions.match(peer.name) }.map { |peer|
-        Traffic.new(ingress, peer.id, group.id, rule.port_range)
+        text = peer.description.to_s.strip
+        Traffic.new(ingress: ingress, from: peer.id, to: group.id, port_range: rule.port_range,
+          descriptions: text.empty? ? [] : [{ports: rule.port_range, text: text}])
       }
     end
   end

@@ -12,7 +12,7 @@ module AwsSecurityViz
     def self.apply(nodes, edges)
       [
         nodes.map { |key, opts| [hash(key), node_opts(opts)] },
-        edges.map { |from, to, opts| [hash(from), hash(to), opts.merge(label: hash_tokens(opts[:label]))] }
+        edges.map { |from, to, opts| [hash(from), hash(to), hash_edge_opts(opts)] }
       ]
     end
 
@@ -20,6 +20,17 @@ module AwsSecurityViz
       %i[label vpc_id region group_id].each_with_object(opts.dup) { |field, hashed|
         hashed[field] = hash(opts[field]) if opts.key?(field) && !opts[field].nil?
       }
+    end
+
+    def self.hash_edge_opts(opts)
+      hashed = opts.merge(label: hash_tokens(opts[:label]))
+      hashed[:descriptions] = hash_descriptions(opts[:descriptions]) if opts.key?(:descriptions)
+      hashed
+    end
+
+    # Free text can name people and systems, so descriptions are hashed like everything else.
+    def self.hash_descriptions(descriptions)
+      descriptions.to_a.map { |d| {ports: hash_tokens(d[:ports]), text: hash(d[:text])} }
     end
 
     # Hash each comma-separated port token so that one token always maps to the same value.

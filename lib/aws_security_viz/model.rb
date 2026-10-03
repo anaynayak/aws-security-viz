@@ -5,9 +5,10 @@ require_relative "port_label"
 module AwsSecurityViz
   # Where a rule's traffic comes from or goes to. kind is :cidr4, :cidr6, :prefix_list or :group;
   # id is the CIDR, prefix list id or group id and name is what exclusions and labels match on.
-  Peer = Data.define(:kind, :id, :name) do
-    def initialize(kind:, id:, name: nil)
-      super(kind: kind, id: id, name: name || id)
+  # description is the free-text rule description (nil or empty when none was given).
+  Peer = Data.define(:kind, :id, :name, :description) do
+    def initialize(kind:, id:, name: nil, description: nil)
+      super(kind: kind, id: id, name: name || id, description: description)
     end
   end
 
@@ -35,19 +36,25 @@ module AwsSecurityViz
 
   class Rule
     def self.from_hash(ip)
-      peers = (ip[:ip_ranges] || []).map { |r| Peer.new(kind: :cidr4, id: r[:cidr_ip]) } +
-        (ip[:ipv6_ranges] || []).map { |r| Peer.new(kind: :cidr6, id: r[:cidr_ipv6]) } +
-        (ip[:prefix_list_ids] || []).map { |r| Peer.new(kind: :prefix_list, id: r[:prefix_list_id]) } +
-        (ip[:user_id_group_pairs] || []).map { |g| Peer.new(kind: :group, id: g[:group_id] || g[:group_name], name: g[:group_name]) }
+      peers = (ip[:ip_ranges] || []).map { |r| Peer.new(kind: :cidr4, id: r[:cidr_ip], description: r[:description]) } +
+        (ip[:ipv6_ranges] || []).map { |r| Peer.new(kind: :cidr6, id: r[:cidr_ipv6], description: r[:description]) } +
+        (ip[:prefix_list_ids] || []).map { |r| Peer.new(kind: :prefix_list, id: r[:prefix_list_id], description: r[:description]) } +
+        (ip[:user_id_group_pairs] || []).map { |g| Peer.new(kind: :group, id: g[:group_id] || g[:group_name], name: g[:group_name], description: g[:description]) }
       new(protocol: ip[:ip_protocol], from_port: ip[:from_port], to_port: ip[:to_port], peers: peers)
     end
   end
 
-  Traffic = Data.define(:ingress, :from, :to, :port_range) do
+  # descriptions: the non-empty rule descriptions behind this traffic, as {ports:, text:} hashes.
+  Traffic = Data.define(:ingress, :from, :to, :port_range, :descriptions) do
+    def initialize(ingress:, from:, to:, port_range:, descriptions: [])
+      super
+    end
+
     def self.grouped(traffic_list)
       t = traffic_list.first
       port_range = PortLabel.normalise(traffic_list.collect(&:port_range).join(","))
-      new(t.ingress, t.from, t.to, port_range)
+      new(ingress: t.ingress, from: t.from, to: t.to, port_range: port_range,
+        descriptions: traffic_list.flat_map(&:descriptions).uniq)
     end
   end
 

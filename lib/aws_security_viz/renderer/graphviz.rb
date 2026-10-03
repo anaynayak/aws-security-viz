@@ -36,7 +36,9 @@ module AwsSecurityViz
         add_node(from, {})
         add_node(to, {})
         # Edges live in the root graph: an edge inside a cluster would pull its other endpoint in.
-        @edges << "#{quote(from)} -> #{quote(to)} [#{attrs({style: "bold"}.merge(opts))}];"
+        edge_attrs = {style: "bold"}.merge(opts.except(:descriptions))
+        edge_attrs[:tooltip] = tooltip(opts[:descriptions]) unless opts[:descriptions].to_a.empty?
+        @edges << "#{quote(from)} -> #{quote(to)} [#{attrs(edge_attrs)}];"
       end
 
       def to_dot
@@ -75,6 +77,11 @@ module AwsSecurityViz
         id = region ? "cluster_#{region}/#{vpc_id}" : "cluster_#{vpc_id}"
         ["#{indent}subgraph #{quote(id)} {", "#{indent}  label=#{quote(vpc_id)};"] +
           node_lines.map { |l| "#{indent}  #{l}" } + ["#{indent}}"]
+      end
+
+      # One line per rule description, prefixed by its ports; quote() escapes the free text.
+      def tooltip(descriptions)
+        descriptions.map { |d| "#{d[:ports]}: #{d[:text]}" }.join("\n")
       end
 
       def cluster(region, body)

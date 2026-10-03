@@ -75,7 +75,9 @@ module AwsSecurityViz
     def merge_edge(existing, opts)
       return opts unless existing
       color = [existing[:color], opts[:color]].include?(:blue) ? :blue : opts[:color]
-      existing.merge(opts).merge(color: color, label: PortLabel.normalise("#{existing[:label]},#{opts[:label]}"))
+      merged = existing.merge(opts).merge(color: color, label: PortLabel.normalise("#{existing[:label]},#{opts[:label]}"))
+      descriptions = (existing[:descriptions].to_a + opts[:descriptions].to_a).uniq
+      descriptions.empty? ? merged : merged.merge(descriptions: descriptions)
     end
 
     def opts(u, v)
