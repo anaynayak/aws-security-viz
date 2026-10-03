@@ -2,6 +2,27 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.0] - 2026-10-03
+### Added
+- --layout option to pick the Graphviz layout engine (overrides `format` in opts.yml; unknown engines are rejected)
+- --profile selects the AWS profile; it no longer defaults to AWS_PROFILE, so explicit access keys are kept
+- --debug (or DEBUG=true) for verbose output and stack traces, --obfuscate (or OBFUSCATE=true) to hash group names and ports
+- IPv6 ranges and prefix lists are drawn as rule peers
+- --vpc-id is honoured for --source-file input
+
+### Changed
+- Region comes from the AWS SDK credential/config chain (AWS_REGION, profile, ...) instead of a hard-coded default
+- Node ids in JSON output are now security group ids; names are labels, and groups are clustered by VPC
+- Rules that allow all traffic, ICMP, or a numeric protocol get readable labels, and all-traffic is labelled "all"
+- Boolean environment variables (DEBUG, OBFUSCATE) are parsed as booleans
+- The default output file name is aws-security-viz.png (.json for json output), and the html asset is written next to the output file, not the current directory
+
+### Fixed
+- Security groups sharing a name in different VPCs no longer collapse into one node
+- Several rules between the same two groups are merged into a single edge with merged port labels
+- DescribeSecurityGroups is paginated and the VPC filter is applied server-side
+- Unknown renderers are rejected and errors are reported cleanly (exit 1, Ctrl-C exits 130)
+
 ## [0.2.4] - 2023-06-10
 - Matrix builds for Ruby v3.0 onwards only
 - Remove support for Ruby v2.x
