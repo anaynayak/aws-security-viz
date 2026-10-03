@@ -40,7 +40,6 @@ describe AwsSecurityViz::VisualizeAws do
       edge = {"color" => "blue", "style" => "bold"}
       expect(statements_of(actual_content)).to eq(
         "graph" => {"concentrate" => "true", "overlap" => "false", "rankdir" => "LR", "sep" => "1", "splines" => "true"},
-        "node" => {"label" => '\\N'},
         "sg-appgrp" => {"label" => "app"},
         "sg-dbgrp" => {"label" => "db"},
         "sg-appgrp -> sg-dbgrp" => edge.merge("label" => "5984/tcp"),
@@ -53,31 +52,45 @@ describe AwsSecurityViz::VisualizeAws do
       )
     end
 
-    it "should parse json input with stubbed out graphviz" do
-      nodes = ["sg-appgrp", "8.8.8.8/32", "sg-amzelb", "*", "sg-dbgrp"]
-      expect(Graphviz).to receive(:output).with(be_graph_with(nodes), path: temp_file.path, format: nil, dot: "dot")
-      AwsSecurityViz::VisualizeAws.new(config, opts).unleash(temp_file.path)
-    end
-
-    it "fails clearly, without writing the file, when the layout engine is missing" do
-      missing = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, layout: "neato"})
+    it "writes dot without needing graphviz on PATH" do
       stub_const("ENV", ENV.to_h.merge("PATH" => ""))
-      File.delete(temp_file.path)
-      expect { AwsSecurityViz::VisualizeAws.new(missing, opts).unleash(temp_file.path) }
-        .to raise_error(ArgumentError, "Graphviz 'neato' not found; install graphviz")
-      expect(File.exist?(temp_file.path)).to be(false)
+      AwsSecurityViz::VisualizeAws.new(config, opts).unleash(temp_file.path)
+      expect(actual_content).to start_with('digraph "G" {').and include('"sg-appgrp" -> "sg-dbgrp"')
     end
 
-    it "passes the configured layout engine to graphviz" do
-      neato = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "neato"})
-      expect(Graphviz).to receive(:output).with(anything, path: temp_file.path, format: nil, dot: "neato")
-      AwsSecurityViz::VisualizeAws.new(neato, opts).unleash(temp_file.path)
+    it "fails clearly, without writing the file, when graphviz is missing for an image format" do
+      png = Tempfile.new(%w[aws .png])
+      stub_const("ENV", ENV.to_h.merge("PATH" => ""))
+      File.delete(png.path)
+      expect { AwsSecurityViz::VisualizeAws.new(config, opts.merge(filename: png)).unleash(png.path) }
+        .to raise_error(ArgumentError, "Graphviz 'dot' not found; install graphviz")
+      expect(File.exist?(png.path)).to be(false)
     end
 
-    it "prefers the layout option over opts.yml format" do
-      neato = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, format: "dot", layout: "sfdp"})
-      expect(Graphviz).to receive(:output).with(anything, path: temp_file.path, format: nil, dot: "sfdp")
-      AwsSecurityViz::VisualizeAws.new(neato, opts).unleash(temp_file.path)
+    it "renders svg through dot with the configured layout engine" do
+      svg = Tempfile.new(%w[aws .svg])
+      neato = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, layout: "neato"})
+      expect(Open3).to receive(:capture3)
+        .with("dot", "-Tsvg", "-Kneato", hash_including(:stdin_data))
+        .and_return(["<svg/>", "", instance_double(Process::Status, success?: true)])
+      AwsSecurityViz::VisualizeAws.new(neato, opts.merge(filename: svg)).unleash(svg.path)
+      expect(File.read(svg.path)).to eq("<svg/>")
+    end
+
+    it "renders a real svg when dot is installed", if: system("which dot > /dev/null 2>&1") do
+      svg = Tempfile.new(%w[aws .svg])
+      AwsSecurityViz::VisualizeAws.new(config, opts.merge(filename: svg)).unleash(svg.path)
+      expect(File.read(svg.path)).to include("<svg")
+    end
+
+    it "escapes quotes, backslashes and newlines in ids and labels" do
+      renderer = AwsSecurityViz::Renderer::GraphViz.new("x.dot", config)
+      renderer.add_node('a"b\\c', {label: "say \"hi\"\nnow", vpc_id: 'vpc"1'})
+      renderer.add_edge('a"b\\c', "d e", label: "80/tcp")
+      dot = renderer.to_dot
+      expect(dot).to include('subgraph "cluster_vpc\\"1"')
+      expect(dot).to include('"a\\"b\\\\c" [label="say \\"hi\\"\\nnow"];')
+      expect(dot).to include('"a\\"b\\\\c" -> "d e" [style="bold", label="80/tcp"];')
     end
   end
 

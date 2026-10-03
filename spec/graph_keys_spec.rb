@@ -35,8 +35,8 @@ describe AwsSecurityViz::VisualizeAws do
     AwsSecurityViz::VisualizeAws.new(config, source_file: fixture, renderer: "graphviz").unleash(dot)
     content = File.read(dot)
     expect(content.scan(/subgraph "?cluster_vpc-[ab]"?/).size).to eq(2)
-    expect(content).to match(/subgraph "cluster_vpc-a".*"sg-default-a"\s*\[.*?label=default/m)
-    expect(content).to match(/subgraph "cluster_vpc-b".*"sg-default-b"\s*\[.*?label=default/m)
+    expect(content).to match(/subgraph "cluster_vpc-a".*"sg-default-a"\s*\[.*?label="?default/m)
+    expect(content).to match(/subgraph "cluster_vpc-b".*"sg-default-b"\s*\[.*?label="?default/m)
   end
 
   it "accepts a group name or id as a source filter" do
