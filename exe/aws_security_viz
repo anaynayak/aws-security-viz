@@ -12,7 +12,7 @@ opts = Optimist.options do
   opt :secret_key, "AWS secret key", default: ENV["AWS_SECRET_KEY"] || ENV["AWS_SECRET_ACCESS_KEY"], type: :string
   opt :session_token, "AWS session token", default: ENV["AWS_SESSION_TOKEN"] || nil, type: :string
   opt :region, "AWS region to query (default: SDK chain, e.g. AWS_REGION or profile)", type: :string
-  opt :profile, "AWS shared-config profile to use", default: ENV["AWS_PROFILE"], type: :string
+  opt :profile, "AWS shared-config profile to use (AWS_PROFILE is read by the SDK)", type: :string
   opt :vpc_id, "AWS VPC id to show", type: :string
   opt :source_file, "JSON source file containing security groups", type: :string
   opt :filename, "Output file name", type: :string, default: "aws-security-viz.png"
