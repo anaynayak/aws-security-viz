@@ -41,3 +41,7 @@ navigator.html
 *.dot
 *.svg
 .DS_Store
+
+# local reports and generated output; viewer templates shipped in the gem are exempt
+*.html
+!/lib/**/*.html
