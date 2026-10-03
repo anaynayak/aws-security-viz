@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/anaynayak/aws-security-viz"
   s.license = "MIT"
   s.metadata = {
-    "homepage_uri" => s.homepage,
     "source_code_uri" => "https://github.com/anaynayak/aws-security-viz",
     "changelog_uri" => "https://github.com/anaynayak/aws-security-viz/blob/main/CHANGELOG.md",
     "rubygems_mfa_required" => "true"
