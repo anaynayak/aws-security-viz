@@ -2,12 +2,12 @@ PATH
   remote: .
   specs:
     aws_security_viz (0.3.0)
-      aws-sdk-ec2 (>= 1.65, < 1.499)
-      graphviz (~> 1.1, >= 1.1.0)
-      optimist (>= 3.0, < 3.3)
-      rexml (~> 3.2, >= 3.2.2)
-      rgl (>= 0.5.3, < 0.7.0)
-      webrick (>= 1.8.1, < 1.10.0)
+      aws-sdk-ec2 (>= 1.655)
+      graphviz (>= 1.1.0)
+      optimist (>= 3.0)
+      rexml (>= 3.4.4)
+      rgl (>= 0.5.3)
+      webrick (>= 1.8.1)
 
 GEM
   remote: https://rubygems.org/
@@ -24,12 +24,12 @@ GEM
       jmespath (~> 1, >= 1.6.1)
       logger
       rexml (~> 3.4, >= 3.4.2)
-    aws-sdk-ec2 (1.498.0)
-      aws-sdk-core (~> 3, >= 3.210.0)
+    aws-sdk-ec2 (1.655.0)
+      aws-sdk-core (~> 3, >= 3.256.0)
       aws-sigv4 (~> 1.5)
     aws-sigv4 (1.12.1)
       aws-eventstream (~> 1, >= 1.0.2)
-    base64 (0.2.0)
+    base64 (0.3.0)
     bigdecimal (4.1.3)
     diff-lcs (1.6.2)
     ffi (1.17.4)
@@ -134,10 +134,10 @@ CHECKSUMS
   aws-eventstream (1.4.0) sha256=116bf85c436200d1060811e6f5d2d40c88f65448f2125bc77ffce5121e6e183b
   aws-partitions (1.1292.0) sha256=c7fbe8b878640f12e24c975fd14c30401f4dd112416a2d21f834d3a823c8c4b8
   aws-sdk-core (3.257.0) sha256=a92ad19c7ff668cec6688ee3200ee562da80647a3bbeed9fda02e8b0ca6492c6
-  aws-sdk-ec2 (1.498.0) sha256=a2290f85642e363d73716f9fdb334fc62f6aa524cdb179d7955a7a7d92ada21b
+  aws-sdk-ec2 (1.655.0) sha256=2cc23243b84f69437d5627886a7c339ea59a49c0c43b5103c09114f7ce35a508
   aws-sigv4 (1.12.1) sha256=6973ff95cb0fd0dc58ba26e90e9510a2219525d07620c8babeb70ef831826c00
   aws_security_viz (0.3.0)
-  base64 (0.2.0) sha256=0f25e9b21a02a0cc0cea8ef92b2041035d39350946e8789c562b2d1a3da01507
+  base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bigdecimal (4.1.3) sha256=61ebe1e5e559bdc3cc6f2c0ee7f427321fc838f59611c294356eb04d6e21cf66
   diff-lcs (1.6.2) sha256=9ae0d2cba7d4df3075fe8cd8602a8604993efc0dfa934cff568969efb1909962
   ffi (1.17.4) sha256=bcd1642e06f0d16fc9e09ac6d49c3a7298b9789bcb58127302f934e437d60acf

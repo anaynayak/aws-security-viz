@@ -14,18 +14,24 @@ Gem::Specification.new do |s|
   s.email = "anayak007+rubygems@gmail.com"
   s.homepage = "https://github.com/anaynayak/aws-security-viz"
   s.license = "MIT"
-  s.bindir = "exe"
+  s.metadata = {
+    "homepage_uri" => s.homepage,
+    "source_code_uri" => "https://github.com/anaynayak/aws-security-viz",
+    "changelog_uri" => "https://github.com/anaynayak/aws-security-viz/blob/main/CHANGELOG.md",
+    "rubygems_mfa_required" => "true"
+  }
 
-  s.files = `git ls-files -z`.split("\x0")
-  s.executables = s.files.grep(%r{^exe/}) { |f| File.basename(f) }
+  s.bindir = "exe"
+  s.files = Dir["lib/**/*", "exe/*"] + %w[LICENSE.md README.md CHANGELOG.md]
+  s.executables = Dir.children("exe")
   s.require_paths = ["lib"]
 
-  s.add_runtime_dependency "rexml", "~> 3.2", ">= 3.2.2"
-  s.add_runtime_dependency "graphviz", "~> 1.1", ">= 1.1.0"
-  s.add_runtime_dependency "optimist", ">= 3.0", "< 3.3"
-  s.add_runtime_dependency "rgl", ">= 0.5.3", "< 0.7.0"
-  s.add_runtime_dependency "webrick", ">= 1.8.1", "< 1.10.0"
-  s.add_runtime_dependency "aws-sdk-ec2", ">= 1.65", "< 1.499"
+  s.add_runtime_dependency "rexml", ">= 3.4.4"
+  s.add_runtime_dependency "graphviz", ">= 1.1.0"
+  s.add_runtime_dependency "optimist", ">= 3.0"
+  s.add_runtime_dependency "rgl", ">= 0.5.3"
+  s.add_runtime_dependency "webrick", ">= 1.8.1"
+  s.add_runtime_dependency "aws-sdk-ec2", ">= 1.655"
 
-  s.required_ruby_version = ">= 3.0.0"
+  s.required_ruby_version = ">= 3.3"
 end
