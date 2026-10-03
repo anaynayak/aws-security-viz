@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "rgl/adjacency"
+require_relative "directed_graph"
 require_relative "port_label"
 require_relative "obfuscation"
 
@@ -8,7 +8,7 @@ module AwsSecurityViz
   class Graph
     attr_reader :underlying
 
-    def initialize(config, underlying = RGL::DirectedAdjacencyGraph.new)
+    def initialize(config, underlying = DirectedGraph.new)
       @config = config
       @underlying = underlying
       @edge_properties = {}
