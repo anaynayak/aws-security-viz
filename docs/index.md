@@ -37,7 +37,7 @@ The sample [security_groups.json](assets/security_groups.json) needs no AWS acce
 
 ## Where to go next
 
-1. [Quickstart](quickstart.md): first graph in two minutes.
+1. [Quickstart](quickstart.md): first graph from a JSON file, live AWS or Docker.
 2. [Configuration](configuration.md): every option, `opts.yml` and exit codes.
 3. [Credentials and IAM](credentials-and-iam.md): how credentials are found and the minimal IAM policy.
 4. [Security](security.md): what leaves your machine and how to verify a release.

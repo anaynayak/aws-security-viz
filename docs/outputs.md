@@ -9,7 +9,7 @@ extension is rejected with a message listing the supported ones.
 
 | Extension | Format | Needs Graphviz |
 | --- | --- | --- |
-| `.html` | Self-contained interactive viewer (default) | No |
+| `.html`, `.htm` | Self-contained interactive viewer (default) | No |
 | `.json` | Nodes and edges as data | No |
 | `.mmd` | Mermaid flowchart | No |
 | `.dot`, `.gv` | Graphviz DOT text | No |
