@@ -4,7 +4,6 @@ PATH
     aws_security_viz (0.3.0)
       aws-sdk-ec2 (>= 1.400)
       rexml (>= 3.4.4)
-      webrick (>= 1.8.1)
 
 GEM
   remote: https://rubygems.org/
@@ -92,7 +91,6 @@ GEM
     unicode-display_width (3.3.0)
       unicode-emoji (~> 4.3)
     unicode-emoji (4.3.0)
-    webrick (1.9.2)
 
 PLATFORMS
   aarch64-linux
@@ -146,7 +144,6 @@ CHECKSUMS
   standard-performance (1.9.0) sha256=49483d31be448292951d80e5e67cdcb576c2502103c7b40aec6f1b6e9c88e3f2
   unicode-display_width (3.3.0) sha256=4b7aa66a4b11db50f6f7e98411215cd0dd10eaecb665d36eec5bcacb3fa0b613
   unicode-emoji (4.3.0) sha256=11c02fa73290378c066bb0562cd4c87d8e1b706fbbe0059ca12746a4244de8ce
-  webrick (1.9.2) sha256=beb4a15fc474defed24a3bda4ffd88a490d517c9e4e6118c3edce59e45864131
 
 BUNDLED WITH
   4.0.20

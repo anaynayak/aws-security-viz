@@ -55,12 +55,10 @@ describe "risk marking" do
     [risky, JSON.parse(File.read(path))]
   end
 
-  it "marks risky edges in json and navigator output, merged all label and ::/0 included" do
+  it "marks risky edges in json output, merged all label and ::/0 included" do
     count, json = edges(AwsSecurityViz::AwsConfig.new({}))
     expect(count).to eq(2)
     expect(json["edges"].select { |e| e["risky"] }.map { |e| e["source"] }).to contain_exactly("0.0.0.0/0", "::/0")
-    _, nav = edges(AwsSecurityViz::AwsConfig.new({}), renderer: "navigator")
-    expect(nav["data"]["edges"].count { |e| e["risky"] }).to eq(2)
   end
 
   it "still flags risk with obfuscation on" do
@@ -114,31 +112,25 @@ describe AwsSecurityViz::CLI, "--fail-on-risk" do
   def run_cli(*argv) = described_class.new(argv, env: {}, out: StringIO.new, err: err).run
 
   it "prints a one-line summary and exits 0 without the flag" do
-    expect(run_cli("-o", source, "-n", "json", "-f", "x.json")).to eq(0)
+    expect(run_cli("-o", source, "-f", "x.json")).to eq(0)
     expect(err.string).to match(/\[WARN\] \d+ risky edge/)
     expect(err.string.lines.size).to eq(1)
   end
 
   it "exits 2 with the flag, still writing the output" do
-    expect(run_cli("-o", source, "-n", "json", "-f", "x.json", "--fail-on-risk")).to eq(2)
+    expect(run_cli("-o", source, "-f", "x.json", "--fail-on-risk")).to eq(2)
     expect(File.exist?("x.json")).to be true
-  end
-
-  it "rejects --serve together with --fail-on-risk" do
-    expect(run_cli("-o", source, "-n", "json", "-f", "x.json", "--serve", "9999", "--fail-on-risk")).to eq(1)
-    expect(err.string).to include("--serve and --fail-on-risk cannot be combined")
-    expect(File.exist?("x.json")).to be false
   end
 
   it "reports an invalid risky_ports entry as a clean error" do
     File.write("opts.yml", {risky_ports: ["ssh"]}.to_yaml)
-    expect(run_cli("-o", source, "-n", "json", "-f", "x.json")).to eq(1)
+    expect(run_cli("-o", source, "-f", "x.json")).to eq(1)
     expect(err.string).to include("risky_ports: invalid entry 'ssh'")
   end
 
   it "exits 0 with the flag when nothing is risky" do
     File.write("opts.yml", {risky_ports: [1]}.to_yaml)
-    expect(run_cli("-o", source, "-n", "json", "-f", "x.json", "--fail-on-risk")).to eq(0)
+    expect(run_cli("-o", source, "-f", "x.json", "--fail-on-risk")).to eq(0)
     expect(err.string).to include("no risky public ingress")
   end
 end

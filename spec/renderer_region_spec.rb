@@ -23,12 +23,6 @@ describe "region in viewer outputs" do
     expect(json["nodes"].map { |n| n["region"] }).to eq(["eu-west-1", nil])
   end
 
-  it "includes the region in navigator categories and info" do
-    json = render(AwsSecurityViz::Renderer::Navigator, nodes)
-    expect(json["categories"].keys).to eq(["eu-west-1 / vpc-1", "vpc-1"])
-    expect(json["data"]["nodes"].first["info"]).to include("eu-west-1")
-  end
-
   it "hashes the region under obfuscation" do
     expect(render(AwsSecurityViz::Renderer::Json, nodes, obfuscate: true).to_json).not_to include("eu-west-1")
   end

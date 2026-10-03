@@ -122,27 +122,14 @@ describe AwsSecurityViz::VisualizeAws do
     let(:temp_file) { Tempfile.new(%w[aws .json]) }
 
     it "should parse json input" do
-      expect(FileUtils).to receive(:copy)
       AwsSecurityViz::VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
       expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
 
     it "should parse json input with obfuscation" do
       config = AwsSecurityViz::AwsConfig.new({groups: {"0.0.0.0/0" => "*"}, obfuscate: true})
-      expect(FileUtils).to receive(:copy)
       AwsSecurityViz::VisualizeAws.new(config, opts.merge(renderer: "json")).unleash(temp_file.path)
       expect(actual_content).not_to include('"amazon-elb-sg"', '"app"', '"db"', "sg-appgrp")
-    end
-  end
-
-  context "json to navigator file" do
-    let(:expected_file) { File.join(File.dirname(__FILE__), "navigator.json") }
-    let(:temp_file) { Tempfile.new(%w[aws .json]) }
-
-    it "should parse json input" do
-      expect(FileUtils).to receive(:copy)
-      AwsSecurityViz::VisualizeAws.new(config, opts.merge(renderer: "navigator")).unleash(temp_file.path)
-      expect(JSON.parse(expected_content)).to eq(JSON.parse(actual_content))
     end
   end
 
@@ -160,7 +147,6 @@ describe AwsSecurityViz::VisualizeAws do
       }
 
       it "should read from ec2 account", integration: true do
-        expect(FileUtils).to receive(:copy)
         AwsSecurityViz::VisualizeAws.new(config, opts).unleash(temp_file.path)
         expect(JSON.parse(expected_content)["edges"]).to match_array(JSON.parse(actual_content)["edges"])
         expect(JSON.parse(expected_content)["nodes"]).to match_array(JSON.parse(actual_content)["nodes"])

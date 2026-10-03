@@ -108,14 +108,9 @@ describe "--show-unused" do
       expect(File.read("o.mmd")).not_to include("unused")
     end
 
-    it "flags unused nodes in JSON and navigator output" do
-      %w[Json Navigator].each do |name|
-        render(AwsSecurityViz::Renderer.const_get(name), "o.json")
-        json = JSON.parse(File.read("o.json"))
-        list = json["nodes"] || json["data"]["nodes"]
-        expect(list.map { |n| n["unused"] }).to eq([nil, true])
-      end
-      expect(JSON.parse(File.read("o.json"))["data"]["nodes"].last["info"]).to include("Unused")
+    it "flags unused nodes in JSON output" do
+      render(AwsSecurityViz::Renderer::Json, "o.json")
+      expect(JSON.parse(File.read("o.json"))["nodes"].map { |n| n["unused"] }).to eq([nil, true])
     end
 
     it "keeps the flag readable under obfuscation" do
@@ -136,7 +131,7 @@ describe "--show-unused" do
     it "warns and ignores the flag with --source-file" do
       source = File.expand_path("integration/dummy.json", __dir__)
       expect(Aws::EC2::Client).not_to receive(:new)
-      status = described_class.new(["--show-unused", "-o", source, "-f", "o.json", "--renderer", "json"],
+      status = described_class.new(["--show-unused", "-o", source, "-f", "o.json"],
         env: {}, out: StringIO.new, err: err).run
       expect(status).to eq(0)
       expect(err.string).to include("--show-unused is ignored with --source-file")

@@ -21,8 +21,8 @@ RSpec.describe "aws_security_viz.gemspec" do
     expect(spec.files.reject { |f| File.directory?(File.join(root, f)) }).to all(match(%r{\A(lib/|exe/|LICENSE\.md\z|README\.md\z|CHANGELOG\.md\z)}))
   end
 
-  it "packages the executable, option sample and html viewers" do
-    expect(spec.files).to include("exe/aws_security_viz", "lib/aws_security_viz/opts.yml.sample", "lib/aws_security_viz/export/html/view.html", "lib/aws_security_viz/export/html/navigator.html")
+  it "packages the executable, option sample" do
+    expect(spec.files).to include("exe/aws_security_viz", "lib/aws_security_viz/opts.yml.sample")
   end
 
   it "packages the html viewer template and the vendored Cytoscape.js with its license and provenance" do

@@ -25,9 +25,9 @@ describe AwsSecurityViz::VisualizeAws do
     expect(nodes).to include({"id" => "sg-app", "label" => "app"})
   end
 
-  it "keys navigator edges by group id" do
-    edge = render("navigator")["data"]["edges"].find { |e| e["from"] == "sg-app" }
-    expect(edge["to"]).to eq("sg-db")
+  it "keys json edges by group id" do
+    edge = render("json")["edges"].find { |e| e["source"] == "sg-app" }
+    expect(edge["target"]).to eq("sg-db")
   end
 
   it "draws one dot cluster per vpc with separate default nodes" do

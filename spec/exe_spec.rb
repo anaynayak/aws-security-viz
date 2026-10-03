@@ -9,7 +9,7 @@ describe "exe/aws_security_viz" do
     root = File.expand_path("..", __dir__)
     Dir.mktmpdir { |dir|
       cmd = ["bundle", "exec", "ruby", "-I", "lib", "-r", "./spec/fixtures/stub_ec2.rb", "exe/aws_security_viz",
-        "-f", File.join(dir, "out.json"), "--renderer", "json", *args]
+        "-f", File.join(dir, "out.json"), *args]
       env = {"AWS_REGION" => nil, "AWS_PROFILE" => nil, "AWS_DEFAULT_REGION" => nil}.merge(env)
       _out, err, _status = Open3.capture3(env, *cmd, chdir: root)
       return err

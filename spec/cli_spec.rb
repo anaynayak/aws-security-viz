@@ -43,8 +43,8 @@ describe AwsSecurityViz::CLI do
   end
 
   it "accepts --input and --output as aliases of --source-file and --filename" do
-    expect(cli("--input", source, "--output", "a.json", "--renderer", "json").run).to eq(0)
-    expect(cli("--source-file", source, "--filename", "b.json", "--renderer", "json").run).to eq(0)
+    expect(cli("--input", source, "--output", "a.json").run).to eq(0)
+    expect(cli("--source-file", source, "--filename", "b.json").run).to eq(0)
     expect(File.read("a.json")).to eq(File.read("b.json"))
   end
 
@@ -56,13 +56,13 @@ describe AwsSecurityViz::CLI do
   end
 
   it "warns on stderr that --color is deprecated and still succeeds" do
-    expect(cli("-o", source, "--color", "-n", "json", "-f", "c.json").run).to eq(0)
+    expect(cli("-o", source, "--color", "-f", "c.json").run).to eq(0)
     expect(err.string).to include("[WARN] --color is deprecated")
     expect(out.string).to be_empty
   end
 
   it "reads DEBUG and OBFUSCATE as booleans and logs debug output to stderr" do
-    expect(cli("-o", source, "-n", "json", "-f", "d.json", env: {"DEBUG" => "true", "OBFUSCATE" => "1"}).run).to eq(0)
+    expect(cli("-o", source, "-f", "d.json", env: {"DEBUG" => "true", "OBFUSCATE" => "1"}).run).to eq(0)
     expect(err.string).to include("[DEBUG] node:")
     expect(out.string).to be_empty
     expect(File.read("d.json")).not_to include("sg-appgrp")
@@ -70,21 +70,51 @@ describe AwsSecurityViz::CLI do
 
   it "lets an explicit --no-debug and --no-obfuscate override DEBUG=true and OBFUSCATE=true" do
     env = {"DEBUG" => "true", "OBFUSCATE" => "true"}
-    expect(cli("-o", source, "-n", "json", "-f", "n.json", "--no-debug", "--no-obfuscate", env: env).run).to eq(0)
+    expect(cli("-o", source, "-f", "n.json", "--no-debug", "--no-obfuscate", env: env).run).to eq(0)
     expect(err.string).not_to include("[DEBUG]")
     expect(File.read("n.json")).to include("sg-appgrp")
+  end
+
+  it "infers the output format from the file extension without a deprecation warning" do
+    {"a.json" => /\A\{"nodes"/, "a.html" => /<html/i, "a.mmd" => /\Aflowchart|\Agraph/, "a.dot" => /digraph/}.each do |file, pattern|
+      expect(cli("-o", source, "-f", file).run).to eq(0), file
+      expect(File.read(file)).to match(pattern), file
+    end
+    expect(err.string).not_to include("deprecated")
+  end
+
+  it "writes aws-security-viz.html by default" do
+    expect(cli("-o", source).run).to eq(0)
+    expect(File.read("aws-security-viz.html")).to match(/<html/i)
+  end
+
+  it "warns that --renderer is deprecated but still honours it" do
+    expect(cli("-o", source, "-n", "json", "-f", "r.out").run).to eq(0)
+    expect(err.string).to include("--renderer is deprecated")
+    expect(JSON.parse(File.read("r.out"))).to have_key("nodes")
+  end
+
+  it "maps --renderer navigator to the html viewer with a warning" do
+    expect(cli("-o", source, "-n", "navigator").run).to eq(0)
+    expect(err.string).to include("--renderer navigator is deprecated")
+    expect(File.read("aws-security-viz.html")).to match(/<html/i)
+  end
+
+  it "no longer accepts --serve" do
+    expect(cli("--serve=3000", "-o", source, "-f", "x.json").run).to eq(1)
+    expect(err.string).to include("invalid option: --serve")
   end
 
   it "returns 1 for an unknown renderer and invalid boolean env" do
     expect(cli("-o", source, "-n", "bogus").run).to eq(1)
     expect(err.string).to include("unknown renderer 'bogus'")
-    expect(cli("-o", source, "-n", "json", "-f", "x.json", env: {"DEBUG" => "maybe"}).run).to eq(1)
+    expect(cli("-o", source, "-f", "x.json", env: {"DEBUG" => "maybe"}).run).to eq(1)
     expect(err.string).to include("DEBUG must be true, false, 1 or 0")
   end
 
   it "returns 130 on Ctrl-C" do
     allow(AwsSecurityViz::VisualizeAws).to receive(:new).and_raise(Interrupt)
-    expect(cli("-o", source, "-n", "json", "-f", "x.json").run).to eq(130)
+    expect(cli("-o", source, "-f", "x.json").run).to eq(130)
   end
 
   it "passes --profile, --region and --vpc-id through to the provider options" do
@@ -93,8 +123,8 @@ describe AwsSecurityViz::CLI do
       seen = opts
       instance_double(AwsSecurityViz::VisualizeAws, unleash: nil)
     }
-    cli("-p", "work", "-r", "eu-west-2", "-v", "vpc-1", "-n", "json", "-f", "x.json").run
-    expect(seen).to include(profile: "work", region: "eu-west-2", vpc_id: "vpc-1", renderer: "json")
+    cli("-p", "work", "-r", "eu-west-2", "-v", "vpc-1", "-f", "x.json").run
+    expect(seen).to include(profile: "work", region: "eu-west-2", vpc_id: "vpc-1")
   end
 end
 
@@ -126,20 +156,12 @@ describe AwsSecurityViz::CLI, "argument validation" do
 
   it "accepts --no-debug, --no-obfuscate and --no-color" do
     %w[--no-debug --no-obfuscate --no-color].each do |flag|
-      expect(run_cli(flag, "-o", source, "-n", "json", "-f", "x.json")).to eq(0), flag
+      expect(run_cli(flag, "-o", source, "-f", "x.json")).to eq(0), flag
     end
-  end
-
-  it "rejects a --serve port outside 1-65535 before rendering" do
-    ["0", "65536", "-1"].each do |port|
-      expect(run_cli("--serve=#{port}", "-o", source, "-n", "json", "-f", "x.json")).to eq(1)
-      expect(err.string).to include("--serve port must be between 1 and 65535")
-    end
-    expect(File.exist?("x.json")).to be(false)
   end
 
   it "rejects an unknown positional argument with exit 1" do
-    expect(run_cli("bogus", "-o", source, "-n", "json", "-f", "x.json")).to eq(1)
+    expect(run_cli("bogus", "-o", source, "-f", "x.json")).to eq(1)
     expect(err.string).to include("unknown command 'bogus'")
     expect(File.exist?("x.json")).to be(false)
   end
@@ -147,7 +169,7 @@ describe AwsSecurityViz::CLI, "argument validation" do
   it "warns when --region or --all-regions is used with --source-file" do
     ["--region=eu-west-1", "--all-regions"].each do |flag|
       err.truncate(0)
-      expect(run_cli(flag, "-o", source, "-n", "json", "-f", "x.json")).to eq(0)
+      expect(run_cli(flag, "-o", source, "-f", "x.json")).to eq(0)
       expect(err.string).to include("--region and --all-regions are ignored with --source-file")
     end
   end
