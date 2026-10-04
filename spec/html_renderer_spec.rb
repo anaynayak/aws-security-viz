@@ -121,6 +121,18 @@ describe AwsSecurityViz::Renderer::Html do
       expect(r["nodes"].count { |n| n["kind"] == "group" }).to be < r["threshold"]
     end
 
+    it "counts security groups, not peers, against the collapse threshold" do
+      renderer = described_class.new("peers.html", config)
+      10.times { |v| 15.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "g", vpc_id: "vpc-#{v}", region: "eu-west-1"}) } }
+      20.times { |i| renderer.add_node("10.0.#{i}.0/24", {label: "10.0.#{i}.0/24"}) }
+      renderer.output
+      out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python", File.expand_path("support/browser_state.py", __dir__), File.expand_path("peers.html"))
+      raise "browser check failed: #{err}" unless status.success?
+      r = JSON.parse(out.lines.last)
+      expect(r["threshold"]).to eq(150)
+      expect(r["collapsed"]).to eq(0)
+    end
+
     describe "a graph over the collapse threshold" do
       let(:vpcs) { 12 }
       let(:per_vpc) { 15 }
@@ -130,11 +142,13 @@ describe AwsSecurityViz::Renderer::Html do
         vpcs.times do |v|
           per_vpc.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "app-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
           renderer.add_edge("sg-#{v}-0", "sg-#{v}-1", {color: :blue, label: "443"})
-          renderer.add_edge("sg-#{v}-1", "sg-#{(v + 1) % vpcs}-0", {color: :blue, label: "5432"})
+          renderer.add_edge("sg-#{v}-1", "sg-#{(v + 1) % vpcs}-0", {color: :blue, label: "5432", descriptions: [{ports: "5432", text: "db from #{v}"}]})
           renderer.add_edge("sg-#{v}-2", "sg-#{(v + 1) % vpcs}-3", {color: :blue, label: "22"})
         end
         renderer.add_node("0.0.0.0/0", {label: "0.0.0.0/0"})
         renderer.add_edge("0.0.0.0/0", "sg-0-0", {color: :blue, label: "22", risky: true})
+        renderer.add_edge("0.0.0.0/0", "sg-0-1", {color: :blue, label: "80"})
+        renderer.add_edge("sg-5-4", "sg-5-5", {color: :blue, label: "all", risky: true})
         renderer.output
         file
       end
@@ -172,6 +186,22 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["group_details"]).to include("Id: sg-3-")
         expect(r["after_recollapse"]["collapsed"].size).to eq(vpcs)
         expect(r["ingress_hidden"]).to be(true)
+
+        expect(r["label_after_expand"]).to eq("vpc-3")
+        expect(r["label_after_recollapse"]).to eq("vpc-3 (15 groups)")
+        expect(r["collapsed_details"]).to include("Internal rules: 1")
+        expect(r["internal_risky_details"]).to include("internal rule(s) are risky")
+        expect(r["into_vpc_details"]).to include("5432", "22", "Rule descriptions", "db from 2")
+        expect(r["meta_risky_width"]).to eq(4)
+        expect(r["peer_meta_label"]).to eq("2 rules")
+        expect(r["risky_only_label"]).to eq("1 rule")
+        expect(r["risky_only_visible"]).to eq(["meta:0.0.0.0/0>vpc:eu-west-1|vpc-0|ingress"])
+        expect(r["risky_only_details"]).to include("22") & satisfy { |t| !t.include?("sg-0-1") }
+
+        expect(r["broad_search_collapsed"]).to eq(vpcs)
+        expect(r["enter_search_collapsed"]).to eq(0)
+        expect(r["cleared_search_collapsed"]).to eq(vpcs)
+        expect(r["expand_all_layouts"]).to eq(1)
 
         expect(r["search_matches"]).to eq(["sg-3-7"])
         expect(r["search_vpc_collapsed"]).to be(false)

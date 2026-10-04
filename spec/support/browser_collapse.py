@@ -53,8 +53,18 @@ with sync_playwright() as p:
         return ev("document.getElementById('details').textContent")
 
     out["collapsed_details"] = tap(vpc_id)
+    out["internal_risky_details"] = tap("vpc:eu-west-1|vpc-5")
     meta_id = ev("awsSecurityViz.cy.edges('.meta')[0].id()")
     out["meta_details"] = tap(meta_id)
+    out["into_vpc_details"] = tap("meta:vpc:eu-west-1|vpc-2>" + vpc_id + "|ingress")
+    out["meta_risky_width"] = ev("awsSecurityViz.cy.edges('.meta.risky')[0].numericStyle('width')")
+    peer_meta = "meta:0.0.0.0/0>vpc:eu-west-1|vpc-0|ingress"
+    out["peer_meta_label"] = ev("awsSecurityViz.cy.getElementById(%s).data('label')" % json.dumps(peer_meta))
+    page.click("#risky-only")
+    out["risky_only_label"] = ev("awsSecurityViz.cy.getElementById(%s).data('label')" % json.dumps(peer_meta))
+    out["risky_only_visible"] = ev("awsSecurityViz.cy.edges().filter(e => e.style('display') !== 'none').map(e => e.id())")
+    out["risky_only_details"] = tap(peer_meta)
+    page.click("#risky-only")
 
     # Double-click one VPC: only its groups get laid out; everything else stays put.
     before = ev("Object.fromEntries(awsSecurityViz.cy.nodes('.collapsed').map(n => [n.id(), n.position()]))")
@@ -67,11 +77,24 @@ with sync_playwright() as p:
     out["group_details"] = tap(ev("awsSecurityViz.cy.getElementById(%s).children()[0].id()" % json.dumps(vpc_id)))
     ev("awsSecurityViz.cy.getElementById(%s).emit('dbltap')" % json.dumps(vpc_id))
     out["after_recollapse"] = snapshot()
+    out["label_after_expand"] = None
+    ev("awsSecurityViz.cy.getElementById(%s).emit('dbltap')" % json.dumps(vpc_id))
+    out["label_after_expand"] = ev("awsSecurityViz.cy.getElementById(%s).data('label')" % json.dumps(vpc_id))
+    ev("awsSecurityViz.cy.getElementById(%s).emit('dbltap')" % json.dumps(vpc_id))
+    out["label_after_recollapse"] = ev("awsSecurityViz.cy.getElementById(%s).data('label')" % json.dumps(vpc_id))
 
     # Toggles apply to merged edges.
     page.click("#ingress")
     out["ingress_hidden"] = ev("awsSecurityViz.cy.edges('.meta.ingress').every(e => e.style('display') === 'none')")
     page.click("#ingress")
+
+    # A broad query does not open anything until confirmed with Enter, and clearing it restores the view.
+    page.fill("#search", "app")
+    out["broad_search_collapsed"] = len(ev("awsSecurityViz.cy.nodes('.collapsed').map(n => n.id())"))
+    page.press("#search", "Enter")
+    out["enter_search_collapsed"] = len(ev("awsSecurityViz.cy.nodes('.collapsed').map(n => n.id())"))
+    page.fill("#search", "")
+    out["cleared_search_collapsed"] = len(ev("awsSecurityViz.cy.nodes('.collapsed').map(n => n.id())"))
 
     # Search reaches into a collapsed VPC and expands it.
     page.fill("#search", group_label)
@@ -79,7 +102,9 @@ with sync_playwright() as p:
     out["search_vpc_collapsed"] = ev("awsSecurityViz.cy.getElementById(%s).hasClass('collapsed')" % json.dumps(vpc_id))
     page.fill("#search", "")
 
+    ev("(window.layouts = 0, awsSecurityViz.cy.on('layoutstart', () => window.layouts++), 0)")
     page.click("#expand-all")
+    out["expand_all_layouts"] = ev("window.layouts")
     out["all_expanded"] = snapshot()
     out["expanded_overlaps"] = ev("""(() => {
       const nodes = awsSecurityViz.cy.nodes('.vpc').toArray();

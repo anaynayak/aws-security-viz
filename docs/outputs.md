@@ -39,11 +39,13 @@ aws_security_viz -o security_groups.json -f viz.html
 4. Click a group or an edge to see its details. For an edge the panel shows the direction, the ports, any rule
    descriptions, and a risk note.
 5. The legend under the toolbar explains the edge styles.
-6. Collapsing. Graphs with more than 150 security groups open with every VPC collapsed into one node that shows
-   its group count; edges to other VPCs and peers are merged into one edge per direction, labelled with the number
-   of rules it stands for. Double-click a VPC to expand or collapse it, or use Expand all and Collapse all. Only
-   the VPC you expand is laid out again, so the rest of the graph stays where it was. Searching for a group inside
-   a collapsed VPC expands that VPC. Smaller graphs open fully expanded.
+6. Collapsing. Graphs with more than 150 security groups in VPCs (CIDR and other peers are not counted) open with
+   every VPC collapsed into one node that shows its group count and how many rules stay inside it. Edges to other
+   VPCs and peers are merged into one edge per direction, labelled with the number of rules; its details list the
+   ports and rule descriptions. Double-click a VPC to expand or collapse it, or use Expand all and Collapse all. Only
+   the VPC you expand is laid out again. Press Enter in the search box to open the VPCs holding a match (a single
+   match opens its VPC straight away); clearing the search restores the previous view. Smaller graphs open fully
+   expanded.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 
