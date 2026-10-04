@@ -1073,6 +1073,8 @@
           var wasCollapsed = existing.hasClass("collapsed");
           existing.data({ label: def.data.label, w: def.data.w, h: def.data.h, internal: def.data.internal, internalRisky: def.data.internalRisky });
           existing.toggleClass("collapsed", !!collapsed[def.data.id]);
+          // Only a collapsed VPC is drawn as exposed; an open one shows its groups.
+          existing.toggleClass("exposed", !!(exposed[def.data.id] && collapsed[def.data.id]));
           if (!collapsed[def.data.id] && wasCollapsed) expanded.push(def.data.id);
           else if (collapsed[def.data.id] && !wasCollapsed) existing.position(centres[def.data.id]);
         }

@@ -537,6 +537,25 @@ describe AwsSecurityViz::Renderer::Html do
       end
     end
 
+    describe "exposed VPCs" do
+      it "draws a VPC as exposed only while it is collapsed, whichever way it got that way" do
+        file = "exposed.html"
+        renderer = described_class.new(file, config)
+        2.times { |v| 3.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "svc-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) } }
+        renderer.add_node("0.0.0.0/0", {label: "0.0.0.0/0"})
+        renderer.add_edge("0.0.0.0/0", "sg-0-0", {color: :blue, label: "22", risky: true})
+        renderer.add_edge("sg-1-0", "sg-1-1", {color: :blue, label: "443"})
+        renderer.output
+        out = run_browser_script(File.expand_path("support/browser_exposed.py", __dir__), File.expand_path(file), "vpc:eu-west-1|vpc-0")
+        r = JSON.parse(out.lines.last)
+        expect(r["errors"]).to be_empty
+        expect(r["open"]).to eq({"collapsed" => false, "exposed" => false})
+        expect(r["collapse_all"]).to eq({"collapsed" => true, "exposed" => true})
+        expect(r["expand_all"]).to eq({"collapsed" => false, "exposed" => false})
+        expect(r["dblclick"]).to eq({"collapsed" => true, "exposed" => true})
+      end
+    end
+
     describe "the WebGL renderer" do
       def webgl_report(file, *flags)
         out = run_browser_script(File.expand_path("support/browser_webgl.py", __dir__), File.expand_path(file), *flags)
