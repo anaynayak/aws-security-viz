@@ -20,6 +20,17 @@ with sync_playwright() as p:
 
     out["canvas"] = True
     out["nodes"] = page.evaluate("awsSecurityViz.cy.nodes().map(n => ({id: n.id(), kind: n.data('kind'), parent: n.data('parent') || null, unused: !!n.data('unused')}))")
+    out["layout"] = page.evaluate("awsSecurityViz.cy.options().layout.name")
+    out["overlaps"] = page.evaluate("""(() => {
+      const groups = {};
+      awsSecurityViz.cy.nodes('.region, .vpc').forEach(n => { (groups[n.data('parent') || ''] = groups[n.data('parent') || ''] || []).push(n); });
+      const bad = [];
+      Object.values(groups).forEach(list => list.forEach((a, i) => list.slice(i + 1).forEach(b => {
+        const x = a.boundingBox(), y = b.boundingBox();
+        if (x.x1 < y.x2 && y.x1 < x.x2 && x.y1 < y.y2 && y.y1 < x.y2) bad.push([a.id(), b.id()]);
+      })));
+      return bad;
+    })()""")
     out["risky_edges"] = page.evaluate("awsSecurityViz.cy.edges('.risky').map(e => e.id())")
 
     def tap(selector_js):

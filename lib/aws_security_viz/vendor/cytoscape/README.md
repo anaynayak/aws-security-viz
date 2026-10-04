@@ -9,7 +9,7 @@ Inlined into the self-contained `.html` output (see `Renderer::Html`) so the vie
 5. sha256 of `cytoscape.min.js`: `5f3b5b529546d5af1fc5628590af033b74511a5b6f789f5f4682845863228b91`
 6. sha256 of `LICENSE`: `eb319c6e6f233607f71e8e2f450391751883cfc0eeb3ca7ef574c13d1d9c2203`
 
-Layout uses Cytoscape's built-in `cose` layout (compound-node aware), so no layout extension is vendored.
+Layout uses the `fcose` extension (see `../fcose/`), registered with `cytoscape.use`.
 
 To upgrade: download the new tarball, replace the two files, update the version and hashes above. A spec checks the
 hash of `cytoscape.min.js` against this file.

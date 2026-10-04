@@ -11,6 +11,8 @@ describe AwsSecurityViz::Renderer::Html do
   let(:config) { AwsSecurityViz::AwsConfig.new({}) }
   let(:vendor) { File.expand_path("../lib/aws_security_viz/vendor/cytoscape", __dir__) }
 
+  let(:fcose_files) { %w[layout-base/layout-base.js cose-base/cose-base.js fcose/cytoscape-fcose.js] }
+
   around { |ex| Dir.mktmpdir { |dir| Dir.chdir(dir) { ex.run } } }
 
   def render(file = "report.html")
@@ -30,6 +32,7 @@ describe AwsSecurityViz::Renderer::Html do
     html = render
     expect(Dir.children(".")).to eq(["report.html"])
     expect(html).to include(File.read(File.join(vendor, "cytoscape.min.js")))
+    fcose_files.each { |file| expect(html).to include(File.read(File.join(vendor, "..", file))) }
     expect(html).not_to match(/<script[^>]*\ssrc=/i)
     expect(html).not_to match(/<link[^>]*href=/i)
     expect(html).not_to include("/*DATA*/", "/*CYTOSCAPE*/")
@@ -55,6 +58,19 @@ describe AwsSecurityViz::Renderer::Html do
     expect(File.read(File.join(vendor, "LICENSE"))).to include("Permission is hereby granted, free of charge")
     expect(readme).to include("3.34.3", "https://registry.npmjs.org/cytoscape/-/cytoscape-3.34.3.tgz",
       Digest::SHA256.file(File.join(vendor, "cytoscape.min.js")).hexdigest)
+  end
+
+  it "keeps the vendored fcose layout and its dependencies pinned, licensed and documented" do
+    {
+      "fcose/cytoscape-fcose.js" => ["2.2.0", "cytoscape-fcose-2.2.0.tgz"],
+      "cose-base/cose-base.js" => ["2.2.0", "cose-base-2.2.0.tgz"],
+      "layout-base/layout-base.js" => ["2.0.1", "layout-base-2.0.1.tgz"]
+    }.each do |file, (version, tarball)|
+      dir = File.join(vendor, "..", File.dirname(file))
+      readme = File.read(File.join(dir, "README.md"))
+      expect(File.read(File.join(dir, "LICENSE"))).to include("Permission is hereby granted, free of charge")
+      expect(readme).to include(version, "https://registry.npmjs.org/", tarball, Digest::SHA256.file(File.join(vendor, "..", file)).hexdigest)
+    end
   end
 
   describe "in a headless browser" do
@@ -86,6 +102,8 @@ describe AwsSecurityViz::Renderer::Html do
       expect(r["nodes"].find { |n| n["id"] == "sg-web" }["parent"]).to eq("vpc:eu-west-1|vpc-1")
       expect(r["nodes"].find { |n| n["id"] == "0.0.0.0/0" }["parent"]).to be_nil
       expect(r["nodes"].find { |n| n["id"] == "sg-db" }["unused"]).to be(true)
+      expect(r["layout"]).to eq("fcose")
+      expect(r["overlaps"]).to be_empty
       expect(r["risky_edges"]).to eq(["0.0.0.0/0-sg-web"])
 
       expect(r["node_details"]).to include("web", "vpc-1", "eu-west-1", "5432")

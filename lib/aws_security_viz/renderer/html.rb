@@ -9,7 +9,15 @@ module AwsSecurityViz
     # builds the DOM with textContent), never as markup.
     class Html
       TEMPLATE = File.expand_path("../export/html/viewer.html", __dir__)
-      CYTOSCAPE = File.expand_path("../vendor/cytoscape/cytoscape.min.js", __dir__)
+      VENDOR = File.expand_path("../vendor", __dir__)
+      CYTOSCAPE = File.join(VENDOR, "cytoscape/cytoscape.min.js")
+      # Load order matters: fcose needs cose-base, which needs layout-base.
+      LIBRARIES = {
+        "CYTOSCAPE" => CYTOSCAPE,
+        "LAYOUT_BASE" => File.join(VENDOR, "layout-base/layout-base.js"),
+        "COSE_BASE" => File.join(VENDOR, "cose-base/cose-base.js"),
+        "FCOSE" => File.join(VENDOR, "fcose/cytoscape-fcose.js")
+      }.freeze
 
       def initialize(file_name, config)
         @file_name = file_name
@@ -30,9 +38,10 @@ module AwsSecurityViz
       end
 
       def output
-        parts = {"/*CYTOSCAPE*/" => File.read(CYTOSCAPE), "/*DATA*/" => json_for_script({nodes: @nodes, edges: @edges})}
-        # One pass, so neither inlined part can be mistaken for the other's placeholder.
-        File.write(@file_name, File.read(TEMPLATE).gsub(%r{/\*(?:CYTOSCAPE|DATA)\*/}) { |marker| parts.fetch(marker) })
+        parts = LIBRARIES.to_h { |name, path| ["/*#{name}*/", File.read(path)] }
+        parts["/*DATA*/"] = json_for_script({nodes: @nodes, edges: @edges})
+        # One pass, so no inlined part can be mistaken for another's placeholder.
+        File.write(@file_name, File.read(TEMPLATE).gsub(%r{/\*(?:#{[*LIBRARIES.keys, "DATA"].join("|")})\*/}) { |marker| parts.fetch(marker) })
       end
 
       private

@@ -30,7 +30,13 @@ RSpec.describe "aws_security_viz.gemspec" do
       "lib/aws_security_viz/export/html/viewer.html",
       "lib/aws_security_viz/vendor/cytoscape/cytoscape.min.js",
       "lib/aws_security_viz/vendor/cytoscape/LICENSE",
-      "lib/aws_security_viz/vendor/cytoscape/README.md"
+      "lib/aws_security_viz/vendor/cytoscape/README.md",
+      "lib/aws_security_viz/vendor/fcose/cytoscape-fcose.js",
+      "lib/aws_security_viz/vendor/fcose/LICENSE",
+      "lib/aws_security_viz/vendor/cose-base/cose-base.js",
+      "lib/aws_security_viz/vendor/cose-base/LICENSE",
+      "lib/aws_security_viz/vendor/layout-base/layout-base.js",
+      "lib/aws_security_viz/vendor/layout-base/LICENSE"
     )
   end
 

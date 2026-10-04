@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - CI builds and smoke-tests the Docker image on every pull request
 
 ### Changed
+- The HTML viewer lays out regions and VPCs with the compound-aware fcose layout (vendored with `cose-base` and `layout-base`, pinned and checksummed) instead of Cytoscape's built-in `cose`
 - The Docker base image is pinned by digest
 - `--obfuscate` help text lists everything it hashes
 

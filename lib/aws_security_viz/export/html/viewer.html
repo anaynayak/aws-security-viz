@@ -38,6 +38,9 @@
 </div>
 <script type="application/json" id="graph-data">/*DATA*/</script>
 <script>/*CYTOSCAPE*/</script>
+<script>/*LAYOUT_BASE*/</script>
+<script>/*COSE_BASE*/</script>
+<script>/*FCOSE*/</script>
 <script>
 (function () {
   "use strict";
@@ -69,6 +72,8 @@
     elements.push({ group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") });
   });
 
+  cytoscape.use(cytoscapeFcose);
+
   var cy = cytoscape({
     container: document.getElementById("cy"),
     elements: elements,
@@ -85,7 +90,7 @@
       { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
       { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
     ],
-    layout: { name: "cose", animate: false, nodeDimensionsIncludeLabels: true, padding: 30 }
+    layout: { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, padding: 30 }
   });
 
   window.awsSecurityViz = { cy: cy }; // read by the browser spec
