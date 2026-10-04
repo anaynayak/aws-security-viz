@@ -104,7 +104,13 @@ with sync_playwright() as p:
     page.mouse.move(spot["x"] - 3, spot["y"])
     page.mouse.move(spot["x"], spot["y"])
     page.wait_for_timeout(300)
-    out["out_label_on_hover"] = grey(page.screenshot(clip=clip))
+    # At this zoom a label is two or three pixels high, too few to tell from the edge's own anti-aliased pixels on every platform,
+    # and edges lie on top of each other, so the pointer may pick a neighbour of the edge aimed at: read the style of the hovered one.
+    out["out_hover_label"] = ev("""() => {
+      const e = awsSecurityViz.cy.edges('.hover')[0];
+      if (!e) return null;
+      return {id: e.id(), label: e.style('label'), data: e.data('label'), minZoomed: e.numericStyle('min-zoomed-font-size'), opacity: e.numericStyle('text-opacity')};
+    }""")
     page.mouse.move(5, 5)
     node = ev("""() => {
       const cy = awsSecurityViz.cy, r = document.getElementById('cy').getBoundingClientRect();

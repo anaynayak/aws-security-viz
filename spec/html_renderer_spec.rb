@@ -440,7 +440,14 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["neighbour_labels"]).to be > 0
         # Labels the user asked for show at any zoom.
         expect(r["out_label_before_hover"]).to eq(0)
-        expect(r["out_label_on_hover"]).to be >= 3, "the hovered edge has no label at zoom #{r["zoom_out"]}"
+        # A label is only a couple of pixels high at this zoom, too few to tell from the edge's own anti-aliased pixels on every
+        # platform, and edges overlap so the pointer may pick a neighbour of the edge aimed at. So the check is the style the hover
+        # gives the edge it picked: its port label shown, with no minimum zoomed size (the pixels are checked at a readable zoom above).
+        hovered = r["out_hover_label"]
+        expect(hovered).not_to be_nil, "no edge is hovered at zoom #{r["zoom_out"]}"
+        expect(hovered["label"]).to eq(hovered["data"])
+        expect(hovered["label"]).not_to be_empty
+        expect(hovered["minZoomed"]).to eq(0)
         expect(r["out_selected"]).not_to be_empty
         expect(r["grey_out_selected"]).to be > 20, "a selected node and its neighbours have no labels at zoom #{r["zoom_out_selected"]}"
       end
