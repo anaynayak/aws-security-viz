@@ -54,6 +54,15 @@ aws_security_viz -o security_groups.json -f viz.html
    draw dashed edges, so a risky edge is a thick solid line there; risky edges are magenta, thicker than every other
    edge and have a larger arrowhead in both renderers, and the details panel still marks them as risky. If the browser
    takes the WebGL context away, the viewer carries on with the canvas renderer.
+8. Can X reach Y. Type a source and a target (a security group, CIDR or other peer, by name or id; the boxes suggest
+   matches) and press Enter or Find path. The viewer searches the rules, following their direction, and reports the
+   shortest path or that there is none. The path is drawn in orange and the rest dimmed; VPCs on the path that were
+   collapsed are opened, and the view is fitted to the path. The details panel lists each hop with its direction,
+   ports and rule descriptions. The port box is optional: with a port such as `443`, `443/udp` or `icmp`, only edges
+   that allow it are used, so every hop of a path allows that port. Without a port the ports are listed per hop and
+   the ports open along the whole path are not computed. The query uses the edges the Ingress, Egress and Risky only
+   toggles leave in, and runs again when you change them. Clear path (or Reset view) removes the highlight and puts
+   back the collapsed VPCs, zoom and position from before the query.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 

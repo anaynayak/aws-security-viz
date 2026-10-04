@@ -18,6 +18,9 @@
   #details ul { margin: 0; padding-left: 18px; }
   .risky { color: #b00020; font-weight: bold; }
   .muted { color: #666; }
+  #pathbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  #pathbar input { width: 150px; padding: 3px 6px; }
+  #pathbar #path-port { width: 110px; }
   #legend span { margin-right: 10px; }
 </style>
 </head>
@@ -30,6 +33,14 @@
     <label><input id="risky-only" type="checkbox"> Risky only</label>
     <label><input id="webgl" type="checkbox"> WebGL</label>
     <button id="reset" type="button">Reset view</button>
+    <span id="pathbar">
+      <input id="path-from" list="path-names" placeholder="Can this reach..." aria-label="Path source" autocomplete="off">
+      <input id="path-to" list="path-names" placeholder="...this group?" aria-label="Path target" autocomplete="off">
+      <input id="path-port" placeholder="Port (optional)" aria-label="Port filter" autocomplete="off">
+      <button id="path-find" type="button">Find path</button>
+      <button id="path-clear" type="button">Clear path</button>
+      <datalist id="path-names"></datalist>
+    </span>
     <button id="expand-all" type="button">Expand all</button>
     <button id="collapse-all" type="button">Collapse all</button>
     <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span style="color:#d6006f;font-weight:bold">thickest magenta: risky public ingress</span><span>grey dashed node: unused</span><span>double-click a VPC to collapse or expand it</span></span>
@@ -163,6 +174,8 @@
       { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
       { selector: "edge.meta", style: { width: 3 } },
       { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.6, "line-style": "dashed", "line-color": "#d6006f", "target-arrow-color": "#d6006f", color: "#b00060" } },
+      { selector: "node.path", style: { "border-width": 3, "border-color": "#ff8c00" } },
+      { selector: "edge.path", style: { width: 6, "arrow-scale": 1.5, "line-color": "#ff8c00", "target-arrow-color": "#ff8c00", "z-index": 10 } },
       { selector: ".dim", style: { opacity: 0.12 } },
       { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
       { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
@@ -390,10 +403,12 @@
     var t = evt.target;
     if (t.isNode() && t.isParent()) { show(t); return; }
     show(t);
-    focus(t);
+    // The path highlight stays while a path is shown.
+    if (!pathState) focus(t);
   }
   function onTapBackground(evt) {
     if (evt.target === cy) {
+      if (pathState) { shownId = null; pathState.render(); return; }
       clearFocus();
       shownId = null;
       showHint();
@@ -448,7 +463,7 @@
     });
   }
   ["ingress", "egress", "risky-only"].forEach(function (id) {
-    document.getElementById(id).addEventListener("change", function () { applyFilters(); autoRenderer(); });
+    document.getElementById(id).addEventListener("change", function () { applyFilters(); autoRenderer(); if (pathState) runPath(); });
   });
 
   // Bring the canvas in line with `collapsed`. Only the VPCs that were just expanded are laid out again, each
@@ -658,7 +673,165 @@
   searchBox.addEventListener("input", function () { runSearch(false); });
   searchBox.addEventListener("keydown", function (evt) { if (evt.key === "Enter") runSearch(true); });
 
+  // "Can X reach Y": a breadth-first search over the real edges (so it does not matter which VPCs are collapsed),
+  // following rule direction, over the edges the Ingress, Egress and Risky only toggles leave in and that allow the
+  // optional port. The shortest path is drawn; the VPCs on it are opened, and Clear path puts the view back.
+  var pathFrom = document.getElementById("path-from");
+  var pathTo = document.getElementById("path-to");
+  var pathPort = document.getElementById("path-port");
+  var pathState = null;   // set while a path is shown: the view to go back to, and how to show the result again
+  var pathNames = {};     // text shown in the pickers -> node id
+  (function () {
+    var byLabel = {};
+    data.nodes.forEach(function (n) { byLabel[n.label] = (byLabel[n.label] || 0) + 1; });
+    var list = document.getElementById("path-names");
+    data.nodes.slice().sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); }).forEach(function (n) {
+      var name = byLabel[n.label] > 1 ? n.label + " (" + n.id + ")" : n.label;
+      pathNames[name] = n.id;
+      var o = document.createElement("option");
+      o.value = name;
+      list.appendChild(o);
+    });
+  })();
+  // Picker text -> node id: an exact name or id, else the one group whose name or id contains the text.
+  function resolveNode(text) {
+    var q = text.trim().toLowerCase();
+    if (!q) return null;
+    var names = Object.keys(pathNames);
+    var exact = names.filter(function (n) { return n.toLowerCase() === q || pathNames[n].toLowerCase() === q; });
+    if (exact.length === 1) return pathNames[exact[0]];
+    if (exact.length > 1) return null;
+    var part = names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1 || pathNames[n].toLowerCase().indexOf(q) !== -1; });
+    return part.length === 1 ? pathNames[part[0]] : null;
+  }
+  // "443" is that port on any protocol, "443/udp" a protocol too, "icmp" a protocol word.
+  function parsePortFilter(text) {
+    var t = text.trim().toLowerCase();
+    if (!t) return null;
+    var m = /^(\d+)(?:\/(\w+))?$/.exec(t);
+    return m ? { port: Number(m[1]), proto: m[2] || null, text: t } : { word: t, text: t };
+  }
+  // Does an edge label such as "22/tcp,1024-65535/tcp,icmp 8" allow what the filter asks for?
+  function labelAllows(label, f) {
+    if (!f || !label) return true;
+    return label.split(",").some(function (tok) {
+      tok = tok.trim();
+      if (tok === "all") return true;
+      if (f.word) return tok === f.word || tok.indexOf(f.word + " ") === 0;
+      var m = /^(\d+)(?:-(\d+))?(?:\/(\w+))?$/.exec(tok);
+      return !!m && f.port >= Number(m[1]) && f.port <= Number(m[2] || m[1]) && (!f.proto || !m[3] || f.proto === m[3]);
+    });
+  }
+  function edgeUsable(e, f) {
+    var shown = e.kind === "ingress" ? document.getElementById("ingress").checked : document.getElementById("egress").checked;
+    if (!shown || (document.getElementById("risky-only").checked && !e.risky)) return false;
+    return labelAllows(e.label, f);
+  }
+  // Shortest path as a list of hops, each the usable edges between two consecutive groups; null when none.
+  function findPath(from, to, f) {
+    var out = {};
+    data.edges.forEach(function (e) {
+      if (e.source !== e.target && edgeUsable(e, f)) (out[e.source] = out[e.source] || []).push(e);
+    });
+    var prev = {};
+    prev[from] = null;
+    var queue = [from];
+    for (var i = 0; i < queue.length && !(to in prev); i++) {
+      (out[queue[i]] || []).forEach(function (e) {
+        if (!(e.target in prev)) { prev[e.target] = queue[i]; queue.push(e.target); }
+      });
+    }
+    if (!(to in prev) || from === to) return null;
+    var chain = [to];
+    while (prev[chain[0]] !== null) chain.unshift(prev[chain[0]]);
+    var hops = [];
+    for (var k = 0; k + 1 < chain.length; k++) {
+      hops.push((out[chain[k]] || []).filter(function (e) { return e.target === chain[k + 1]; }));
+    }
+    return { nodes: chain, hops: hops };
+  }
+  function portNote(f) { return f ? " on port " + f.text : ""; }
+  function showPathMessage(title, lines) {
+    details.textContent = "";
+    details.appendChild(el("h2", title));
+    lines.forEach(function (l) { details.appendChild(el("p", l.text, l.cls)); });
+  }
+  function showPathResult(found, f) {
+    details.textContent = "";
+    var n = found.hops.length;
+    details.appendChild(el("h2", nodeLabel(found.nodes[0]) + " -> " + nodeLabel(found.nodes[n])));
+    details.appendChild(el("p", "Reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ", along rule direction."));
+    found.hops.forEach(function (edges, i) {
+      details.appendChild(el("h3", "Hop " + (i + 1) + ": " + nodeLabel(found.nodes[i]) + " -> " + nodeLabel(found.nodes[i + 1])));
+      var ul = el("ul");
+      edges.forEach(function (e) {
+        var li = el("li", e.kind + ": " + (e.label || "all"));
+        if (e.risky) li.appendChild(el("span", " (risky)", "risky"));
+        if (e.descriptions && e.descriptions.length) li.appendChild(descriptionList(e.descriptions));
+        ul.appendChild(li);
+      });
+      details.appendChild(ul);
+    });
+    details.appendChild(el("p", f ? "Every hop allows port " + f.text + "." : "Ports are listed per hop; the ports open along the whole path are not computed. Enter a port to ask about one.", "muted"));
+  }
+  function runPath() {
+    var from = resolveNode(pathFrom.value), to = resolveNode(pathTo.value);
+    if (!from || !to) {
+      showPathMessage("Pick a source and a target", [{ text: "Type a group name or id in both boxes and choose one from the list.", cls: "muted" }]);
+      return;
+    }
+    var f = parsePortFilter(pathPort.value);
+    var found = findPath(from, to, f);
+    shownId = null;
+    if (!found) {
+      clearPath(true);
+      showPathMessage("No path", [
+        { text: nodeLabel(from) + " cannot reach " + nodeLabel(to) + portNote(f) + ", following rule direction." },
+        { text: from === to ? "Source and target are the same group." : "Only edges the Ingress, Egress and Risky only toggles leave in are considered.", cls: "muted" }
+      ]);
+      return;
+    }
+    if (!pathState) pathState = { collapsed: Object.assign({}, collapsed), zoom: cy.zoom(), pan: Object.assign({}, cy.pan()) };
+    pathState.render = function () { showPathResult(found, f); };
+    var opened = false;
+    found.nodes.forEach(function (id) {
+      if (collapsed[vpcOf[id]]) { collapsed[vpcOf[id]] = false; opened = true; }
+    });
+    if (opened) { searchSnapshot = null; sync(); }
+    var nodes = cy.collection(), edges = cy.collection();
+    found.nodes.forEach(function (id) { nodes = nodes.union(cy.getElementById(id)); });
+    found.hops.forEach(function (list) { list.forEach(function (e) { edges = edges.union(cy.getElementById(e.id)); }); });
+    var on = nodes.union(edges);
+    cy.elements().removeClass("path dim");
+    on.addClass("path");
+    cy.elements().not(on.union(nodes.ancestors())).addClass("dim");
+    pathState.render();
+    userMoved = true;
+    cy.fit(on, 60);
+    if (cy.zoom() > MAX_SEARCH_ZOOM) { cy.zoom(MAX_SEARCH_ZOOM); cy.center(on); }
+  }
+  // Remove the highlight and put the view (collapsed VPCs, zoom, pan) back as it was before the first query.
+  function clearPath(keepInputs) {
+    var was = pathState;
+    pathState = null;
+    cy.elements().removeClass("path dim");
+    if (!keepInputs) { pathFrom.value = ""; pathTo.value = ""; pathPort.value = ""; }
+    if (!was) return;
+    Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = !!was.collapsed[id]; });
+    searchSnapshot = null;
+    sync();
+    cy.viewport({ zoom: was.zoom, pan: was.pan });
+    shownId = null;
+    showHint();
+  }
+  [pathFrom, pathTo, pathPort].forEach(function (box) {
+    box.addEventListener("keydown", function (evt) { if (evt.key === "Enter") runPath(); });
+  });
+  document.getElementById("path-find").addEventListener("click", runPath);
+  document.getElementById("path-clear").addEventListener("click", function () { clearPath(false); showHint(); });
+
   document.getElementById("reset").addEventListener("click", function () {
+    clearPath(false);
     clearFocus();
     cy.nodes().removeClass("match");
     document.getElementById("search").value = "";

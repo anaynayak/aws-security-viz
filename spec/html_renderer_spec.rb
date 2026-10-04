@@ -387,6 +387,95 @@ describe AwsSecurityViz::Renderer::Html do
       end
     end
 
+    describe "the path query" do
+      def path_report(file, queries, *flags)
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
+          File.expand_path("support/browser_path.py", __dir__), File.expand_path(file), JSON.generate(queries), *flags)
+        raise "browser check failed: #{err}" unless status.success?
+        JSON.parse(out.lines.last)
+      end
+
+      def expect_clean(r, file)
+        expect(r["requests"]).to eq(["file://" + File.expand_path(file)])
+        expect(r["errors"]).to be_empty
+        expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
+        expect(r["dialogs"]).to be_empty
+      end
+
+      it "finds a path along rule direction, draws it and lists each hop with ports and descriptions" do
+        render
+        r = path_report("report.html", [{from: "0.0.0.0/0", to: "db"}])
+        expect_clean(r, "report.html")
+        q = r["queries"].first
+        expect(q["pathNodes"]).to eq(%w[0.0.0.0/0 sg-db sg-web])
+        expect(q["pathEdges"].size).to eq(2)
+        expect(q["details"]).to include("2 hops", "Hop 1", "0.0.0.0/0 -> web", "22", "Hop 2", "web -> db", "5432", "not computed")
+        expect(q["details"]).to include("risky")
+        expect(q["dimmed"]).to be > 0
+        expect(q["allVisible"]).to be(true)
+        expect(q["orange"]).to be > 200
+        expect(r["before"]["orange"]).to eq(0)
+        expect(q["cleared"]["dimmed"]).to eq(0)
+        expect(q["cleared"]["pathEdges"]).to be_empty
+        expect(q["cleared"]["orange"]).to eq(0)
+        expect(q["cleared"]["inputs"]).to eq(["", "", ""])
+        expect(q["cleared"]["zoom"]).to eq(r["before"]["zoom"])
+        expect(q["cleared"]["pan"]).to eq(r["before"]["pan"])
+      end
+
+      it "runs from the Find button and reports no path against the rule direction" do
+        render
+        r = path_report("report.html", [{from: "db", to: "0.0.0.0/0", click: true}])
+        q = r["queries"].first
+        expect(q["details"]).to include("No path", "db", "0.0.0.0/0")
+        expect(q["pathEdges"]).to be_empty
+        expect(q["dimmed"]).to eq(0)
+        expect(q["orange"]).to eq(0)
+      end
+
+      it "only considers edges that allow the given port" do
+        render
+        r = path_report("report.html", [
+          {from: "0.0.0.0/0", to: "db", port: "5432"},
+          {from: "sg-evil", to: "db", port: "5432"},
+          {from: "sg-evil", to: "db", port: "22"}
+        ])
+        expect(r["queries"][0]["pathEdges"]).to be_empty
+        expect(r["queries"][0]["details"]).to include("No path", "5432")
+        expect(r["queries"][1]["pathNodes"]).to eq(%w[sg-db sg-evil sg-web])
+        expect(r["queries"][1]["details"]).to include("on port 5432")
+        expect(r["queries"][2]["pathEdges"]).to be_empty
+        expect(r["queries"][2]["details"]).to include("No path")
+      end
+
+      it "respects the Ingress toggle" do
+        render
+        r = path_report("report.html", [{from: "0.0.0.0/0", to: "db", keep: true}, {toggle: "#ingress"}])
+        expect(r["queries"][0]["pathEdges"].size).to eq(2)
+        expect(r["queries"][1]["pathEdges"]).to be_empty
+        expect(r["queries"][1]["details"]).to include("No path")
+      end
+
+      it "keeps a hostile group name as text" do
+        render
+        r = path_report("report.html", [{from: hostile, to: "db", tap_background: true}])
+        expect_clean(r, "report.html")
+        q = r["queries"].first
+        expect(q["pathNodes"]).to include("sg-evil")
+        expect(q["details"]).to include(hostile)
+        expect(q["detailsMarkup"]).to eq(0)
+        expect(q["pwned"]).to be_nil
+        expect(q["after_background_tap"]["details"]).to include(hostile)
+        expect(q["after_background_tap"]["pathEdges"]).to eq(q["pathEdges"])
+      end
+
+      it "reports when a picker names no group" do
+        render
+        r = path_report("report.html", [{from: "nothing-like-this", to: "db"}])
+        expect(r["queries"].first["details"]).to include("Pick a source and a target")
+      end
+    end
+
     describe "a graph over the collapse threshold" do
       let(:vpcs) { 12 }
       let(:per_vpc) { 15 }
@@ -412,6 +501,37 @@ describe AwsSecurityViz::Renderer::Html do
           File.expand_path("support/browser_collapse.py", __dir__), File.expand_path(file), "vpc:eu-west-1|vpc-3", "app-3-7")
         raise "browser check failed: #{err}" unless status.success?
         JSON.parse(out.lines.last)
+      end
+
+      def path_report(queries, *flags)
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
+          File.expand_path("support/browser_path.py", __dir__), File.expand_path(render_large), JSON.generate(queries), *flags)
+        raise "browser check failed: #{err}" unless status.success?
+        JSON.parse(out.lines.last)
+      end
+
+      [[], ["--webgl"]].each do |flags|
+        it "expands the collapsed VPCs on a path, draws and fits it, and restores the view on clear (#{flags.first || "canvas"})" do
+          r = path_report([{from: "app-0-0", to: "app-2-1"}], *flags)
+          expect(r["requests"]).to eq(["file://" + File.expand_path("large.html")])
+          expect(r["errors"]).to be_empty
+          expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
+          expect(r["renderer"]).to eq(flags.empty? ? "canvas" : "webgl")
+          q = r["queries"].first
+          expect(r["before"]["collapsed"].size).to eq(vpcs)
+          expect(q["collapsed"].size).to eq(vpcs - 3)
+          expect(q["collapsed"]).not_to include("vpc:eu-west-1|vpc-0", "vpc:eu-west-1|vpc-1", "vpc:eu-west-1|vpc-2")
+          expect(q["pathNodes"]).to eq(%w[sg-0-0 sg-0-1 sg-1-0 sg-1-1 sg-2-0 sg-2-1])
+          expect(q["details"]).to include("5 hops", "db from 0", "db from 1")
+          expect(q["allVisible"]).to be(true)
+          expect(q["dimmed"]).to be > 0
+          expect(q["orange"]).to be > 200
+          expect(q["cleared"]["collapsed"]).to eq(r["before"]["collapsed"])
+          expect(q["cleared"]["zoom"]).to be_within(1e-6).of(r["before"]["zoom"])
+          expect(q["cleared"]["pan"]["x"]).to be_within(1e-6).of(r["before"]["pan"]["x"])
+          expect(q["cleared"]["orange"]).to eq(0)
+          expect(q["cleared"]["dimmed"]).to eq(0)
+        end
       end
 
       it "starts with every VPC collapsed and expands, collapses and searches on demand" do

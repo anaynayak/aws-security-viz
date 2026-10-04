@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- The HTML viewer answers "can X reach Y": pick a source and a target (and optionally a port), and it draws the shortest path along rule direction, opens the collapsed VPCs on it, lists each hop with its ports and rule descriptions, or says there is none; Clear path restores the previous view
 - The HTML viewer switches to Cytoscape's WebGL renderer above 2,000 elements on the canvas, has a WebGL checkbox to switch it by hand, and keeps the canvas renderer where WebGL 2 is not available
 - The HTML viewer opens graphs of more than 150 security groups with every VPC collapsed into one node with merged edges; double-click, Expand all and Collapse all open them up, search expands the VPC holding a hit, and only the expanded VPC is laid out again
 - Documentation site at https://anaynayak.github.io/aws-security-viz/ (MkDocs Material, built strictly in CI and deployed from `main`); the README is now a short summary that links to it

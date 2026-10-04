@@ -19,7 +19,7 @@ aws-security-viz reads the EC2 security group configuration from the AWS API, or
 
 <div class="grid cards" markdown>
 
-1. **HTML viewer.** One self-contained page with search, ingress and egress toggles and a details panel. Large graphs open with each VPC collapsed into one node, and a WebGL renderer takes over for very large ones. No server, no CDN. See [Outputs](outputs.md#html-viewer).
+1. **HTML viewer.** One self-contained page with search, a "can X reach Y" path query, ingress and egress toggles and a details panel. Large graphs open with each VPC collapsed into one node, and a WebGL renderer takes over for very large ones. No server, no CDN. See [Outputs](outputs.md#html-viewer).
 2. **Risky ingress highlighting.** `0.0.0.0/0` or `::/0` on a sensitive port is drawn as a dashed crimson edge, and `--fail-on-risk` turns it into a failing exit code. See [Filtering and risk checks](filtering-and-risk-checks.md).
 3. **Runs anywhere.** Install the gem, or run the published container image with Ruby and Graphviz built in. See [Installation](installation.md).
 
