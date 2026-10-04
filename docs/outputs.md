@@ -77,11 +77,10 @@ aws_security_viz -o security_groups.json -f viz.html
    3. A CIDR, IPv6 range or prefix list is an endpoint, never a stop along the way. A CIDR source reaches a group when
       one of the group's ingress CIDRs contains it (10.1.0.0/16 is inside 0.0.0.0/0), IPv4 and IPv6 alike, and a group
       reaches a CIDR target when one of its egress CIDRs contains it. A prefix list matches a rule on the same prefix
-      list id, a rule on `0.0.0.0/0`, and is possible against any other CIDR rule (the list may hold addresses inside
-      it). A name given to a CIDR in the `groups` setting stands for the CIDRs it covers: the answer is "reachable"
+      list id, a rule on `0.0.0.0/0`, and is possible against any other CIDR rule or prefix list (the lists may overlap). A name given to a CIDR in the `groups` setting stands for the CIDRs it covers: the answer is "reachable"
       only when all of them are matched. CIDRs that only egress rules name can be picked as targets even when egress
       edges are not drawn (`--no-egress`).
-   4. The port box is optional: `443` (tcp and udp), `443/udp`, `1000-2000`, `icmp`, `icmp 8`, `proto 50` or `all`.
+   4. The port box is optional: `443` (tcp and udp), `443/udp`, `1000-2000`, `icmp`, `icmp 8` or `proto 50` (a protocol number; 1, 6, 17 and 58 mean icmp, tcp, udp and icmpv6).
       With it, every hop must allow the port; anything else in the box is rejected. Without it the ports are listed per hop and the ports open along the
       whole path are not computed.
    5. The panel lists each hop with the egress rules on its source, the ingress rules on its target, the allowed

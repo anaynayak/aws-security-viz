@@ -549,6 +549,14 @@ describe AwsSecurityViz::Renderer::Html do
         expect(q[0]["details"]).not_to include("ma -> md")
       end
 
+      it "accepts protocol numbers, treats other prefix lists as possible and names the allowed part of a range" do
+        q = answers([{from: "def", to: "tdef", port: "proto 6"}, {from: "pl-999", to: "pldst"}], source: adversarial)
+        expect(q[0]["details"]).to include("Reachable in 1 hop", "on port proto 6")
+        expect(q[1]["details"]).to include("Possibly reachable in 1 hop", "contents of the prefix list are not in the data")
+        q = answers([{from: "0.0.0.0/0", to: "h-internal"}])
+        expect(q[0]["details"]).to include("only 10.1.0.0/16 of 0.0.0.0/0 is allowed")
+      end
+
       it "rejects a port filter that is not a port, a range, icmp or a protocol" do
         q = answers([{from: "web", to: "db", port: "all"}, {from: "web", to: "db", port: "9-1"}])
         expect(q.map { |x| x["details"] }).to all(include("Unrecognised port"))

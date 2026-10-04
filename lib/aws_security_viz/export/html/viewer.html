@@ -903,7 +903,12 @@
     if ((m = /^(icmp|icmpv6)(?: (-?\d+)(?:\/(-?\d+))?)?$/.exec(t))) {
       return { items: [{ proto: m[1], from: m[2] === undefined ? -1 : Number(m[2]), to: m[3] === undefined ? -1 : Number(m[3]) }], text: t };
     }
-    if ((m = /^proto (\d+)$/.exec(t))) return { items: [{ proto: m[1] }], text: t };
+    if ((m = /^proto (\d+)$/.exec(t))) {
+      var named = { "1": "icmp", "6": "tcp", "17": "udp", "58": "icmpv6" }[m[1]];
+      if (named === "tcp" || named === "udp") return { items: [{ proto: named, from: 0, to: 65535 }], text: t };
+      if (named) return { items: [{ proto: named, from: -1, to: -1 }], text: t };
+      return { items: [{ proto: m[1] }], text: t };
+    }
     return { bad: true };
   }
 
@@ -916,7 +921,7 @@
   // Against one member of an endpoint: a CIDR, a prefix list or a named group.
   function relMember(rule, m) {
     if (rule.kind === "group") return m.kind === "group" && rule.peer === m.id ? YES : null;
-    if (rule.kind === "prefix_list") return m.kind === "prefix_list" ? (rule.peer === m.id ? YES : null) : maybe("pl");
+    if (rule.kind === "prefix_list") return m.kind === "prefix_list" && rule.peer === m.id ? YES : maybe("pl");
     if (m.kind === "prefix_list") return rule.peer === "0.0.0.0/0" ? YES : maybe(rule.any ? "v6" : "pl");
     if (m.kind !== "cidr4" && m.kind !== "cidr6") return null;
     if (!rule.c || !m.c || rule.c.bits !== m.c.bits) return null;
@@ -1006,13 +1011,16 @@
         egressItems: eg.map(function (e) { return e.item; }), ingressItems: ing.map(function (i) { return i.item; }),
         items: used.map(function (p) { return p.item; }),
         egress: uniq(used.map(function (p) { return p.e.rule; })), ingress: uniq(used.map(function (p) { return p.i.rule; })),
-        reasons: []
+        reasons: [], parts: []
       };
       used.forEach(function (p) {
         if (p.e.c === "maybe") res.reasons.push(reasonText("out", p.e.rule, p.e.why, A, B));
         if (p.i.c === "maybe") res.reasons.push(reasonText("in", p.i.rule, p.i.why, B, A));
+        if (p.e.why === "part") res.parts.push("only " + p.e.rule.peer + " of " + B.label + " is allowed");
+        if (p.i.why === "part") res.parts.push("only " + p.i.rule.peer + " of " + A.label + " is allowed");
       });
       res.reasons = uniq(res.reasons);
+      res.parts = uniq(res.parts);
     }
     cache[key] = res;
     return res;
@@ -1118,11 +1126,12 @@
   function showPathResult(res, f) {
     details.textContent = "";
     var n = res.hops.length, first = res.hops[0].from, last = res.hops[n - 1].to;
+    var parts = uniq([].concat.apply([], res.hops.map(function (h) { return h.parts; })));
     details.appendChild(el("h2", first.label + " -> " + last.label));
     if (res.verdict === "reachable") {
       details.appendChild(el("p", "Reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": every hop is allowed by both the egress rules of its source and the ingress rules of its target."));
     } else {
-      details.appendChild(el("p", "Possibly reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": at least one hop depends on something the data cannot tell.", "risky"));
+      details.appendChild(el("p", "Possibly reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": at least one hop depends on something the data cannot tell" + (parts.length ? ": " + parts.join("; ") : "") + ".", "risky"));
     }
     res.hops.forEach(function (h, i) {
       details.appendChild(el("h3", "Hop " + (i + 1) + ": " + h.from.label + " -> " + h.to.label + (h.status === "maybe" ? " (possible)" : "")));
