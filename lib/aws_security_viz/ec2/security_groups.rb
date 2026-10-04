@@ -26,6 +26,11 @@ module AwsSecurityViz
         .select { |p| p.kind == :group && p.name != p.id }.to_h { |p| [p.id, p.name] }
     end
 
+    # Peer id -> :cidr4, :cidr6 or :prefix_list for the non-group peers a group's rules name, so renderers can draw them by kind.
+    def peer_kinds(group)
+      (group.ingress + group.egress).flat_map(&:peers).reject { |p| p.kind == :group }.to_h { |p| [p.id, p.kind] }
+    end
+
     # Every rule of a group, both directions whatever --no-egress says, one entry per peer, for the viewer's path
     # query (which needs the egress side of a hop even when egress edges are not drawn). dir is "in" or "out";
     # node is the graph node the peer is drawn as when that differs from the peer id (CIDR group mapping).

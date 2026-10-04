@@ -215,12 +215,17 @@
     }
     return id;
   }
-  // Peers are told apart by their id: a CIDR holds a "/" (IPv6 also a ":"), a prefix list starts with "pl-". Reports made with
-  // --obfuscate hash the ids, so their peers are drawn like groups.
-  function peerClasses(id) {
-    var s = String(id);
-    if (s.indexOf("/") !== -1) return "cidr" + (s.indexOf(":") !== -1 ? " ipv6" : "") + (s === "0.0.0.0/0" || s === "::/0" ? " internet" : "");
-    return s.indexOf("pl-") === 0 ? "pl" : "";
+  // Peers are drawn by kind (cidr4, cidr6, prefix_list), which the data carries so that --obfuscate, which hashes the ids, keeps the shapes.
+  var PEER_CLASSES = { cidr4: "cidr", cidr6: "cidr ipv6", prefix_list: "pl" };
+  // Data without a kind (built by hand) falls back to the id: a CIDR holds a "/" (IPv6 also a ":"), a prefix list starts with "pl-".
+  function peerKind(n) {
+    if (n.peer || n.vpc) return n.peer;
+    var s = String(n.id);
+    return s.indexOf("/") !== -1 ? (s.indexOf(":") !== -1 ? "cidr6" : "cidr4") : (s.indexOf("pl-") === 0 ? "prefix_list" : undefined);
+  }
+  function peerClasses(n) {
+    var internet = n.internet || n.id === "0.0.0.0/0" || n.id === "::/0";
+    return (PEER_CLASSES[peerKind(n)] || "") + (internet && PEER_CLASSES[peerKind(n)] ? " internet" : "");
   }
   data.nodes.forEach(function (n) {
     var d = { id: n.id, label: n.label, kind: "group", unused: !!n.unused };
@@ -232,7 +237,7 @@
       (vpcGroups[up] = vpcGroups[up] || []).push(n.id);
     }
     if (up) d.parent = up;
-    groupDefs[n.id] = { group: "nodes", data: d, classes: (n.unused ? "unused " : "") + peerClasses(n.id) };
+    groupDefs[n.id] = { group: "nodes", data: d, classes: (n.unused ? "unused " : "") + peerClasses(n) };
   });
   var realEdges = data.edges.map(function (e) {
     return { group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") };
@@ -431,7 +436,7 @@
   var BOX_LABEL = 22;    // and above them, for the VPC's name
 
   function isPeer(n) { return n.data("kind") === "group" && !vpcOf[n.id()]; }
-  function isPublic(n) { return n.id() === "0.0.0.0/0" || n.id() === "::/0"; }
+  function isPublic(n) { return n.hasClass("internet"); }
   function byLabel(a, b) {
     var x = String(a.data("label")), y = String(b.data("label"));
     return x < y ? -1 : x > y ? 1 : (a.id() < b.id() ? -1 : 1);

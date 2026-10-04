@@ -142,8 +142,7 @@ aws_security_viz -o security_groups.json -f viz.html
     and groups that take a risky ingress rule (and the VPCs holding one) have a red outline on a red tint. Ingress
     edges are thick with a filled arrowhead, egress edges thin with an open one, risky edges the thickest. Graph
     colours keep a contrast of at least 3:1 against the canvas (4.5:1 for text). No web fonts are loaded: the page
-    uses the system font stack. A report made with `--obfuscate` hashes the ids, so its CIDRs and prefix lists are
-    drawn like security groups.
+    uses the system font stack. Reports made with `--obfuscate` keep these shapes.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 

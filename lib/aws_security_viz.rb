@@ -12,6 +12,8 @@ require_relative "aws_security_viz/cli_guard"
 
 module AwsSecurityViz
   class VisualizeAws
+    PUBLIC_RANGES = %w[0.0.0.0/0 ::/0].freeze
+
     def initialize(config, options = {})
       @options = options
       @config = config
@@ -41,8 +43,10 @@ module AwsSecurityViz
     def build
       g = Graph.new(@config)
       peer_names = {}
+      peer_kinds = {}
       @security_groups.each { |group|
         peer_names.merge!(@security_groups.peer_names(group))
+        peer_kinds.merge!(@security_groups.peer_kinds(group))
         g.add_node(group.id, node_options(group))
         @security_groups.traffic(group).each { |traffic|
           edge = {color: traffic.ingress ? :blue : :red, label: traffic.port_range}
@@ -56,6 +60,8 @@ module AwsSecurityViz
         }
       }
       peer_names.each { |id, name| g.describe_node(id, {label: name}) }
+      # Obfuscation hashes the ids, so the kind travels with the node and is not read back from the id.
+      peer_kinds.each { |id, kind| g.describe_node(id, {peer: kind, internet: PUBLIC_RANGES.include?(id) || nil}.compact) }
       g
     end
   end

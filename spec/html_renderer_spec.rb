@@ -538,6 +538,21 @@ describe AwsSecurityViz::Renderer::Html do
       end
     end
 
+    describe "peer kinds" do
+      it "keeps the shapes of CIDRs and the internet in an obfuscated report, where the ids are hashes" do
+        file = File.expand_path("obfuscated.html")
+        config = AwsSecurityViz::AwsConfig.new(obfuscate: true)
+        source = File.expand_path("integration/dummy.json", __dir__)
+        AwsSecurityViz::VisualizeAws.new(config, source_file: source, renderer: "html").unleash(file)
+        expect(File.read(file)[%r{id="graph-data">(.*?)</script>}m, 1]).not_to include("0.0.0.0/0")
+        out = run_browser_script(File.expand_path("support/browser_peers.py", __dir__), file)
+        r = JSON.parse(out.lines.last)
+        expect(r["errors"]).to be_empty
+        expect(r["classes"].count { |c| c.include?("cidr") }).to be >= 2
+        expect(r["classes"].count { |c| c.include?("internet") }).to eq(1)
+      end
+    end
+
     describe "exposed VPCs" do
       it "draws a VPC as exposed only while it is collapsed, whichever way it got that way" do
         file = "exposed.html"

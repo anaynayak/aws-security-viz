@@ -29,7 +29,7 @@ module AwsSecurityViz
       end
 
       def add_node(name, opts)
-        @nodes << {id: name, label: opts[:label] || name, vpc: opts[:vpc_id], region: opts[:region], unused: (true if opts[:unused]), rules: opts[:rules], unknown: opts[:unknown]}.compact
+        @nodes << {id: name, label: opts[:label] || name, vpc: opts[:vpc_id], region: opts[:region], unused: (true if opts[:unused]), peer: opts[:peer]&.to_s, internet: opts[:internet], rules: opts[:rules], unknown: opts[:unknown]}.compact
       end
 
       def add_edge(from, to, opts)
