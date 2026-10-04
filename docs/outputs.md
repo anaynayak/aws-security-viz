@@ -55,14 +55,36 @@ aws_security_viz -o security_groups.json -f viz.html
    edge and have a larger arrowhead in both renderers, and the details panel still marks them as risky. If the browser
    takes the WebGL context away, the viewer carries on with the canvas renderer.
 8. Can X reach Y. Type a source and a target (a security group, CIDR or other peer, by name or id; the boxes suggest
-   matches) and press Enter or Find path. The viewer searches the rules, following their direction, and reports the
-   shortest path or that there is none. The path is drawn in orange and the rest dimmed; VPCs on the path that were
-   collapsed are opened, and the view is fitted to the path. The details panel lists each hop with its direction,
-   ports and rule descriptions. The port box is optional: with a port such as `443`, `443/udp` or `icmp`, only edges
-   that allow it are used, so every hop of a path allows that port. Without a port the ports are listed per hop and
-   the ports open along the whole path are not computed. The query uses the edges the Ingress, Egress and Risky only
-   toggles leave in, and runs again when you change them. Clear path (or Reset view) removes the highlight and puts
-   back the collapsed VPCs, zoom and position from before the query.
+   matches) and press Enter or Find path. The answer comes from the security group rules, the way AWS evaluates them,
+   and not from the drawn edges, so the Ingress, Egress and Risky only toggles never change it (the path stays visible
+   whatever they say). The shortest path is drawn in orange and the rest dimmed; collapsed VPCs on the path are opened,
+   the view is fitted to the path, and Clear path (or Reset view) puts back the collapsed VPCs, zoom and position.
+   The exact rules:
+   1. A hop from group A to group B is allowed only when A has an egress rule that allows B and B has an ingress rule
+      that allows A. The ports of the hop are what both sides have in common: protocols must match (tcp, udp, icmp and
+      icmpv6 by type and code, other protocols by number), `all` matches everything, and port ranges are intersected.
+      A rule on one side only is not a hop. When there is no path, the message names the nearest blocked hop and the
+      missing side, or says that the two sides share no traffic.
+   2. A rule names a group by id (a rule on the group itself, a self reference, is fine). A rule on `0.0.0.0/0` or
+      `::/0` allows any address. An egress rule on any other CIDR or on a prefix list cannot be tied to a group,
+      because the data holds no instance addresses; the same goes for an ingress rule on such a CIDR or prefix list
+      when the other end is a group. Such a hop is "possible": the answer then reads "Possibly reachable", not
+      "Reachable", and the panel gives the reason for each such rule.
+   3. A CIDR, IPv6 range or prefix list is an endpoint, never a stop along the way. A CIDR source reaches a group when
+      one of its ingress CIDRs contains it (10.1.0.0/16 is inside 0.0.0.0/0), IPv4 and IPv6 alike. A prefix list
+      source matches only ingress rules on the same prefix list id. A group reaches a CIDR target when one of its egress
+      CIDRs contains it. A group that allows `0.0.0.0/0` or `::/0` is reachable from the internet.
+   4. The port box is optional: `443` (tcp and udp), `443/udp`, `1000-2000`, `icmp`, `icmp 8`, `proto 50` or `all`.
+      With it, every hop must allow the port. Without it the ports are listed per hop and the ports open along the
+      whole path are not computed.
+   5. The panel lists each hop with the egress rules on its source, the ingress rules on its target, the allowed
+      ports and the rule descriptions.
+   6. Source and target the same group answers "Same group".
+
+   Security groups are only part of the picture, so the answer does not take into account network ACLs, route tables,
+   instance addresses, VPC peering or transit gateway routing, or anything else outside the security group rules. A
+   reachable answer means the security groups do not stop it. Groups left out of the report (by the `exclude` list or
+   by `--source-filter` and `--target-filter`) are not seen, and a report written with `--obfuscate` has no rules, so its path boxes are disabled.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 

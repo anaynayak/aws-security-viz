@@ -8,6 +8,7 @@ require "open3"
 
 describe AwsSecurityViz::Renderer::Html do
   let(:hostile) { %(<img src=x onerror="window.pwned=1"></script><script>window.pwned=2</script>) }
+  let(:hostile_name) { %(<img src=x onerror="window.pwned=1"><b>evil</b>) }
   let(:config) { AwsSecurityViz::AwsConfig.new({}) }
   let(:vendor) { File.expand_path("../lib/aws_security_viz/vendor/cytoscape", __dir__) }
 
@@ -388,6 +389,8 @@ describe AwsSecurityViz::Renderer::Html do
     end
 
     describe "the path query" do
+      let(:fixture) { File.expand_path("fixtures/path_semantics.json", __dir__) }
+
       def path_report(file, queries, *flags)
         out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
           File.expand_path("support/browser_path.py", __dir__), File.expand_path(file), JSON.generate(queries), *flags)
@@ -402,85 +405,144 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["dialogs"]).to be_empty
       end
 
-      it "finds a path along rule direction, draws it and lists each hop with ports and descriptions" do
-        render
-        r = path_report("report.html", [{from: "0.0.0.0/0", to: "db"}])
+      def render_fixture(**opts)
+        AwsSecurityViz::VisualizeAws.new(config, {source_file: fixture, renderer: "html"}.merge(opts)).unleash("report.html")
+        "report.html"
+      end
+
+      def answers(queries)
+        file = render_fixture
+        path_report(file, queries)["queries"]
+      end
+
+      it "finds a path, draws it and lists each hop with its egress and ingress rules, ports and descriptions" do
+        r = path_report(render_fixture, [{from: "0.0.0.0/0", to: "db"}])
         expect_clean(r, "report.html")
         q = r["queries"].first
         expect(q["pathNodes"]).to eq(%w[0.0.0.0/0 sg-db sg-web])
-        expect(q["pathEdges"].size).to eq(2)
-        expect(q["details"]).to include("2 hops", "Hop 1", "0.0.0.0/0 -> web", "22", "Hop 2", "web -> db", "5432", "not computed")
-        expect(q["details"]).to include("risky")
+        expect(q["pathEdges"]).to eq(%w[0.0.0.0/0-sg-web sg-web-sg-db])
+        expect(q["details"]).to include("Reachable in 2 hops", "Hop 1: 0.0.0.0/0 -> web", "443/tcp from 0.0.0.0/0",
+          "Hop 2: web -> db", "Egress on web", "5432/tcp to db", " - web to db", "Ingress on db", "5432/tcp from web", " - db from web",
+          "Allowed ports: 5432/tcp", "not computed", "network ACLs, route tables")
         expect(q["dimmed"]).to be > 0
         expect(q["allVisible"]).to be(true)
         expect(q["orange"]).to be > 200
         expect(r["before"]["orange"]).to eq(0)
-        expect(q["cleared"]["dimmed"]).to eq(0)
-        expect(q["cleared"]["pathEdges"]).to be_empty
-        expect(q["cleared"]["orange"]).to eq(0)
-        expect(q["cleared"]["inputs"]).to eq(["", "", ""])
+        expect(q["cleared"]).to include("dimmed" => 0, "pathEdges" => [], "orange" => 0, "inputs" => ["", "", ""])
         expect(q["cleared"]["zoom"]).to eq(r["before"]["zoom"])
         expect(q["cleared"]["pan"]).to eq(r["before"]["pan"])
       end
 
-      it "runs from the Find button and reports no path against the rule direction" do
-        render
-        r = path_report("report.html", [{from: "db", to: "0.0.0.0/0", click: true}])
-        q = r["queries"].first
-        expect(q["details"]).to include("No path", "db", "0.0.0.0/0")
-        expect(q["pathEdges"]).to be_empty
-        expect(q["dimmed"]).to eq(0)
-        expect(q["orange"]).to eq(0)
+      it "needs both sides: egress alone, ingress alone and disagreeing ports are blocked, and the message says which side" do
+        q = answers([{from: "c-egress-to-d", to: "d-no-ingress", click: true}, {from: "g-public", to: "r-ingress-from-g"},
+          {from: "e-egress-443-to-f", to: "f-ingress-22-from-e"}])
+        expect(q[0]["details"]).to include("No path", "Nearest blocked hop: c-egress-to-d -> d-no-ingress",
+          "d-no-ingress has no ingress rule that allows c-egress-to-d", "missing side is the ingress of d-no-ingress")
+        expect(q[1]["details"]).to include("g-public has no egress rule that allows r-ingress-from-g", "missing side is the egress of g-public")
+        expect(q[2]["details"]).to include("Egress on e-egress-443-to-f allows 443/tcp", "ingress on f-ingress-22-from-e allows 22/tcp", "nothing in common")
+        expect(q.map { |x| x["pathEdges"] }).to all(be_empty)
+        expect(q.map { |x| x["dimmed"] }).to all(eq(0))
       end
 
-      it "only considers edges that allow the given port" do
-        render
-        r = path_report("report.html", [
-          {from: "0.0.0.0/0", to: "db", port: "5432"},
-          {from: "sg-evil", to: "db", port: "5432"},
-          {from: "sg-evil", to: "db", port: "22"}
-        ])
-        expect(r["queries"][0]["pathEdges"]).to be_empty
-        expect(r["queries"][0]["details"]).to include("No path", "5432")
-        expect(r["queries"][1]["pathNodes"]).to eq(%w[sg-db sg-evil sg-web])
-        expect(r["queries"][1]["details"]).to include("on port 5432")
-        expect(r["queries"][2]["pathEdges"]).to be_empty
-        expect(r["queries"][2]["details"]).to include("No path")
+      it "intersects ports, ranges and protocols per hop, and filters by port" do
+        q = answers([{from: "wide-egress", to: "range-ingress"}, {from: "wide-egress", to: "range-ingress", port: "1600"},
+          {from: "wide-egress", to: "range-ingress", port: "1600/udp"}, {from: "pinger-egress", to: "ping-ingress", port: "icmp"},
+          {from: "pinger-egress", to: "ping-ingress", port: "icmp 3"}, {from: "web", to: "db", port: "5432"},
+          {from: "web", to: "db", port: "80"}, {from: "0.0.0.0/0", to: "db", port: "443"}])
+        expect(q[0]["details"]).to include("Allowed ports: 1500-2000/tcp")
+        expect(q[0]["details"]).not_to include("udp")
+        expect(q[1]["details"]).to include("Reachable in 1 hop on port 1600", "Every hop allows port 1600")
+        expect(q[2]["details"]).to include("No path", "not on port 1600/udp")
+        expect(q[3]["details"]).to include("Allowed ports: icmp 8")
+        expect(q[4]["details"]).to include("No path", "not on port icmp 3")
+        expect(q[5]["details"]).to include("Reachable in 1 hop on port 5432")
+        expect(q[6]["details"]).to include("No path", "not on port 80")
+        expect(q[7]["details"]).to include("No path", "Nearest blocked hop: web -> db", "web is reachable from 0.0.0.0/0 in 1 hop")
       end
 
-      it "respects the Ingress toggle" do
-        render
-        r = path_report("report.html", [{from: "0.0.0.0/0", to: "db", keep: true}, {toggle: "#ingress"}])
-        expect(r["queries"][0]["pathEdges"].size).to eq(2)
-        expect(r["queries"][1]["pathEdges"]).to be_empty
-        expect(r["queries"][1]["details"]).to include("No path")
+      it "matches CIDR, IPv6 and prefix list sources by containment and never lets them carry traffic onward" do
+        q = answers([{from: "10.1.0.0/16", to: "g-public"}, {from: "0.0.0.0/0", to: "h-internal"},
+          {from: "2001:db8:1::/48", to: "v6-ingress"}, {from: "0.0.0.0/0", to: "v6-ingress"},
+          {from: "pl-123", to: "pl-ingress"}, {from: "10.1.0.0/16", to: "pl-ingress"}, {from: "h-internal", to: "0.0.0.0/0"}])
+        expect(q[0]["details"]).to include("Reachable in 1 hop", "80/tcp from 0.0.0.0/0")
+        expect(q[0]["pathNodes"]).to eq(%w[10.1.0.0/16 sg-g])
+        expect(q[0]["pathEdges"]).to eq(%w[0.0.0.0/0-sg-g])
+        expect(q[0]["pathVia"]).to eq(%w[0.0.0.0/0])
+        expect(q[1]["details"]).to include("No path", "no ingress rule that allows 0.0.0.0/0")
+        expect(q[2]["details"]).to include("Reachable in 1 hop", "443/tcp from 2001:db8::/32")
+        expect(q[3]["details"]).to include("No path")
+        expect(q[4]["details"]).to include("Reachable in 1 hop", "443/tcp from pl-123")
+        # A CIDR is no prefix list, so there is no direct hop; h-internal may carry it there, which only might hold.
+        expect(q[5]["details"]).to include("Possibly reachable in 2 hops", "Hop 1: 10.1.0.0/16 -> h-internal", "Hop 2: h-internal -> pl-ingress")
+        expect(q[6]["details"]).to include("Reachable in 1 hop", "all to 0.0.0.0/0")
+      end
+
+      it "reports possible, not reachable, when a hop rests on a CIDR or prefix list that cannot be matched to a group" do
+        q = answers([{from: "p-egress-to-cidr", to: "q-ingress-from-p"}, {from: "p-egress-to-cidr", to: "t-ingress-from-cidr"}])
+        expect(q[0]["details"]).to include("Possibly reachable in 1 hop", "(possible)", "Egress 22/tcp to 192.168.0.0/16 cannot be matched to q-ingress-from-p")
+        expect(q[0]["details"]).not_to include("Reachable in")
+        expect(q[0]["pathEdges"]).to eq(%w[sg-p-192.168.0.0/16 sg-p-sg-q])
+        expect(q[0]["pathVia"]).to eq(%w[192.168.0.0/16])
+        expect(q[1]["details"]).to include("Possibly reachable in 1 hop", "Ingress 22/tcp from 192.168.0.0/16 cannot be matched to p-egress-to-cidr")
+        expect(q[1]["pathNodes"]).not_to include("192.168.0.0/16")
+      end
+
+      it "leaves the answer and the drawn path alone when the Ingress, Egress and Risky only toggles change" do
+        r = path_report(render_fixture, [{from: "0.0.0.0/0", to: "db", keep: true},
+          {toggle: "#ingress"}, {toggle: "#egress"}, {toggle: "#risky-only"}])
+        first, *toggled = r["queries"]
+        expect(first["details"]).to include("Reachable in 2 hops")
+        toggled.each do |t|
+          expect(t["details"]).to eq(first["details"])
+          expect(t["pathEdges"]).to eq(first["pathEdges"])
+          expect(t["dimmed"]).to eq(first["dimmed"])
+        end
+      end
+
+      it "answers X to X as the same group" do
+        q = answers([{from: "s-self", to: "s-self"}])
+        expect(q[0]["details"]).to include("Same group")
+        expect(q[0]["pathEdges"]).to be_empty
+      end
+
+      it "runs from the Find button" do
+        q = answers([{from: "web", to: "db", click: true}])
+        expect(q[0]["details"]).to include("Reachable in 1 hop")
       end
 
       it "keeps a hostile group name as text" do
-        render
-        r = path_report("report.html", [{from: hostile, to: "db", tap_background: true}])
-        expect_clean(r, "report.html")
+        file = render_fixture
+        r = path_report(file, [{from: hostile_name, to: "g-public", tap_background: true}])
+        expect_clean(r, file)
         q = r["queries"].first
         expect(q["pathNodes"]).to include("sg-evil")
-        expect(q["details"]).to include(hostile)
+        expect(q["details"]).to include(hostile_name, "Reachable in 1 hop")
         expect(q["detailsMarkup"]).to eq(0)
         expect(q["pwned"]).to be_nil
-        expect(q["after_background_tap"]["details"]).to include(hostile)
+        expect(q["after_background_tap"]["details"]).to include(hostile_name)
         expect(q["after_background_tap"]["pathEdges"]).to eq(q["pathEdges"])
       end
 
       it "says so when a name matches several groups, and lists some" do
-        render
-        r = path_report("report.html", [{from: "sg-", to: "db"}])
-        q = r["queries"].first
-        expect(q["details"]).to include("Ambiguous", "The source matches 3 groups", "web", "db")
-        expect(q["pathEdges"]).to be_empty
+        q = answers([{from: "sg-", to: "db"}])
+        expect(q[0]["details"]).to include("Ambiguous", "The source matches")
+        expect(q[0]["pathEdges"]).to be_empty
       end
 
-      it "reports when a picker names no group" do
-        render
-        r = path_report("report.html", [{from: "nothing-like-this", to: "db"}])
-        expect(r["queries"].first["details"]).to include("Pick a source and a target")
+      it "reports a missing pick and an unrecognised port" do
+        q = answers([{from: "nothing-like-this", to: "db"}, {from: "web", to: "db", port: "banana"}])
+        expect(q[0]["details"]).to include("Pick a source and a target")
+        expect(q[1]["details"]).to include("Unrecognised port")
+      end
+
+      it "leaves the rules out of an obfuscated report and disables the query" do
+        render_fixture(renderer: "html")
+        obfuscated = AwsSecurityViz::AwsConfig.new(obfuscate: true)
+        AwsSecurityViz::VisualizeAws.new(obfuscated, source_file: fixture, renderer: "html").unleash("hidden.html")
+        html = File.read("hidden.html")
+        data = JSON.parse(html[%r{<script type="application/json" id="graph-data">(.*?)</script>}m, 1])
+        expect(data["nodes"].flat_map(&:keys)).not_to include("rules")
+        expect(html).not_to include("sg-web")
       end
     end
 
@@ -511,16 +573,44 @@ describe AwsSecurityViz::Renderer::Html do
         JSON.parse(out.lines.last)
       end
 
+      # The same shape as render_large, built through the real pipeline so the groups carry their rules: in each VPC
+      # group 0 may send 443 to group 1, and group 1 sends 5432 to group 0 of the next VPC.
+      def render_chain(file = "chain.html")
+        perm = ->(port, group: nil, cidr: nil, desc: nil) {
+          pair = {"GroupId" => group, "UserId" => "1"}.merge(desc ? {"Description" => desc} : {})
+          {"IpProtocol" => "tcp", "FromPort" => port, "ToPort" => port, "IpRanges" => cidr ? [{"CidrIp" => cidr}] : [],
+           "Ipv6Ranges" => [], "PrefixListIds" => [], "UserIdGroupPairs" => group ? [pair] : []}
+        }
+        groups = (0...vpcs).flat_map { |v|
+          (0...per_vpc).map { |i|
+            ingress = []
+            egress = []
+            if i.zero?
+              egress << perm.call(443, group: "sg-#{v}-1")
+              ingress << perm.call(5432, group: "sg-#{(v - 1) % vpcs}-1", desc: "db from #{(v - 1) % vpcs}")
+              ingress << perm.call(22, cidr: "0.0.0.0/0") if v.zero?
+            elsif i == 1
+              ingress << perm.call(443, group: "sg-#{v}-0")
+              egress << perm.call(5432, group: "sg-#{(v + 1) % vpcs}-0")
+            end
+            {"GroupName" => "app-#{v}-#{i}", "GroupId" => "sg-#{v}-#{i}", "VpcId" => "vpc-#{v}", "IpPermissions" => ingress, "IpPermissionsEgress" => egress}
+          }
+        }
+        File.write("chain.json", JSON.generate({"SecurityGroups" => groups}))
+        AwsSecurityViz::VisualizeAws.new(config, source_file: "chain.json", renderer: "html").unleash(file)
+        file
+      end
+
       def path_report(queries, *flags)
         out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
-          File.expand_path("support/browser_path.py", __dir__), File.expand_path(render_large), JSON.generate(queries), *flags)
+          File.expand_path("support/browser_path.py", __dir__), File.expand_path(render_chain), JSON.generate(queries), *flags)
         raise "browser check failed: #{err}" unless status.success?
         JSON.parse(out.lines.last).tap { |r| expect(r["picker"]).to be(true), "the viewer has no #path-from picker" }
       end
 
       [[], ["--webgl"]].each do |flags|
         it "keeps the highlight and the dimming in step through search, Expand all and collapsing a VPC on the path (#{flags.first || "canvas"})" do
-          vpc1 = "vpc:eu-west-1|vpc-1"
+          vpc1 = "vpc:|vpc-1"
           r = path_report([{from: "app-0-0", to: "app-2-1", actions: [
             {do: "search", text: "app-5-3"}, {do: "clear_search"}, {do: "expand_all"}, {do: "dblclick", vpc: vpc1}
           ]}], *flags)
@@ -544,14 +634,14 @@ describe AwsSecurityViz::Renderer::Html do
 
         it "expands the collapsed VPCs on a path, draws and fits it, and restores the view on clear (#{flags.first || "canvas"})" do
           r = path_report([{from: "app-0-0", to: "app-2-1"}], *flags)
-          expect(r["requests"]).to eq(["file://" + File.expand_path("large.html")])
+          expect(r["requests"]).to eq(["file://" + File.expand_path("chain.html")])
           expect(r["errors"]).to be_empty
           expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
           expect(r["renderer"]).to eq(flags.empty? ? "canvas" : "webgl")
           q = r["queries"].first
           expect(r["before"]["collapsed"].size).to eq(vpcs)
           expect(q["collapsed"].size).to eq(vpcs - 3)
-          expect(q["collapsed"]).not_to include("vpc:eu-west-1|vpc-0", "vpc:eu-west-1|vpc-1", "vpc:eu-west-1|vpc-2")
+          expect(q["collapsed"]).not_to include("vpc:|vpc-0", "vpc:|vpc-1", "vpc:|vpc-2")
           expect(q["pathNodes"]).to eq(%w[sg-0-0 sg-0-1 sg-1-0 sg-1-1 sg-2-0 sg-2-1])
           expect(q["details"]).to include("5 hops", "db from 0", "db from 1")
           expect(q["allVisible"]).to be(true)

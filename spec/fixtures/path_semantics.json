@@ -1,0 +1,538 @@
+{
+ "SecurityGroups": [
+  {
+   "GroupName": "a-restricted-egress",
+   "GroupId": "sg-a",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 443,
+     "ToPort": 443,
+     "IpRanges": [
+      {
+       "CidrIp": "10.0.0.0/8"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": []
+    }
+   ]
+  },
+  {
+   "GroupName": "b-allows-a-22",
+   "GroupId": "sg-b",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 22,
+     "ToPort": 22,
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-a",
+       "UserId": "1"
+      }
+     ]
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "c-egress-to-d",
+   "GroupId": "sg-c",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 5432,
+     "ToPort": 5432,
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-d",
+       "UserId": "1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "GroupName": "d-no-ingress",
+   "GroupId": "sg-d",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "e-egress-443-to-f",
+   "GroupId": "sg-e",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 443,
+     "ToPort": 443,
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-f",
+       "UserId": "1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "GroupName": "f-ingress-22-from-e",
+   "GroupId": "sg-f",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 22,
+     "ToPort": 22,
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-e",
+       "UserId": "1"
+      }
+     ]
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "g-public",
+   "GroupId": "sg-g",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 80,
+     "ToPort": 80,
+     "IpRanges": [
+      {
+       "CidrIp": "0.0.0.0/0"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": []
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "h-internal",
+   "GroupId": "sg-h",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 80,
+     "ToPort": 80,
+     "IpRanges": [
+      {
+       "CidrIp": "10.1.0.0/16"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": []
+    }
+   ],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "-1",
+     "IpRanges": [
+      {
+       "CidrIp": "0.0.0.0/0"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": []
+    }
+   ]
+  },
+  {
+   "GroupName": "s-self",
+   "GroupId": "sg-s",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "-1",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-s",
+       "UserId": "1"
+      }
+     ]
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "<img src=x onerror=\"window.pwned=1\"><b>evil</b>",
+   "GroupId": "sg-evil",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "FromPort": 22,
+     "ToPort": 22,
+     "IpRanges": [
+      {
+       "CidrIp": "0.0.0.0/0",
+       "Description": "<script>window.pwned=2</script>"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": []
+    }
+   ],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "-1",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-g",
+       "UserId": "1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "GroupName": "web",
+   "GroupId": "sg-web",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [
+      {
+       "CidrIp": "0.0.0.0/0"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [],
+     "FromPort": 443,
+     "ToPort": 443
+    }
+   ],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-db",
+       "UserId": "1",
+       "Description": "web to db"
+      }
+     ],
+     "FromPort": 5432,
+     "ToPort": 5432
+    }
+   ]
+  },
+  {
+   "GroupName": "db",
+   "GroupId": "sg-db",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-web",
+       "UserId": "1",
+       "Description": "db from web"
+      }
+     ],
+     "FromPort": 5432,
+     "ToPort": 5432
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "p-egress-to-cidr",
+   "GroupId": "sg-p",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [
+      {
+       "CidrIp": "192.168.0.0/16"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [],
+     "FromPort": 22,
+     "ToPort": 22
+    }
+   ]
+  },
+  {
+   "GroupName": "q-ingress-from-p",
+   "GroupId": "sg-q",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-p",
+       "UserId": "1"
+      }
+     ],
+     "FromPort": 22,
+     "ToPort": 22
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "v6-ingress",
+   "GroupId": "sg-v6",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [
+      {
+       "CidrIpv6": "2001:db8::/32"
+      }
+     ],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [],
+     "FromPort": 443,
+     "ToPort": 443
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "w6-egress",
+   "GroupId": "sg-w6",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [
+      {
+       "CidrIpv6": "2001:db8:1::/48"
+      }
+     ],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [],
+     "FromPort": 443,
+     "ToPort": 443
+    }
+   ]
+  },
+  {
+   "GroupName": "pl-ingress",
+   "GroupId": "sg-pl",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [
+      {
+       "PrefixListId": "pl-123"
+      }
+     ],
+     "UserIdGroupPairs": [],
+     "FromPort": 443,
+     "ToPort": 443
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "range-ingress",
+   "GroupId": "sg-range",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-wide",
+       "UserId": "1"
+      }
+     ],
+     "FromPort": 1000,
+     "ToPort": 2000
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "wide-egress",
+   "GroupId": "sg-wide",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-range",
+       "UserId": "1"
+      }
+     ],
+     "FromPort": 1500,
+     "ToPort": 3000
+    },
+    {
+     "IpProtocol": "udp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-range",
+       "UserId": "1"
+      }
+     ],
+     "FromPort": 0,
+     "ToPort": 65535
+    }
+   ]
+  },
+  {
+   "GroupName": "ping-ingress",
+   "GroupId": "sg-ping",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "icmp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-pinger",
+       "UserId": "1"
+      }
+     ],
+     "FromPort": 8,
+     "ToPort": -1
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "pinger-egress",
+   "GroupId": "sg-pinger",
+   "VpcId": "vpc-1",
+   "IpPermissions": [],
+   "IpPermissionsEgress": [
+    {
+     "IpProtocol": "-1",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-ping",
+       "UserId": "1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "GroupName": "r-ingress-from-g",
+   "GroupId": "sg-r",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [
+      {
+       "GroupId": "sg-g",
+       "UserId": "1"
+      }
+     ],
+     "FromPort": 22,
+     "ToPort": 22
+    }
+   ],
+   "IpPermissionsEgress": []
+  },
+  {
+   "GroupName": "t-ingress-from-cidr",
+   "GroupId": "sg-t",
+   "VpcId": "vpc-1",
+   "IpPermissions": [
+    {
+     "IpProtocol": "tcp",
+     "IpRanges": [
+      {
+       "CidrIp": "192.168.0.0/16"
+      }
+     ],
+     "Ipv6Ranges": [],
+     "PrefixListIds": [],
+     "UserIdGroupPairs": [],
+     "FromPort": 22,
+     "ToPort": 22
+    }
+   ],
+   "IpPermissionsEgress": []
+  }
+ ]
+}

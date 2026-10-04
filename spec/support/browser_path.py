@@ -72,6 +72,7 @@ with sync_playwright() as p:
             pwned: window.pwned || null,
             dimTextOpacity: cy.elements('.dim').length ? cy.elements('.dim')[0].numericStyle('text-opacity') : null,
             pathCollapsed: cy.nodes('.collapsed.path').map(n => n.id()),
+            pathVia: cy.nodes('.pathvia').map(n => n.id()).sort(),
             pathLabels: path.nodes().map(n => n.data('label')),
           };
         }""")
