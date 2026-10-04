@@ -176,7 +176,7 @@
       { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.6, "line-style": "dashed", "line-color": "#d6006f", "target-arrow-color": "#d6006f", color: "#b00060" } },
       { selector: "node.path", style: { "border-width": 3, "border-color": "#ff8c00" } },
       { selector: "edge.path", style: { width: 6, "arrow-scale": 1.5, "line-color": "#ff8c00", "target-arrow-color": "#ff8c00", "z-index": 10 } },
-      { selector: ".dim", style: { opacity: 0.12 } },
+      { selector: ".dim", style: { opacity: 0.12, "text-opacity": 0.12, "text-background-opacity": 0.12 } },
       { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
       { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
   ];
@@ -504,6 +504,7 @@
     applyFilters();
     autoRenderer();
     refreshDetails();
+    if (pathState) markPath();
   }
 
   function layoutVpc(id, centre) {
@@ -694,15 +695,17 @@
     });
   })();
   // Picker text -> node id: an exact name or id, else the one group whose name or id contains the text.
+  // Returns { id } or { candidates } (several groups match) or null.
   function resolveNode(text) {
     var q = text.trim().toLowerCase();
     if (!q) return null;
     var names = Object.keys(pathNames);
     var exact = names.filter(function (n) { return n.toLowerCase() === q || pathNames[n].toLowerCase() === q; });
-    if (exact.length === 1) return pathNames[exact[0]];
-    if (exact.length > 1) return null;
+    if (exact.length === 1) return { id: pathNames[exact[0]] };
+    if (exact.length > 1) return { candidates: exact };
     var part = names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1 || pathNames[n].toLowerCase().indexOf(q) !== -1; });
-    return part.length === 1 ? pathNames[part[0]] : null;
+    if (part.length === 1) return { id: pathNames[part[0]] };
+    return part.length ? { candidates: part } : null;
   }
   // "443" is that port on any protocol, "443/udp" a protocol too, "icmp" a protocol word.
   function parsePortFilter(text) {
@@ -775,11 +778,20 @@
     details.appendChild(el("p", f ? "Every hop allows port " + f.text + "." : "Ports are listed per hop; the ports open along the whole path are not computed. Enter a port to ask about one.", "muted"));
   }
   function runPath() {
-    var from = resolveNode(pathFrom.value), to = resolveNode(pathTo.value);
-    if (!from || !to) {
+    var a = resolveNode(pathFrom.value), b = resolveNode(pathTo.value);
+    var vague = [["source", a], ["target", b]].filter(function (x) { return x[1] && x[1].candidates; });
+    if (vague.length) {
+      showPathMessage("Ambiguous name", vague.map(function (x) {
+        var c = x[1].candidates;
+        return { text: "The " + x[0] + " matches " + c.length + " groups: " + c.slice(0, 5).join(", ") + (c.length > 5 ? ", ..." : "") + ". Type more of the name or pick one from the list." };
+      }));
+      return;
+    }
+    if (!a || !b) {
       showPathMessage("Pick a source and a target", [{ text: "Type a group name or id in both boxes and choose one from the list.", cls: "muted" }]);
       return;
     }
+    var from = a.id, to = b.id;
     var f = parsePortFilter(pathPort.value);
     var found = findPath(from, to, f);
     shownId = null;
@@ -793,22 +805,36 @@
     }
     if (!pathState) pathState = { collapsed: Object.assign({}, collapsed), zoom: cy.zoom(), pan: Object.assign({}, cy.pan()) };
     pathState.render = function () { showPathResult(found, f); };
+    pathState.nodes = found.nodes;
+    pathState.edgeIds = {};
+    found.hops.forEach(function (list) { list.forEach(function (e) { pathState.edgeIds[e.id] = true; }); });
     var opened = false;
     found.nodes.forEach(function (id) {
       if (collapsed[vpcOf[id]]) { collapsed[vpcOf[id]] = false; opened = true; }
     });
     if (opened) { searchSnapshot = null; sync(); }
-    var nodes = cy.collection(), edges = cy.collection();
-    found.nodes.forEach(function (id) { nodes = nodes.union(cy.getElementById(id)); });
-    found.hops.forEach(function (list) { list.forEach(function (e) { edges = edges.union(cy.getElementById(e.id)); }); });
-    var on = nodes.union(edges);
-    cy.elements().removeClass("path dim");
-    on.addClass("path");
-    cy.elements().not(on.union(nodes.ancestors())).addClass("dim");
+    var on = markPath();
     pathState.render();
     userMoved = true;
     cy.fit(on, 60);
     if (cy.zoom() > MAX_SEARCH_ZOOM) { cy.zoom(MAX_SEARCH_ZOOM); cy.center(on); }
+  }
+  // Draw the path on whatever is on the canvas: a collapsed VPC stands in for the path groups inside it, and a merged
+  // edge for the path rules it holds. Runs after every sync so the highlight and the dimming never fall out of step.
+  function markPath() {
+    var nodes = cy.collection(), edges = cy.collection();
+    pathState.nodes.forEach(function (id) {
+      nodes = nodes.union(cy.getElementById(collapsed[vpcOf[id]] ? vpcOf[id] : id));
+    });
+    cy.edges().forEach(function (e) {
+      var hit = e.data("meta") ? e.data("members").some(function (m) { return pathState.edgeIds[m]; }) : pathState.edgeIds[e.id()];
+      if (hit) edges = edges.union(e);
+    });
+    var on = nodes.union(edges);
+    cy.elements().removeClass("path dim");
+    on.addClass("path");
+    cy.elements().not(on.union(nodes.ancestors())).addClass("dim");
+    return on;
   }
   // Remove the highlight and put the view (collapsed VPCs, zoom, pan) back as it was before the first query.
   function clearPath(keepInputs) {

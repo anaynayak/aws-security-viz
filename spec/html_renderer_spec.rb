@@ -392,7 +392,7 @@ describe AwsSecurityViz::Renderer::Html do
         out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
           File.expand_path("support/browser_path.py", __dir__), File.expand_path(file), JSON.generate(queries), *flags)
         raise "browser check failed: #{err}" unless status.success?
-        JSON.parse(out.lines.last)
+        JSON.parse(out.lines.last).tap { |r| expect(r["picker"]).to be(true), "the viewer has no #path-from picker" }
       end
 
       def expect_clean(r, file)
@@ -469,6 +469,14 @@ describe AwsSecurityViz::Renderer::Html do
         expect(q["after_background_tap"]["pathEdges"]).to eq(q["pathEdges"])
       end
 
+      it "says so when a name matches several groups, and lists some" do
+        render
+        r = path_report("report.html", [{from: "sg-", to: "db"}])
+        q = r["queries"].first
+        expect(q["details"]).to include("Ambiguous", "The source matches 3 groups", "web", "db")
+        expect(q["pathEdges"]).to be_empty
+      end
+
       it "reports when a picker names no group" do
         render
         r = path_report("report.html", [{from: "nothing-like-this", to: "db"}])
@@ -507,10 +515,33 @@ describe AwsSecurityViz::Renderer::Html do
         out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
           File.expand_path("support/browser_path.py", __dir__), File.expand_path(render_large), JSON.generate(queries), *flags)
         raise "browser check failed: #{err}" unless status.success?
-        JSON.parse(out.lines.last)
+        JSON.parse(out.lines.last).tap { |r| expect(r["picker"]).to be(true), "the viewer has no #path-from picker" }
       end
 
       [[], ["--webgl"]].each do |flags|
+        it "keeps the highlight and the dimming in step through search, Expand all and collapsing a VPC on the path (#{flags.first || "canvas"})" do
+          vpc1 = "vpc:eu-west-1|vpc-1"
+          r = path_report([{from: "app-0-0", to: "app-2-1", actions: [
+            {do: "search", text: "app-5-3"}, {do: "clear_search"}, {do: "expand_all"}, {do: "dblclick", vpc: vpc1}
+          ]}], *flags)
+          q = r["queries"].first
+          search, _, expand, collapse = q["actions"]
+          [search, expand].each do |a|
+            expect(a["dimmed"]).to be > 0
+            expect(a["pathNodes"]).to eq(q["pathNodes"])
+            expect(a["pathEdges"]).to eq(q["pathEdges"])
+          end
+          expect(expand["orange"]).to be > 200
+          expect(collapse["pathCollapsed"]).to eq([vpc1])
+          expect(collapse["pathNodes"]).to eq(%w[sg-0-0 sg-0-1 sg-2-0 sg-2-1])
+          expect(collapse["pathEdges"].size).to be > 0
+          expect(collapse["pathEdges"].grep(/\Ameta:/).size).to eq(2)
+          expect(collapse["dimmed"]).to be > 0
+          expect(collapse["orange"]).to be > 200
+          expect(q["dimTextOpacity"]).to be_within(0.001).of(0.12)
+          expect(expand["dark"]).to be < r["before"]["dark"]
+        end
+
         it "expands the collapsed VPCs on a path, draws and fits it, and restores the view on clear (#{flags.first || "canvas"})" do
           r = path_report([{from: "app-0-0", to: "app-2-1"}], *flags)
           expect(r["requests"]).to eq(["file://" + File.expand_path("large.html")])
