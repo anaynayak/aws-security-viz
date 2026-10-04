@@ -15,13 +15,24 @@ See which security groups can reach which, and which are open to the internet, i
 aws-security-viz reads the EC2 security group configuration from the AWS API, or from the JSON written by
 `aws ec2 describe-security-groups`, and draws it as a graph.
 
-![Security group graph rendered with Graphviz: a risky 0.0.0.0/0 edge into the app group](assets/sample.png)
+## The HTML viewer
+
+![HTML viewer in the light theme: the dev VPC and its groups, the public peers 0.0.0.0/0 and ::/0, and a thick red edge from 0.0.0.0/0 to the dev-bastion group](assets/viewer-hero.png#only-light)
+![HTML viewer in the dark theme: the dev VPC and its groups, the public peers 0.0.0.0/0 and ::/0, and a thick red edge from 0.0.0.0/0 to the dev-bastion group](assets/viewer-hero-dark.png#only-dark)
+
+The default output is an interactive page for exploring, searching and sharing the graph.
+
+1. [Collapsed VPCs](outputs.md#viewer-collapsing) keep a large account readable: big graphs open with each VPC as one node.
+2. [Can X reach Y](outputs.md#viewer-path) answers from the security group rules, the way AWS evaluates them.
+3. [Layouts](outputs.md#viewer-layouts) include force, traffic flow and exposure rings.
+4. [Risky ingress](outputs.md#viewer-risky) on a sensitive port is highlighted, and Risky only hides the rest.
+5. [Light and dark themes](outputs.md#viewer-themes) follow the browser, with a toggle.
+6. [One offline file](outputs.md#html-viewer): no server and no CDN.
 
 <div class="grid cards" markdown>
 
-1. **HTML viewer.** One self-contained page with search, a "can X reach Y" path query, ingress and egress toggles and a details panel. Large graphs open with each VPC collapsed into one node, and a WebGL renderer takes over for very large ones. No server, no CDN. See [Outputs](outputs.md#html-viewer).
-2. **Risky ingress highlighting.** `0.0.0.0/0` or `::/0` on a sensitive port is drawn as a dashed crimson edge, and `--fail-on-risk` turns it into a failing exit code. See [Filtering and risk checks](filtering-and-risk-checks.md).
-3. **Runs anywhere.** Install the gem, or run the published container image with Ruby and Graphviz built in. See [Installation](installation.md).
+1. **Fail the build on risk.** `--fail-on-risk` turns risky public ingress into a failing exit code. See [Filtering and risk checks](filtering-and-risk-checks.md).
+2. **Runs anywhere.** Install the gem, or run the published container image with Ruby and Graphviz built in. See [Installation](installation.md).
 
 </div>
 
@@ -34,6 +45,12 @@ aws_security_viz -o security_groups.json
 
 The sample [security_groups.json](assets/security_groups.json) needs no AWS access. The command writes
 `aws-security-viz.html`; open it in a browser. The [Quickstart](quickstart.md) covers live AWS access and Docker.
+
+## Other formats
+
+The same graph can be written as DOT, PNG, SVG, Mermaid or JSON; see [Outputs](outputs.md). Graphviz draws this one:
+
+![Security group graph rendered with Graphviz: a risky 0.0.0.0/0 edge into the app group](assets/sample.png)
 
 ## Where to go next
 
