@@ -18,7 +18,10 @@ bundle install
 
 1. Tests: `bundle exec rspec`. The integration specs need the Graphviz `dot` binary.
 2. Lint: `bundle exec standardrb`. Both commands must pass before a pull request.
-3. Run from the checkout: `bundle exec exe/aws_security_viz -o spec/integration/dummy.json -f /tmp/out.svg`.
+3. Browser specs: `spec/html_renderer_spec.rb` drives the HTML viewer in headless Chromium. Install it once with
+   `uv run --group browser playwright install chromium`; the specs are pending, with a reason, while `uv` or
+   Chromium is missing. CI always runs them.
+4. Run from the checkout: `bundle exec exe/aws_security_viz -o spec/integration/dummy.json -f /tmp/out.svg`.
 
 Supported Ruby versions are 3.3, 3.4 and 4.0.
 

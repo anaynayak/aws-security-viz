@@ -61,7 +61,9 @@ describe AwsSecurityViz::Renderer::Html do
     let(:script) { File.expand_path("support/browser_check.py", __dir__) }
 
     def browser_report(path)
-      out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python", script, path)
+      out, err, status = Open3.capture3("uv", "run", "--quiet", "--locked", "--project", File.expand_path("..", __dir__),
+        "--group", "browser", "python", script, path)
+      skip "Chromium is not installed (uv run --group browser playwright install chromium)" if err.include?("Executable doesn't exist")
       raise "browser check failed: #{err}" unless status.success?
       JSON.parse(out.lines.last)
     end

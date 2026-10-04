@@ -11,6 +11,11 @@ docs = [
     "mkdocs-material>=9.6",
     "mkdocs<2",
 ]
+# Headless-browser specs and script/docs-screenshots. Chromium itself is installed with
+# `uv run --group browser playwright install chromium`; the pin keeps the driver and the browser build in step.
+browser = [
+    "playwright==1.55.0",
+]
 
 [tool.uv]
 package = false

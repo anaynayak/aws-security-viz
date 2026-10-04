@@ -89,6 +89,27 @@ jobs:
           sha256sum "$RUNNER_TEMP/first.gem" "$RUNNER_TEMP/second.gem"
           [ "$(sha256sum < "$RUNNER_TEMP/first.gem")" = "$(sha256sum < "$RUNNER_TEMP/second.gem")" ]
 
+  browser:
+    name: browser specs (headless Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.22"
+      # Playwright is pinned in uv.lock (--locked); the Chromium build follows from that version.
+      - name: Install Chromium
+        run: uv run --locked --group browser playwright install --with-deps chromium
+      - name: Run the browser specs
+        run: bundle exec rspec spec/html_renderer_spec.rb --format documentation --fail-fast
+
   docs:
     name: docs build
     runs-on: ubuntu-latest
