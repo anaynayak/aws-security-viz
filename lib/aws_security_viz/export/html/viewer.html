@@ -716,6 +716,7 @@
   var pathNames = {};     // text shown in the pickers -> node id
   var nodeInfo = {};      // node id -> { id, label, type: group | ext | cidr | pl | other, rules, in, out, c }
   var pathData = data.nodes.some(function (n) { return !!n.rules; });
+  var memberOf = {};      // node id -> the peers it stands for, when a rule's peer is drawn under another name (:groups config)
   var ANY_CIDRS = ["0.0.0.0/0", "::/0"];
   var ALL_ITEM = { proto: "all" };
 
@@ -815,30 +816,44 @@
     return m.length ? m.map(itemLabel).join(", ") : "nothing";
   }
 
-  // Groups named in a rule that were not described themselves (another account, say): endpoints with no rules.
-  var namedGroups = {};
+  var namedGroups = {};   // groups named in a rule that were not described themselves (another account, say)
   data.nodes.forEach(function (n) {
-    (n.rules || []).forEach(function (r) { if (r.kind === "group") namedGroups[r.peer] = true; });
+    (n.rules || []).forEach(function (r) {
+      if (r.kind === "group") namedGroups[r.peer] = true;
+      if (r.node) (memberOf[r.node] = memberOf[r.node] || []).push({ kind: r.kind, id: r.peer });
+      if (r.kind === "cidr4" || r.kind === "cidr6") { r.c = parseCidr(r.peer); r.any = ANY_CIDRS.indexOf(r.peer) !== -1; }
+    });
   });
-  data.nodes.forEach(function (n) {
-    var c = parseCidr(n.id);
-    var info = { id: n.id, label: n.label, rules: n.rules || null, c: c };
-    info.type = n.rules ? "group" : (c ? "cidr" : (/^pl-/.test(n.id) ? "pl" : (namedGroups[n.id] ? "ext" : "other")));
-    if (n.rules) {
-      info.in = n.rules.filter(function (r) { return r.dir === "in"; });
-      info.out = n.rules.filter(function (r) { return r.dir === "out"; });
-      n.rules.forEach(function (r) {
-        if (r.kind === "cidr4" || r.kind === "cidr6") { r.c = parseCidr(r.peer); r.any = ANY_CIDRS.indexOf(r.peer) !== -1; }
-      });
+  // Every endpoint a rule or the graph names, so a CIDR that only egress rules mention (egress edges may not be
+  // drawn) can still be picked. type: group (rules known), ext (a group the input does not describe) or endpoint (an
+  // address range or prefix list, standing for the members).
+  function addInfo(id, label, n) {
+    if (nodeInfo[id]) return;
+    var info = { id: id, label: label, rules: (n && n.rules) || null, unknown: (n && n.unknown) || [] };
+    var c = parseCidr(id);
+    if (info.rules) {
+      info.type = "group";
+      info.in = info.rules.filter(function (r) { return r.dir === "in"; });
+      info.out = info.rules.filter(function (r) { return r.dir === "out"; });
+    } else if (namedGroups[id] && !memberOf[id]) {
+      info.type = "ext";
+    } else {
+      info.type = "endpoint";
+      info.members = memberOf[id] || (c ? [{ kind: c.bits === 32 ? "cidr4" : "cidr6", id: id }] : (/^pl-/.test(id) ? [{ kind: "prefix_list", id: id }] : []));
+      info.members.forEach(function (m) { m.c = m.kind === "cidr4" || m.kind === "cidr6" ? parseCidr(m.id) : null; });
     }
-    nodeInfo[n.id] = info;
+    nodeInfo[id] = info;
+  }
+  data.nodes.forEach(function (n) { addInfo(n.id, n.label, n); });
+  data.nodes.forEach(function (n) {
+    (n.rules || []).forEach(function (r) { addInfo(r.node || r.peer, r.node || r.peer, null); });
   });
   var groupList = data.nodes.filter(function (n) { return n.rules; }).map(function (n) { return nodeInfo[n.id]; });
-  // Groups that could accept traffic from a given group: named in an ingress rule, or open to any address, or to a
-  // CIDR or prefix list that may or may not hold it.
+  // Groups that could accept traffic from a given group: named in an ingress rule, or open to addresses (a CIDR or
+  // prefix list), or with no ingress rules in the input.
   var ingressByPeer = {}, ingressOpen = [];
   groupList.forEach(function (g) {
-    var open = false;
+    var open = g.unknown.indexOf("in") !== -1;
     g.in.forEach(function (r) {
       if (r.kind === "group") (ingressByPeer[r.peer] = ingressByPeer[r.peer] || []).push(g);
       else open = true;
@@ -846,10 +861,11 @@
     if (open) ingressOpen.push(g);
   });
   (function () {
+    var all = Object.keys(nodeInfo).map(function (id) { return nodeInfo[id]; });
     var byLabel = {};
-    data.nodes.forEach(function (n) { byLabel[n.label] = (byLabel[n.label] || 0) + 1; });
+    all.forEach(function (n) { byLabel[n.label] = (byLabel[n.label] || 0) + 1; });
     var list = document.getElementById("path-names");
-    data.nodes.slice().sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); }).forEach(function (n) {
+    all.sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); }).forEach(function (n) {
       var name = byLabel[n.label] > 1 ? n.label + " (" + n.id + ")" : n.label;
       pathNames[name] = n.id;
       var o = document.createElement("option");
@@ -875,13 +891,13 @@
   }
 
   // The port box: "443" is that port on tcp and udp, "443/udp" one protocol, "1000-2000" a range, "icmp",
-  // "icmp 8", "proto 50" or "all". Returns a list of items, null for an empty box, or { bad: true }.
+  // "icmp 8" or "proto 50". Returns { items }, null for an empty box, or { bad: true }.
   function parsePortFilter(text) {
     var t = text.trim().toLowerCase(), m;
     if (!t) return null;
-    if (t === "all") return { items: [ALL_ITEM], text: t };
     if ((m = /^(\d+)(?:-(\d+))?(?:\/(tcp|udp))?$/.exec(t))) {
       var from = Number(m[1]), to = Number(m[2] || m[1]);
+      if (from > to || to > 65535) return { bad: true };
       return { items: (m[3] ? [m[3]] : ["tcp", "udp"]).map(function (p) { return { proto: p, from: from, to: to }; }), text: t };
     }
     if ((m = /^(icmp|icmpv6)(?: (-?\d+)(?:\/(-?\d+))?)?$/.exec(t))) {
@@ -891,24 +907,52 @@
     return { bad: true };
   }
 
-  // Does one rule of a group allow the node X on the other side? "yes", "maybe" (depends on addresses the data does
-  // not hold) or null.
+  // How one rule of a group relates to what is on the other side. The answer is null (no), or { c: "yes" } or
+  // { c: "maybe", why } where why says what the data cannot tell: addr (instance addresses), v6 (whether instances
+  // have IPv6 addresses), pl (what a prefix list holds), part (a range only partly covered), some (some of the
+  // ranges behind a name) or unknown (the rules themselves are not in the input).
+  var YES = { c: "yes" };
+  function maybe(why) { return { c: "maybe", why: why }; }
+  // Against one member of an endpoint: a CIDR, a prefix list or a named group.
+  function relMember(rule, m) {
+    if (rule.kind === "group") return m.kind === "group" && rule.peer === m.id ? YES : null;
+    if (rule.kind === "prefix_list") return m.kind === "prefix_list" ? (rule.peer === m.id ? YES : null) : maybe("pl");
+    if (m.kind === "prefix_list") return rule.peer === "0.0.0.0/0" ? YES : maybe(rule.any ? "v6" : "pl");
+    if (m.kind !== "cidr4" && m.kind !== "cidr6") return null;
+    if (!rule.c || !m.c || rule.c.bits !== m.c.bits) return null;
+    if (contains(rule.c, m.c)) return YES;
+    return contains(m.c, rule.c) ? maybe("part") : null;
+  }
   function classify(rule, X) {
-    if (rule.node && rule.node === X.id) return "yes";
-    if (rule.kind === "group") return rule.peer === X.id ? "yes" : null;
-    var instance = X.type === "group" || X.type === "ext";
-    if (rule.kind === "prefix_list") return X.type === "pl" ? (rule.peer === X.id ? "yes" : null) : (instance ? "maybe" : null);
-    if (X.type === "cidr") return rule.c && X.c && contains(rule.c, X.c) ? "yes" : null;
-    return instance ? (rule.any ? "yes" : "maybe") : null;
+    if (X.type === "endpoint") {
+      var results = X.members.map(function (m) { return relMember(rule, m); }).filter(function (r) { return r; });
+      if (!results.length) return null;
+      var vague = results.filter(function (r) { return r.c === "maybe"; });
+      if (vague.length) return vague[0];
+      return results.length === X.members.length ? YES : maybe("some");
+    }
+    // A group, with instances whose addresses the data does not hold.
+    if (rule.kind === "group") return rule.peer === X.id ? YES : null;
+    if (rule.kind === "prefix_list") return maybe("pl");
+    if (!rule.any) return maybe("addr");
+    return rule.c.bits === 32 ? YES : maybe("v6");
   }
-  function matching(rules, X) {
-    var out = [];
-    rules.forEach(function (r) {
-      var c = classify(r, X);
-      if (c) out.push({ rule: r, c: c, item: ruleItem(r) });
-    });
-    return out;
+  // What one side of a hop offers: the rules of the node that match the other end, or a single "anything" for an
+  // end that has no rules to satisfy (an address range), or a "maybe" when its rules are not in the input.
+  function side(node, dir, other) {
+    if (node.type === "group") {
+      if (node.unknown.indexOf(dir) !== -1) return [{ rule: null, c: "maybe", why: "unknown", item: ALL_ITEM }];
+      var out = [];
+      (dir === "out" ? node.out : node.in).forEach(function (r) {
+        var rel = classify(r, other);
+        if (rel) out.push({ rule: r, c: rel.c, why: rel.why, item: ruleItem(r) });
+      });
+      return out;
+    }
+    if (node.type === "ext") return [{ rule: null, c: "maybe", why: "unknown", item: ALL_ITEM }];
+    return [{ rule: null, c: "yes", item: ALL_ITEM }];
   }
+  function famOf(rule) { return !rule ? null : (rule.kind === "cidr4" ? 4 : (rule.kind === "cidr6" ? 6 : null)); }
   function peerName(r) {
     var id = r.node || r.peer;
     return nodeInfo[id] ? nodeInfo[id].label : id;
@@ -916,22 +960,33 @@
   function ruleText(r) {
     return itemLabel(ruleItem(r)) + (r.dir === "out" ? " to " : " from ") + peerName(r);
   }
+  function reasonText(side, rule, why, node, other) {
+    var which = side === "out" ? "Egress" : "Ingress";
+    if (why === "unknown") return "The " + (side === "out" ? "egress" : "ingress") + " rules of " + node.label + " are not in the input.";
+    var r = which + " " + ruleText(rule);
+    if (why === "v6") return r + " applies only if " + other.label + " has IPv6 addresses, which the data does not say.";
+    if (why === "pl") return r + " may or may not cover " + other.label + ": the contents of the prefix list are not in the data.";
+    if (why === "part") return r + " covers only part of the addresses of " + other.label + ".";
+    if (why === "some") return r + " covers only some of the address ranges behind " + other.label + ".";
+    return r + " cannot be matched to " + other.label + ": instance addresses are not in the data.";
+  }
 
   // One hop A -> B: the egress rules of A that name B, the ingress rules of B that name A, and what they share.
-  // A side that is not a group with rules (a CIDR, prefix list or outside group) imposes nothing. null when neither
-  // end is a group.
+  // A rule on a CIDR and one on IPv6 CIDR never meet. null when neither end is a group with rules.
   function hop(A, B, f, cache) {
     var key = A.id + "\n" + B.id;
     if (key in cache) return cache[key];
     var res = null;
     if (A.rules || B.rules) {
-      var eg = A.rules ? matching(A.out, B) : [{ rule: null, c: "yes", item: ALL_ITEM }];
-      var ing = B.rules ? matching(B.in, A) : [{ rule: null, c: "yes", item: ALL_ITEM }];
-      var pairs = [];
+      var eg = side(A, "out", B), ing = side(B, "in", A);
+      var pairs = [], famClash = false;
       eg.forEach(function (e) {
         ing.forEach(function (i) {
           var it = intersect(e.item, i.item);
-          if (it) pairs.push({ item: it, e: e.rule, i: i.rule, ec: e.c, ic: i.c, c: e.c === "yes" && i.c === "yes" ? "yes" : "maybe" });
+          if (!it) return;
+          var fe = famOf(e.rule), fi = famOf(i.rule);
+          if (fe && fi && fe !== fi) { famClash = true; return; }
+          pairs.push({ item: it, e: e, i: i, c: e.c === "yes" && i.c === "yes" ? "yes" : "maybe" });
         });
       });
       var entries = [];
@@ -946,15 +1001,16 @@
       res = {
         from: A, to: B,
         status: sure.length ? "yes" : (entries.length ? "maybe" : "blocked"),
-        egressOk: eg.length > 0, ingressOk: ing.length > 0, overlap: pairs.length > 0,
+        egressOk: eg.length > 0, ingressOk: ing.length > 0, overlap: pairs.length > 0, famClash: famClash,
+        named: eg.concat(ing).some(function (x) { return x.rule && x.rule.kind === "group"; }),
         egressItems: eg.map(function (e) { return e.item; }), ingressItems: ing.map(function (i) { return i.item; }),
         items: used.map(function (p) { return p.item; }),
-        egress: uniq(used.map(function (p) { return p.e; })), ingress: uniq(used.map(function (p) { return p.i; })),
+        egress: uniq(used.map(function (p) { return p.e.rule; })), ingress: uniq(used.map(function (p) { return p.i.rule; })),
         reasons: []
       };
       used.forEach(function (p) {
-        if (p.ec === "maybe" && p.e) res.reasons.push("Egress " + ruleText(p.e) + " cannot be matched to " + B.label + ": instance addresses are not in the data.");
-        if (p.ic === "maybe" && p.i) res.reasons.push("Ingress " + ruleText(p.i) + " cannot be matched to " + A.label + ": instance addresses are not in the data.");
+        if (p.e.c === "maybe") res.reasons.push(reasonText("out", p.e.rule, p.e.why, A, B));
+        if (p.i.c === "maybe") res.reasons.push(reasonText("in", p.i.rule, p.i.why, B, A));
       });
       res.reasons = uniq(res.reasons);
     }
@@ -966,46 +1022,81 @@
     list.forEach(function (x) { if (x && out.indexOf(x) === -1) out.push(x); });
     return out;
   }
+  function accepted(h, allowMaybe) { return !!h && (h.status === "yes" || (allowMaybe && h.status === "maybe")); }
 
-  // Breadth-first over the groups. Only groups carry traffic onward: an endpoint is the first node or the last.
+  // Breadth-first over the groups. Only groups with rules carry traffic onward: an endpoint is the first node or the last.
   function search(from, to, f, allowMaybe, cache) {
     var dist = {}, prev = {}, queue = [from];
     dist[from.id] = 0;
     for (var i = 0; i < queue.length && !(to.id in dist); i++) {
       var X = queue[i];
-      var candidates = X.rules ? uniq((ingressByPeer[X.id] || []).concat(ingressOpen)) : groupList;
+      var candidates = X.type === "group" ? uniq((ingressByPeer[X.id] || []).concat(ingressOpen)) : groupList;
       if (candidates.indexOf(to) === -1) candidates = candidates.concat([to]);
       candidates.forEach(function (Y) {
         if (Y.id in dist || Y === X) return;
         var h = hop(X, Y, f, cache);
-        if (!h || (h.status !== "yes" && !(allowMaybe && h.status === "maybe"))) return;
+        if (!accepted(h, allowMaybe)) return;
         dist[Y.id] = dist[X.id] + 1;
         prev[Y.id] = h;
         queue.push(Y);
       });
     }
-    if (!(to.id in dist)) return { dist: dist };
+    if (!(to.id in dist)) return null;
     var hops = [];
     for (var at = to.id; at !== from.id; at = prev[at].from.id) hops.unshift(prev[at]);
-    return { dist: dist, hops: hops };
+    return hops;
   }
-  // The verdict: reachable (every hop certain), possible (some hop depends on addresses the data lacks) or blocked,
-  // with the blocked hop nearest to the target that has the most going for it.
+  // When nothing gets through: the path with the fewest blocked hops (a blocked hop is one where a rule on at least
+  // one side names the other end), so the report names the hop that actually stops the traffic.
+  var BLOCKED_COST = 1000;
+  function closest(from, to, f, cache) {
+    var cost = {}, prev = {}, done = {}, open = [from];
+    cost[from.id] = 0;
+    while (open.length) {
+      var best = 0;
+      open.forEach(function (n, k) { if (cost[n.id] < cost[open[best].id]) best = k; });
+      var X = open.splice(best, 1)[0];
+      if (done[X.id]) continue;
+      done[X.id] = true;
+      if (X === to) break;
+      var candidates = X.type === "group"
+        ? uniq((ingressByPeer[X.id] || []).concat(ingressOpen, X.out.filter(function (r) { return r.kind === "group" && nodeInfo[r.peer]; }).map(function (r) { return nodeInfo[r.peer]; })))
+        : groupList;
+      if (candidates.indexOf(to) === -1) candidates = candidates.concat([to]);
+      candidates.forEach(function (Y) {
+        if (done[Y.id] || Y === X || (Y !== to && Y.type !== "group")) return;
+        var h = hop(X, Y, f, cache);
+        if (!h) return;
+        var step = accepted(h, true) ? 1 : (h.named || (h.egressOk && h.ingressOk) ? BLOCKED_COST : 0);
+        if (!step) return;
+        if (!(Y.id in cost) || cost[X.id] + step < cost[Y.id]) {
+          cost[Y.id] = cost[X.id] + step;
+          prev[Y.id] = h;
+          open.push(Y);
+        }
+      });
+    }
+    if (!(to.id in cost)) return null;
+    var hops = [];
+    for (var at = to.id; at !== from.id; at = prev[at].from.id) hops.unshift(prev[at]);
+    return hops;
+  }
+  // The verdict: reachable (every hop certain), possible (some hop depends on what the data cannot tell) or blocked,
+  // with the hop that stops the traffic on the closest path.
   function analyse(from, to, f) {
-    var cache = {};
-    var sure = search(from, to, f, false, cache);
-    if (sure.hops) return { verdict: "reachable", hops: sure.hops };
-    var maybe = search(from, to, f, true, cache);
-    if (maybe.hops) return { verdict: "possible", hops: maybe.hops };
-    var best = null;
-    Object.keys(maybe.dist).forEach(function (id) {
-      var X = nodeInfo[id];
-      if (X === to || (!X.rules && !to.rules)) return;
-      var h = hop(X, to, f, cache);
-      var score = (h.egressOk ? 1 : 0) + (h.ingressOk ? 1 : 0) + (h.overlap ? 1 : 0);
-      if (!best || score > best.score || (score === best.score && maybe.dist[id] < best.dist)) best = { hop: h, score: score, dist: maybe.dist[id] };
-    });
-    return { verdict: "blocked", blocked: best && best.hop, reach: best && best.dist, filtered: !!f };
+    var cache = {}, hops;
+    if (from === to) {
+      var self = hop(from, from, f, cache);
+      if (accepted(self, true)) return { verdict: self.status === "yes" ? "reachable" : "possible", hops: [self] };
+      return { verdict: "blocked", blocked: self, reach: 0 };
+    }
+    if ((hops = search(from, to, f, false, cache))) return { verdict: "reachable", hops: hops };
+    if ((hops = search(from, to, f, true, cache))) return { verdict: "possible", hops: hops };
+    hops = closest(from, to, f, cache);
+    if (!hops) return { verdict: "blocked", blocked: null };
+    var k = 0;
+    while (k < hops.length && accepted(hops[k], true)) k++;
+    return { verdict: "blocked", blocked: hops[k], reach: k };
   }
 
   function portNote(f) { return f ? " on port " + f.text : ""; }
@@ -1023,6 +1114,7 @@
     });
     return ul;
   }
+  var NOT_CHECKED = "Security groups only: network ACLs, route tables, peering and gateways are not checked.";
   function showPathResult(res, f) {
     details.textContent = "";
     var n = res.hops.length, first = res.hops[0].from, last = res.hops[n - 1].to;
@@ -1030,7 +1122,7 @@
     if (res.verdict === "reachable") {
       details.appendChild(el("p", "Reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": every hop is allowed by both the egress rules of its source and the ingress rules of its target."));
     } else {
-      details.appendChild(el("p", "Possibly reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": at least one hop depends on a CIDR or prefix list that cannot be matched to a group.", "risky"));
+      details.appendChild(el("p", "Possibly reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": at least one hop depends on something the data cannot tell.", "risky"));
     }
     res.hops.forEach(function (h, i) {
       details.appendChild(el("h3", "Hop " + (i + 1) + ": " + h.from.label + " -> " + h.to.label + (h.status === "maybe" ? " (possible)" : "")));
@@ -1040,21 +1132,22 @@
       h.reasons.forEach(function (r) { details.appendChild(el("p", r, "muted")); });
     });
     details.appendChild(el("p", f ? "Every hop allows port " + f.text + "." : "Ports are listed per hop; the ports open along the whole path are not computed. Enter a port to ask about one.", "muted"));
-    details.appendChild(el("p", "Security groups only: network ACLs, route tables, peering and gateways are not checked.", "muted"));
+    details.appendChild(el("p", NOT_CHECKED, "muted"));
   }
   function showBlocked(from, to, res, f) {
     var lines = [{ text: from.label + " cannot reach " + to.label + portNote(f) + "." }];
     var h = res.blocked;
     if (!h) {
-      lines.push({ text: "Neither end is a security group, so no rule relates them.", cls: "muted" });
+      lines.push({ text: "No rule on either side names the other, so nothing connects them.", cls: "muted" });
     } else {
       lines.push({ text: "Nearest blocked hop: " + h.from.label + " -> " + h.to.label + (res.reach ? " (" + h.from.label + " is reachable from " + from.label + " in " + res.reach + (res.reach === 1 ? " hop)." : " hops).") : ".") });
       if (!h.egressOk) lines.push({ text: h.from.label + " has no egress rule that allows " + h.to.label + ". The missing side is the egress of " + h.from.label + "." });
       if (!h.ingressOk) lines.push({ text: h.to.label + " has no ingress rule that allows " + h.from.label + ". The missing side is the ingress of " + h.to.label + "." });
-      if (h.egressOk && h.ingressOk && !h.overlap) lines.push({ text: "Egress on " + h.from.label + " allows " + itemsText(h.egressItems) + " and ingress on " + h.to.label + " allows " + itemsText(h.ingressItems) + ": nothing in common." });
+      if (h.egressOk && h.ingressOk && !h.overlap && h.famClash) lines.push({ text: "The egress rules of " + h.from.label + " and the ingress rules of " + h.to.label + " cover different address families (IPv4 on one side, IPv6 on the other), so no address satisfies both." });
+      else if (h.egressOk && h.ingressOk && !h.overlap) lines.push({ text: "Egress on " + h.from.label + " allows " + itemsText(h.egressItems) + " and ingress on " + h.to.label + " allows " + itemsText(h.ingressItems) + ": nothing in common." });
       if (h.overlap && f) lines.push({ text: "Both sides agree on some traffic, but not on port " + f.text + "." });
     }
-    lines.push({ text: "Security groups only: network ACLs, route tables, peering and gateways are not checked.", cls: "muted" });
+    lines.push({ text: NOT_CHECKED, cls: "muted" });
     showPathMessage("No path", lines);
   }
   function runPath() {
@@ -1073,14 +1166,14 @@
     }
     var f = parsePortFilter(pathPort.value);
     if (f && f.bad) {
-      showPathMessage("Unrecognised port", [{ text: "Use a port such as 443, 443/udp or 1000-2000, or icmp, icmp 8, proto 50 or all.", cls: "muted" }]);
+      showPathMessage("Unrecognised port", [{ text: "Use a port such as 443, 443/udp or 1000-2000, or icmp, icmp 8 or proto 50.", cls: "muted" }]);
       return;
     }
     var from = nodeInfo[a.id], to = nodeInfo[b.id];
     shownId = null;
-    if (from === to) {
+    if (from === to && from.type !== "group") {
       clearPath(true);
-      showPathMessage("Same group", [{ text: "The source and the target are the same group.", cls: "muted" }]);
+      showPathMessage("Same endpoint", [{ text: "The source and the target are the same address range; no security group rule is involved.", cls: "muted" }]);
       return;
     }
     var res = analyse(from, to, f);

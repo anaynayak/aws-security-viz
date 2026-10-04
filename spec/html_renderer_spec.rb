@@ -405,15 +405,16 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["dialogs"]).to be_empty
       end
 
-      def render_fixture(**opts)
-        AwsSecurityViz::VisualizeAws.new(config, {source_file: fixture, renderer: "html"}.merge(opts)).unleash("report.html")
+      def render_fixture(source: fixture, config: self.config, **opts)
+        AwsSecurityViz::VisualizeAws.new(config, {source_file: source, renderer: "html"}.merge(opts)).unleash("report.html")
         "report.html"
       end
 
-      def answers(queries)
-        file = render_fixture
-        path_report(file, queries)["queries"]
+      def answers(queries, **render_options)
+        path_report(render_fixture(**render_options), queries)["queries"]
       end
+
+      let(:adversarial) { File.expand_path("fixtures/path_adversarial.json", __dir__) }
 
       it "finds a path, draws it and lists each hop with its egress and ingress rules, ports and descriptions" do
         r = path_report(render_fixture, [{from: "0.0.0.0/0", to: "db"}])
@@ -468,12 +469,12 @@ describe AwsSecurityViz::Renderer::Html do
         expect(q[0]["pathNodes"]).to eq(%w[10.1.0.0/16 sg-g])
         expect(q[0]["pathEdges"]).to eq(%w[0.0.0.0/0-sg-g])
         expect(q[0]["pathVia"]).to eq(%w[0.0.0.0/0])
-        expect(q[1]["details"]).to include("No path", "no ingress rule that allows 0.0.0.0/0")
+        # Only part of 0.0.0.0/0 is inside the 10.1.0.0/16 the group allows.
+        expect(q[1]["details"]).to include("Possibly reachable in 1 hop", "covers only part of the addresses of 0.0.0.0/0")
         expect(q[2]["details"]).to include("Reachable in 1 hop", "443/tcp from 2001:db8::/32")
         expect(q[3]["details"]).to include("No path")
         expect(q[4]["details"]).to include("Reachable in 1 hop", "443/tcp from pl-123")
-        # A CIDR is no prefix list, so there is no direct hop; h-internal may carry it there, which only might hold.
-        expect(q[5]["details"]).to include("Possibly reachable in 2 hops", "Hop 1: 10.1.0.0/16 -> h-internal", "Hop 2: h-internal -> pl-ingress")
+        expect(q[5]["details"]).to include("Possibly reachable in 1 hop", "contents of the prefix list are not in the data")
         expect(q[6]["details"]).to include("Reachable in 1 hop", "all to 0.0.0.0/0")
       end
 
@@ -499,10 +500,63 @@ describe AwsSecurityViz::Renderer::Html do
         end
       end
 
-      it "answers X to X as the same group" do
+      it "answers X to X from the group's own rules" do
         q = answers([{from: "s-self", to: "s-self"}])
-        expect(q[0]["details"]).to include("Same group")
-        expect(q[0]["pathEdges"]).to be_empty
+        expect(q[0]["details"]).to include("Nearest blocked hop: s-self -> s-self", "missing side is the egress of s-self")
+        q = answers([{from: "self", to: "self"}, {from: "lonely", to: "lonely"}], source: adversarial)
+        expect(q[0]["details"]).to include("Reachable in 1 hop", "Hop 1: self -> self", "Allowed ports: 22/tcp")
+        expect(q[1]["details"]).to include("missing side is the ingress of lonely")
+      end
+
+      it "treats 0.0.0.0/0 as covering prefix lists, and keeps IPv4 and IPv6 rules apart" do
+        q = answers([{from: "pl-123", to: "anydst"}, {from: "def", to: "pl-123"}, {from: "famsrc", to: "famdst"},
+          {from: "v6src", to: "v6dst"}], source: adversarial)
+        expect(q[0]["details"]).to include("Reachable in 1 hop", "80/tcp from 0.0.0.0/0")
+        expect(q[1]["details"]).to include("Reachable in 1 hop", "all to 0.0.0.0/0")
+        expect(q[2]["details"]).to include("No path", "different address families")
+        expect(q[3]["details"]).to include("Possibly reachable", "applies only if v6dst has IPv6 addresses")
+        expect(q[3]["details"]).not_to include("Reachable in")
+      end
+
+      it "keeps the CIDRs behind a name given in the :groups config" do
+        groups = AwsSecurityViz::AwsConfig.new(groups: {"10.0.5.0/24" => "Office", "0.0.0.0/0" => "Internet"})
+        q = answers([{from: "Office", to: "cdst"}, {from: "def", to: "Office"}, {from: "Internet", to: "anydst"}],
+          source: adversarial, config: groups)
+        expect(q[0]["details"]).to include("Reachable in 1 hop", "22/tcp from 10.0.0.0/16")
+        expect(q[1]["details"]).to include("Reachable in 1 hop")
+        expect(q[2]["details"]).to include("Reachable in 1 hop")
+      end
+
+      it "calls partly covered ranges and prefix list contents possible, and evaluates such hops directly" do
+        q = answers([{from: "10.0.0.0/8", to: "cdst"}, {from: "10.1.0.0/16", to: "pldst"}, {from: "egnarrow", to: "10.0.0.0/8"},
+          {from: "egnarrow", to: "10.0.5.7/32"}], source: adversarial)
+        expect(q[0]["details"]).to include("Possibly reachable in 1 hop", "covers only part of the addresses of 10.0.0.0/8")
+        expect(q[1]["details"]).to include("Possibly reachable in 1 hop", "contents of the prefix list are not in the data")
+        expect(q[2]["details"]).to include("Possibly reachable in 1 hop", "covers only part of the addresses of 10.0.0.0/8")
+        expect(q[3]["details"]).to include("Reachable in 1 hop")
+      end
+
+      it "treats rules that are not in the input as unknown, never as an allow or a deny" do
+        q = answers([{from: "sg-ext999", to: "extdst"}, {from: "nokey", to: "nokeydst"}, {from: "noeg", to: "ionly"}], source: adversarial)
+        expect(q[0]["details"]).to include("Possibly reachable in 1 hop", "egress rules of sg-ext999 are not in the input")
+        expect(q[1]["details"]).to include("Possibly reachable in 1 hop", "egress rules of nokey are not in the input")
+        expect(q[2]["details"]).to include("No path", "noeg has no egress rule")
+      end
+
+      it "names the blocked hop on the closest path, not the hop between the ends" do
+        q = answers([{from: "ma", to: "md"}], source: adversarial)
+        expect(q[0]["details"]).to include("Nearest blocked hop: mb -> mc", "mb is reachable from ma in 1 hop", "nothing in common")
+        expect(q[0]["details"]).not_to include("ma -> md")
+      end
+
+      it "rejects a port filter that is not a port, a range, icmp or a protocol" do
+        q = answers([{from: "web", to: "db", port: "all"}, {from: "web", to: "db", port: "9-1"}])
+        expect(q.map { |x| x["details"] }).to all(include("Unrecognised port"))
+      end
+
+      it "offers CIDRs that only egress rules name, even when egress edges are not drawn" do
+        q = answers([{from: "egnarrow", to: "10.0.5.7/32"}], source: adversarial, config: AwsSecurityViz::AwsConfig.new(egress: false))
+        expect(q[0]["details"]).to include("Reachable in 1 hop", "all to 10.0.0.0/16")
       end
 
       it "runs from the Find button" do

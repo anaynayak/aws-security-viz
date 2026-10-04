@@ -65,21 +65,34 @@ aws_security_viz -o security_groups.json -f viz.html
       icmpv6 by type and code, other protocols by number), `all` matches everything, and port ranges are intersected.
       A rule on one side only is not a hop. When there is no path, the message names the nearest blocked hop and the
       missing side, or says that the two sides share no traffic.
-   2. A rule names a group by id (a rule on the group itself, a self reference, is fine). A rule on `0.0.0.0/0` or
-      `::/0` allows any address. An egress rule on any other CIDR or on a prefix list cannot be tied to a group,
-      because the data holds no instance addresses; the same goes for an ingress rule on such a CIDR or prefix list
-      when the other end is a group. Such a hop is "possible": the answer then reads "Possibly reachable", not
-      "Reachable", and the panel gives the reason for each such rule.
+   2. A rule names a group by id (a rule on the group itself, a self reference, is fine). A rule on `0.0.0.0/0`
+      allows any IPv4 address, so it covers every group. Anything else about addresses is not in the data (instance
+      addresses, what a prefix list holds, whether instances have IPv6), so a hop that rests on it is "possible":
+      an egress or ingress rule on another CIDR or on a prefix list when the other end is a group, a rule on `::/0`
+      or another IPv6 CIDR when the other end is a group (it holds only if the instances have IPv6 addresses), and a
+      CIDR that covers only part of the other end's range (10.0.0.0/8 against a rule on 10.0.0.0/16). The answer then
+      reads "Possibly reachable", not "Reachable", and the panel gives the reason for each such rule. A hop also
+      needs both sides in a common address family: an egress rule on `0.0.0.0/0` and an ingress rule on `::/0` never
+      meet, and the message says so. Group references are the same in both families.
    3. A CIDR, IPv6 range or prefix list is an endpoint, never a stop along the way. A CIDR source reaches a group when
-      one of its ingress CIDRs contains it (10.1.0.0/16 is inside 0.0.0.0/0), IPv4 and IPv6 alike. A prefix list
-      source matches only ingress rules on the same prefix list id. A group reaches a CIDR target when one of its egress
-      CIDRs contains it. A group that allows `0.0.0.0/0` or `::/0` is reachable from the internet.
+      one of the group's ingress CIDRs contains it (10.1.0.0/16 is inside 0.0.0.0/0), IPv4 and IPv6 alike, and a group
+      reaches a CIDR target when one of its egress CIDRs contains it. A prefix list matches a rule on the same prefix
+      list id, a rule on `0.0.0.0/0`, and is possible against any other CIDR rule (the list may hold addresses inside
+      it). A name given to a CIDR in the `groups` setting stands for the CIDRs it covers: the answer is "reachable"
+      only when all of them are matched. CIDRs that only egress rules name can be picked as targets even when egress
+      edges are not drawn (`--no-egress`).
    4. The port box is optional: `443` (tcp and udp), `443/udp`, `1000-2000`, `icmp`, `icmp 8`, `proto 50` or `all`.
-      With it, every hop must allow the port. Without it the ports are listed per hop and the ports open along the
+      With it, every hop must allow the port; anything else in the box is rejected. Without it the ports are listed per hop and the ports open along the
       whole path are not computed.
    5. The panel lists each hop with the egress rules on its source, the ingress rules on its target, the allowed
       ports and the rule descriptions.
-   6. Source and target the same group answers "Same group".
+   6. A group as both source and target is answered from its own rules: it needs an egress rule and an ingress rule
+      that both allow itself, such as a self-referencing ingress rule together with the default egress.
+   7. Rules that are not in the input are unknown, never an allow or a deny. A group the input only mentions (another
+      account, say) has unknown rules, and so has a group whose input has no `IpPermissions` or `IpPermissionsEgress`
+      key at all (an empty list denies everything and is not unknown). A hop that depends on such rules is "possible".
+      When nothing gets through, the report names the blocked hop on the path with the fewest blocked hops, which is
+      not always the hop between the two ends.
 
    Security groups are only part of the picture, so the answer does not take into account network ACLs, route tables,
    instance addresses, VPC peering or transit gateway routing, or anything else outside the security group rules. A
