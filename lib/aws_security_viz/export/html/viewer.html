@@ -730,20 +730,28 @@
 
   var cy;
 
-  // The legend sits over the bottom left of the canvas, so a fit leaves a strip of that height free along the bottom.
-  function legendStrip() {
-    var legend = document.getElementById("legend"), h = document.getElementById("cy").clientHeight;
-    return Math.min(legend.offsetHeight + 12, Math.round(h * 0.4));
+  // The legend sits over the bottom left of the canvas, so a fit uses the larger of two free areas: the full width above the
+  // legend, or the full height beside it.
+  function legendBox() {
+    var legend = document.getElementById("legend"), box = document.getElementById("cy").getBoundingClientRect(), r = legend.getBoundingClientRect();
+    return { w: r.right - box.left + 12, h: box.bottom - r.top + 12 };
   }
-  // Fit `eles` (everything when empty) into the canvas above the legend, at most at zoom `maxZoom`.
+  // Fit `eles` (everything when empty) into the canvas clear of the legend, at most at zoom `maxZoom`.
   function fitView(eles, pad, maxZoom) {
     var set = eles && eles.nonempty() ? eles : cy.elements();
     if (set.empty()) return;
-    var bb = set.boundingBox(), w = cy.width(), h = cy.height() - legendStrip();
-    var zoom = Math.min((w - 2 * pad) / Math.max(bb.w, 1), (h - 2 * pad) / Math.max(bb.h, 1), maxZoom || Infinity);
-    zoom = Math.max(cy.minZoom(), Math.min(cy.maxZoom(), zoom));
-    cy.viewport({ zoom: zoom, pan: { x: (w - zoom * (bb.x1 + bb.x2)) / 2, y: (h - zoom * (bb.y1 + bb.y2)) / 2 } });
+    var bb = set.boundingBox(), w = cy.width(), h = cy.height(), lg = legendBox();
+    var areas = [{ x: 0, y: 0, w: w, h: Math.max(h - lg.h, h * 0.4) }, { x: Math.min(lg.w, w * 0.6), y: 0, w: w - Math.min(lg.w, w * 0.6), h: h }];
+    var best = null;
+    areas.forEach(function (a) {
+      var z = Math.min((a.w - 2 * pad) / Math.max(bb.w, 1), (a.h - 2 * pad) / Math.max(bb.h, 1), maxZoom || Infinity);
+      if (!best || z > best.z) best = { z: z, a: a };
+    });
+    var zoom = Math.max(cy.minZoom(), Math.min(cy.maxZoom(), best.z)), a = best.a;
+    cy.viewport({ zoom: zoom, pan: { x: a.x + (a.w - zoom * (bb.x1 + bb.x2)) / 2, y: a.y + (a.h - zoom * (bb.y1 + bb.y2)) / 2 } });
   }
+  // Opening or closing the legend frees or takes room: fit again, unless the user has moved the view.
+  document.getElementById("legend").addEventListener("toggle", function () { if (cy && !userMoved) fitView(undefined, 30); });
 
   // Light (Blueprint) or dark (Console): the user's choice from the toggle, else the browser's.
   var themeChoice = null;
@@ -1200,6 +1208,7 @@
       webglThreshold: WEBGL_THRESHOLD,
       get renderer() { return webglOn ? "webgl" : "canvas"; },
       get theme() { return themeName(); },
+      fit: fitView,
       palette: palette
     };
   }

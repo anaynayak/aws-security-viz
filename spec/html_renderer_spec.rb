@@ -526,6 +526,10 @@ describe AwsSecurityViz::Renderer::Html do
           expect(run["max_moved"]).to eq(0), "#{name}: nodes moved by #{run["max_moved"]}"
           expect(run["state_kept"].reject { |_, kept| kept }.keys).to be_empty, "#{name}: lost #{run["state_kept"].reject { |_, kept| kept }.keys}"
           expect(run["selection"]).to eq(["sg-0-2"])
+          tall = run["tall_fit"]
+          expect(tall["zoom"]).to be > tall["stripZoom"] * 1.2, "#{name}: a tall graph is fitted above the legend, not beside it"
+          expect(tall["clearOfLegend"]).to be(true)
+          expect(tall["onScreen"]).to be(true)
           expect(run["legend_overlap"].values.flatten).to be_empty, "#{name}: the legend covers #{run["legend_overlap"]}"
         end
         expect(r["runs"]["light-canvas"]["corner_before"]).to eq([246, 248, 251])

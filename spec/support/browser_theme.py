@@ -182,6 +182,19 @@ def run(browser, scheme, webgl):
     page.fill("#search", "")
     page.evaluate("() => { awsSecurityViz.cy.nodes().removeClass('match dim'); }")
     page.click("#reset")
+    # A tall graph is fitted beside the legend, not in the strip above it.
+    res["tall_fit"] = page.evaluate("""() => {
+      const cy = awsSecurityViz.cy, before = {zoom: cy.zoom(), pan: Object.assign({}, cy.pan())};
+      const probe = cy.add([{group: 'nodes', data: {id: 'tall-a', w: 10, h: 10}, position: {x: 0, y: 0}}, {group: 'nodes', data: {id: 'tall-b', w: 10, h: 10}, position: {x: 0, y: 1500}}]);
+      awsSecurityViz.fit(probe, 30);
+      const l = document.getElementById('legend').getBoundingClientRect(), c = document.getElementById('cy').getBoundingClientRect();
+      const b = probe.renderedBoundingBox({includeLabels: false, includeOverlays: false});
+      const strip = Math.min(c.bottom - l.top + 12, cy.height());
+      const res = {zoom: cy.zoom(), stripZoom: (cy.height() - strip - 60) / 1500, clearOfLegend: b.x1 > l.right - c.left || b.y2 < l.top - c.top, onScreen: b.y1 >= 0 && b.y2 <= cy.height()};
+      cy.remove(probe);
+      cy.viewport(before);
+      return res;
+    }""")
     # Put the viewer in a state worth keeping: a selection, a match, a collapsed VPC, a search, Risky only, a moved view.
     page.evaluate("""() => { const cy = awsSecurityViz.cy; const g = cy.getElementById('sg-0-2'); g.select(); g.emit('tap'); }""")
     page.fill("#search", "svc-0-3")
