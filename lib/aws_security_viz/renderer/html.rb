@@ -11,12 +11,14 @@ module AwsSecurityViz
       TEMPLATE = File.expand_path("../export/html/viewer.html", __dir__)
       VENDOR = File.expand_path("../vendor", __dir__)
       CYTOSCAPE = File.join(VENDOR, "cytoscape/cytoscape.min.js")
-      # Load order matters: fcose needs cose-base, which needs layout-base.
+      # Load order matters: fcose needs cose-base, which needs layout-base; cytoscape-dagre needs dagre.
       LIBRARIES = {
         "CYTOSCAPE" => CYTOSCAPE,
         "LAYOUT_BASE" => File.join(VENDOR, "layout-base/layout-base.js"),
         "COSE_BASE" => File.join(VENDOR, "cose-base/cose-base.js"),
-        "FCOSE" => File.join(VENDOR, "fcose/cytoscape-fcose.js")
+        "FCOSE" => File.join(VENDOR, "fcose/cytoscape-fcose.js"),
+        "DAGRE" => File.join(VENDOR, "dagre/dagre.min.js"),
+        "CYTOSCAPE_DAGRE" => File.join(VENDOR, "cytoscape-dagre/cytoscape-dagre.js")
       }.freeze
 
       def initialize(file_name, config)

@@ -36,7 +36,13 @@ RSpec.describe "aws_security_viz.gemspec" do
       "lib/aws_security_viz/vendor/cose-base/cose-base.js",
       "lib/aws_security_viz/vendor/cose-base/LICENSE",
       "lib/aws_security_viz/vendor/layout-base/layout-base.js",
-      "lib/aws_security_viz/vendor/layout-base/LICENSE"
+      "lib/aws_security_viz/vendor/layout-base/LICENSE",
+      "lib/aws_security_viz/vendor/dagre/dagre.min.js",
+      "lib/aws_security_viz/vendor/dagre/LICENSE",
+      "lib/aws_security_viz/vendor/dagre/README.md",
+      "lib/aws_security_viz/vendor/cytoscape-dagre/cytoscape-dagre.js",
+      "lib/aws_security_viz/vendor/cytoscape-dagre/LICENSE",
+      "lib/aws_security_viz/vendor/cytoscape-dagre/README.md"
     )
   end
 

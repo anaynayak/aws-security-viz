@@ -42,4 +42,4 @@ The sample [security_groups.json](assets/security_groups.json) needs no AWS acce
 3. [Credentials and IAM](credentials-and-iam.md): how credentials are found and the minimal IAM policy.
 4. [Security](security.md): what leaves your machine and how to verify a release.
 
-aws-security-viz is MIT licensed. The HTML viewer inlines vendored copies of Cytoscape.js, cytoscape-fcose, cose-base and layout-base, which are also MIT licensed; their notices ship inside the gem under `lib/aws_security_viz/vendor/`.
+aws-security-viz is MIT licensed. The HTML viewer inlines vendored copies of Cytoscape.js, cytoscape-fcose, cose-base, layout-base, dagre and cytoscape-dagre, which are also MIT licensed; their notices ship inside the gem under `lib/aws_security_viz/vendor/`.

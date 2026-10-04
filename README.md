@@ -57,4 +57,4 @@ Also: [SECURITY.md](SECURITY.md), [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md
 
 ## LICENSE
 
-MIT, see [LICENSE.md](LICENSE.md). The HTML viewer inlines vendored copies of Cytoscape.js, cytoscape-fcose, cose-base and layout-base, which are also MIT licensed; their notices are under [lib/aws_security_viz/vendor/](lib/aws_security_viz/vendor/) and ship inside the gem.
+MIT, see [LICENSE.md](LICENSE.md). The HTML viewer inlines vendored copies of Cytoscape.js, cytoscape-fcose, cose-base, layout-base, dagre and cytoscape-dagre, which are also MIT licensed; their notices are under [lib/aws_security_viz/vendor/](lib/aws_security_viz/vendor/) and ship inside the gem.

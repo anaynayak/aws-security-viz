@@ -12,7 +12,7 @@ describe AwsSecurityViz::Renderer::Html do
   let(:config) { AwsSecurityViz::AwsConfig.new({}) }
   let(:vendor) { File.expand_path("../lib/aws_security_viz/vendor/cytoscape", __dir__) }
 
-  let(:fcose_files) { %w[layout-base/layout-base.js cose-base/cose-base.js fcose/cytoscape-fcose.js] }
+  let(:layout_files) { %w[layout-base/layout-base.js cose-base/cose-base.js fcose/cytoscape-fcose.js dagre/dagre.min.js cytoscape-dagre/cytoscape-dagre.js] }
 
   around { |ex| Dir.mktmpdir { |dir| Dir.chdir(dir) { ex.run } } }
 
@@ -33,10 +33,10 @@ describe AwsSecurityViz::Renderer::Html do
     html = render
     expect(Dir.children(".")).to eq(["report.html"])
     expect(html).to include(File.read(File.join(vendor, "cytoscape.min.js")))
-    fcose_files.each { |file| expect(html).to include(File.read(File.join(vendor, "..", file))) }
+    layout_files.each { |file| expect(html).to include(File.read(File.join(vendor, "..", file))) }
     expect(html).not_to match(/<script[^>]*\ssrc=/i)
     expect(html).not_to match(/<link[^>]*href=/i)
-    expect(html).not_to include("/*DATA*/", "/*CYTOSCAPE*/")
+    expect(html).not_to include("/*DATA*/", "/*CYTOSCAPE*/", "/*DAGRE*/", "/*CYTOSCAPE_DAGRE*/")
   end
 
   it "cannot be broken out of by data: markup characters never appear raw in the data block" do
@@ -66,11 +66,13 @@ describe AwsSecurityViz::Renderer::Html do
     expect(source).to include("emit('tap'); return null")
   end
 
-  it "keeps the vendored fcose layout and its dependencies pinned, licensed and documented" do
+  it "keeps the vendored layouts (fcose, dagre) and their dependencies pinned, licensed and documented" do
     {
       "fcose/cytoscape-fcose.js" => ["2.2.0", "cytoscape-fcose-2.2.0.tgz"],
       "cose-base/cose-base.js" => ["2.2.0", "cose-base-2.2.0.tgz"],
-      "layout-base/layout-base.js" => ["2.0.1", "layout-base-2.0.1.tgz"]
+      "layout-base/layout-base.js" => ["2.0.1", "layout-base-2.0.1.tgz"],
+      "dagre/dagre.min.js" => ["0.8.5", "dagre-0.8.5.tgz"],
+      "cytoscape-dagre/cytoscape-dagre.js" => ["2.5.0", "cytoscape-dagre-2.5.0.tgz"]
     }.each do |file, (version, tarball)|
       dir = File.join(vendor, "..", File.dirname(file))
       readme = File.read(File.join(dir, "README.md"))
