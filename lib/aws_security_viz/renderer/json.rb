@@ -22,7 +22,7 @@ module AwsSecurityViz
       end
 
       def output
-        IO.write(@file_name, {nodes: @nodes, edges: @edges}.to_json)
+        File.write(@file_name, {nodes: @nodes, edges: @edges}.to_json)
       end
     end
   end

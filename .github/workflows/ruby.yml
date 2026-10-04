@@ -43,6 +43,8 @@ jobs:
         run: bundle exec standardrb
       - name: Run tests
         run: bundle exec rspec
+        env:
+          COVERAGE: "1"
 
   docker:
     name: docker image
