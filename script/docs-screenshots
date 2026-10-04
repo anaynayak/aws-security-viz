@@ -1,7 +1,7 @@
-#!/usr/bin/env -S uv run --with playwright python3
+#!/usr/bin/env -S uv run --group browser python3
 """Regenerate the viewer screenshots and the social card in docs/assets from spec/integration/dummy.json.
 
-Needs headless Chromium: uv run --with playwright python3 -m playwright install chromium
+Needs headless Chromium: uv run --group browser playwright install chromium
 Usage: script/docs-screenshots
 """
 import base64

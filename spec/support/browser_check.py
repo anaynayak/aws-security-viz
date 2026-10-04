@@ -1,5 +1,5 @@
 # Drives a generated .html report in headless Chromium and prints a JSON summary.
-# Run: uv run --with playwright python spec/support/browser_check.py REPORT.html
+# Run: uv run --group browser python spec/support/browser_check.py REPORT.html
 import json
 import sys
 
