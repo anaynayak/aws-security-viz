@@ -25,7 +25,9 @@ No. It reads the live EC2 API or the JSON from `aws ec2 describe-security-groups
 
 ## How large a graph is practical?
 
-The HTML viewer is the format for large accounts. Mermaid output warns above 500 edges or 50,000 characters, and
+The HTML viewer is the format for large accounts. Graphs of more than 150 security groups open with every VPC collapsed
+into one node, and above 2,000 elements on the canvas the viewer switches to the WebGL renderer; see
+[Outputs](outputs.md#html-viewer). Mermaid output warns above 500 edges or 50,000 characters, and
 Graphviz layouts slow down as the node count grows; try `--layout sfdp` for big graphs.
 
 ## What does it show that the AWS console does not?

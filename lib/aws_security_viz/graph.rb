@@ -17,7 +17,7 @@ module AwsSecurityViz
     end
 
     def add_node(name, opts)
-      log("node: #{loggable(name)}, opts: #{@config.obfuscate? ? Obfuscation.node_opts(opts) : opts}")
+      log("node: #{loggable(name)}, opts: #{@config.obfuscate? ? Obfuscation.node_opts(opts) : opts.except(:rules, :unknown)}")
       @underlying.add_vertex(name)
       @node_properties[name] = opts
     end

@@ -1,0 +1,955 @@
+{
+  "SecurityGroups": [
+    {
+      "GroupName": "dev-alb",
+      "GroupId": "sg-dev-alb",
+      "VpcId": "vpc-dev",
+      "Description": "alb in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "public https"
+            }
+          ],
+          "Ipv6Ranges": [
+            {
+              "CidrIpv6": "::/0"
+            }
+          ],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 443,
+          "ToPort": 443
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "redirect"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 80,
+          "ToPort": 80
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-bastion",
+      "GroupId": "sg-dev-bastion",
+      "VpcId": "vpc-dev",
+      "Description": "bastion in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "ssh"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 22,
+          "ToPort": 22
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [
+            {
+              "PrefixListId": "pl-corp-vpn"
+            }
+          ],
+          "UserIdGroupPairs": [],
+          "FromPort": 22,
+          "ToPort": 22
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-shared-ci",
+              "UserId": "123456789012",
+              "Description": "deploys"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-orders-svc",
+      "GroupId": "sg-dev-orders-svc",
+      "VpcId": "vpc-dev",
+      "Description": "orders-svc in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-alb",
+              "UserId": "123456789012",
+              "Description": "from alb"
+            }
+          ],
+          "FromPort": 8080,
+          "ToPort": 8080
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-bastion",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-orders-db",
+      "GroupId": "sg-dev-orders-db",
+      "VpcId": "vpc-dev",
+      "Description": "orders-db in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-orders-svc",
+              "UserId": "123456789012",
+              "Description": "orders postgres"
+            }
+          ],
+          "FromPort": 5432,
+          "ToPort": 5432
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-payments-svc",
+      "GroupId": "sg-dev-payments-svc",
+      "VpcId": "vpc-dev",
+      "Description": "payments-svc in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-alb",
+              "UserId": "123456789012",
+              "Description": "from alb"
+            }
+          ],
+          "FromPort": 8080,
+          "ToPort": 8080
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-bastion",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-payments-db",
+      "GroupId": "sg-dev-payments-db",
+      "VpcId": "vpc-dev",
+      "Description": "payments-db in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-payments-svc",
+              "UserId": "123456789012",
+              "Description": "payments postgres"
+            }
+          ],
+          "FromPort": 5432,
+          "ToPort": 5432
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-users-svc",
+      "GroupId": "sg-dev-users-svc",
+      "VpcId": "vpc-dev",
+      "Description": "users-svc in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-alb",
+              "UserId": "123456789012",
+              "Description": "from alb"
+            }
+          ],
+          "FromPort": 8080,
+          "ToPort": 8080
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-bastion",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-users-db",
+      "GroupId": "sg-dev-users-db",
+      "VpcId": "vpc-dev",
+      "Description": "users-db in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-users-svc",
+              "UserId": "123456789012",
+              "Description": "users postgres"
+            }
+          ],
+          "FromPort": 5432,
+          "ToPort": 5432
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-redis",
+      "GroupId": "sg-dev-redis",
+      "VpcId": "vpc-dev",
+      "Description": "redis in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-orders-svc",
+              "UserId": "123456789012"
+            },
+            {
+              "GroupId": "sg-dev-payments-svc",
+              "UserId": "123456789012"
+            },
+            {
+              "GroupId": "sg-dev-users-svc",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 6379,
+          "ToPort": 6379
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "dev-monitoring",
+      "GroupId": "sg-dev-monitoring",
+      "VpcId": "vpc-dev",
+      "Description": "monitoring in dev",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "10.20.0.0/16",
+              "Description": "prometheus"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 9100,
+          "ToPort": 9100
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-alb",
+      "GroupId": "sg-prod-alb",
+      "VpcId": "vpc-prod",
+      "Description": "alb in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "public https"
+            }
+          ],
+          "Ipv6Ranges": [
+            {
+              "CidrIpv6": "::/0"
+            }
+          ],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 443,
+          "ToPort": 443
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0",
+              "Description": "redirect"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 80,
+          "ToPort": 80
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-bastion",
+      "GroupId": "sg-prod-bastion",
+      "VpcId": "vpc-prod",
+      "Description": "bastion in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "10.0.0.0/8",
+              "Description": "ssh"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 22,
+          "ToPort": 22
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [
+            {
+              "PrefixListId": "pl-corp-vpn"
+            }
+          ],
+          "UserIdGroupPairs": [],
+          "FromPort": 22,
+          "ToPort": 22
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-shared-ci",
+              "UserId": "123456789012",
+              "Description": "deploys"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-orders-svc",
+      "GroupId": "sg-prod-orders-svc",
+      "VpcId": "vpc-prod",
+      "Description": "orders-svc in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-alb",
+              "UserId": "123456789012",
+              "Description": "from alb"
+            }
+          ],
+          "FromPort": 8080,
+          "ToPort": 8080
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-bastion",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-orders-db",
+      "GroupId": "sg-prod-orders-db",
+      "VpcId": "vpc-prod",
+      "Description": "orders-db in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-orders-svc",
+              "UserId": "123456789012",
+              "Description": "orders postgres"
+            }
+          ],
+          "FromPort": 5432,
+          "ToPort": 5432
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-payments-svc",
+      "GroupId": "sg-prod-payments-svc",
+      "VpcId": "vpc-prod",
+      "Description": "payments-svc in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-alb",
+              "UserId": "123456789012",
+              "Description": "from alb"
+            }
+          ],
+          "FromPort": 8080,
+          "ToPort": 8080
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-bastion",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-payments-db",
+      "GroupId": "sg-prod-payments-db",
+      "VpcId": "vpc-prod",
+      "Description": "payments-db in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-payments-svc",
+              "UserId": "123456789012",
+              "Description": "payments postgres"
+            }
+          ],
+          "FromPort": 5432,
+          "ToPort": 5432
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-users-svc",
+      "GroupId": "sg-prod-users-svc",
+      "VpcId": "vpc-prod",
+      "Description": "users-svc in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-alb",
+              "UserId": "123456789012",
+              "Description": "from alb"
+            }
+          ],
+          "FromPort": 8080,
+          "ToPort": 8080
+        },
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-bastion",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 22,
+          "ToPort": 22
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-users-db",
+      "GroupId": "sg-prod-users-db",
+      "VpcId": "vpc-prod",
+      "Description": "users-db in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-users-svc",
+              "UserId": "123456789012",
+              "Description": "users postgres"
+            }
+          ],
+          "FromPort": 5432,
+          "ToPort": 5432
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-redis",
+      "GroupId": "sg-prod-redis",
+      "VpcId": "vpc-prod",
+      "Description": "redis in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-prod-orders-svc",
+              "UserId": "123456789012"
+            },
+            {
+              "GroupId": "sg-prod-payments-svc",
+              "UserId": "123456789012"
+            },
+            {
+              "GroupId": "sg-prod-users-svc",
+              "UserId": "123456789012"
+            }
+          ],
+          "FromPort": 6379,
+          "ToPort": 6379
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "prod-monitoring",
+      "GroupId": "sg-prod-monitoring",
+      "VpcId": "vpc-prod",
+      "Description": "monitoring in prod",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [
+            {
+              "CidrIp": "10.20.0.0/16",
+              "Description": "prometheus"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [],
+          "FromPort": 9100,
+          "ToPort": 9100
+        }
+      ],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "shared-ci-runners",
+      "GroupId": "sg-shared-ci",
+      "VpcId": "vpc-shared",
+      "IpPermissions": [],
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": []
+        }
+      ]
+    },
+    {
+      "GroupName": "shared-vault",
+      "GroupId": "sg-shared-vault",
+      "VpcId": "vpc-shared",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": [],
+          "UserIdGroupPairs": [
+            {
+              "GroupId": "sg-dev-orders-svc",
+              "UserId": "123456789012",
+              "Description": "secrets"
+            },
+            {
+              "GroupId": "sg-prod-orders-svc",
+              "UserId": "123456789012",
+              "Description": "secrets"
+            }
+          ],
+          "FromPort": 8200,
+          "ToPort": 8200
+        }
+      ],
+      "IpPermissionsEgress": []
+    }
+  ]
+}

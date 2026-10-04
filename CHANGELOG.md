@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- The HTML viewer has a layout picker: force (fcose, the default), traffic flow (layered along the rule direction with dagre, external peers in their own column), exposure rings (public peers in the centre, rings by hop distance; VPC boxes are not drawn) and grid within VPC (a row per tier); traffic flow lays each open VPC out on its own and packs the VPCs in rows. A group's panel has a Collapse button for its VPC. Switching keeps collapse state, selection, search, toggles and a shown path, on canvas and WebGL. dagre and cytoscape-dagre are vendored, pinned and checksummed
+- The HTML viewer draws the same picture every time a report is opened: layouts are seeded from the graph
+- The HTML viewer answers "can X reach Y" from the security group rules: a hop needs the source's egress and the target's ingress to allow it, with the ports both sides share (and an optional port filter); CIDR, IPv6 and prefix-list sources match by containment and are never stops along the way; a hop that rests on addresses, prefix-list contents, IPv6 presence, a partly covered range or rules that are not in the input is reported as possible; address families must agree; the blocked hop is named on the closest path; the Ingress, Egress and Risky only toggles never change the answer. The shortest path is drawn, collapsed VPCs on it are opened, and Clear path restores the previous view. The HTML data now carries each group's rules (left out under `--obfuscate`)
+- The HTML viewer switches to Cytoscape's WebGL renderer above 2,000 elements on the canvas, has a WebGL checkbox to switch it by hand, and keeps the canvas renderer where WebGL 2 is not available
+- The HTML viewer opens graphs of more than 150 security groups with every VPC collapsed into one node with merged edges; double-click, Expand all and Collapse all open them up, search expands the VPC holding a hit, and only the expanded VPC is laid out again
 - Documentation site at https://anaynayak.github.io/aws-security-viz/ (MkDocs Material, built strictly in CI and deployed from `main`); the README is now a short summary that links to it
 - `SECURITY.md`: supported versions, private vulnerability reporting, scope, disclosure timeline, data handling and release verification
 - Releases attest SLSA build provenance for the gem and the GHCR image, attach a CycloneDX SBOM and the provenance bundle (`.intoto.jsonl`) to the GitHub release, and create that release from this changelog
@@ -13,10 +18,21 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - CI builds and smoke-tests the Docker image on every pull request
 
 ### Changed
+- The HTML viewer has a new look: a light theme (Blueprint) and a dark theme (Console) that follow `prefers-color-scheme` and switch with a toolbar button without laying anything out again or losing the view, selection, collapse state, search or path; the colours, spacing and type are CSS custom properties with the system font stack, so no font is fetched. Groups, CIDRs, IPv6 ranges, prefix lists, unused groups, collapsed VPCs and groups taking risky ingress have their own shapes and borders, ingress, egress and risky edges differ in width and arrowhead as well as colour (so they stay apart under WebGL), graph colours meet WCAG AA contrast in both themes, and a legend at the bottom left (the fit leaves room for it) names every kind. The HTML data now carries each peer's kind (CIDR, IPv6, prefix list, internet), so reports made with `--obfuscate` keep the peer shapes
+- The HTML viewer's default layout lines groups up by tier inside each VPC (external -> entry -> app -> data, left to right), puts the external peers in one column and pulls components closer together; labels hide when zoomed out and edge port labels show on hover or selection only
+- The HTML viewer lays out regions and VPCs with the compound-aware fcose layout (vendored with `cose-base` and `layout-base`, pinned and checksummed) instead of Cytoscape's built-in `cose`
 - The Docker base image is pinned by digest
 - `--obfuscate` help text lists everything it hashes
 
 ### Fixed
+- The HTML viewer draws a VPC as exposed (red outline) whenever it is collapsed, including by Collapse all or a double-click, and no longer keeps that fill when it is opened
+- The HTML viewer's panel for an opened VPC has a Collapse button in every layout and mentions double-click only where it works (the exposure rings draw no VPC boxes to double-click)
+- The HTML viewer no longer opens blank or without edges: node sizes are measured up front instead of left to the renderer, so layouts no longer see zero-size nodes (this also fixes clicks missing nodes, Expand all drawing no edges and the WebGL switch showing a blank canvas)
+- Collapsed VPCs, expanded VPCs, peers and groups no longer overlap after a layout; expanding a VPC moves its neighbours instead of covering them
+- Collapsing a VPC with a real double-click no longer throws, and double-click works under WebGL
+- Switching renderer keeps the zoom and pan, releases the WebGL context, falls back to canvas if WebGL fails or is lost, and the size rule counts only visible elements and follows the filters
+- Risky edges are magenta, thicker and with a larger arrowhead so they differ from merged egress edges, and the legend describes them correctly
+- Searching for a single group no longer zooms in past 1.5x
 - With `--obfuscate`, the warnings for skipped regions and for `--show-unused` without `ec2:DescribeNetworkInterfaces` printed the raw region name
 
 ## [1.0.0] - 2026-10-03

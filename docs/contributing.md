@@ -63,7 +63,7 @@ uv run --locked --group docs mkdocs build --strict
 ```
 
 Pages live in `docs/`. The changelog and security pages include `CHANGELOG.md` and `SECURITY.md`, so edit those files,
-not the pages. The viewer screenshots and the social card are generated from `spec/integration/dummy.json` by
+not the pages. The viewer screenshots and the social card are generated from `spec/integration/docs_vpcs.json` (three VPCs, so the pictures show grouping) by
 `script/docs-screenshots` (needs `uv` and headless Chromium installed through Playwright). A spec checks that every
 command line option appears on the [Configuration](configuration.md) page.
 

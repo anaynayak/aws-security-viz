@@ -6,38 +6,192 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:">
 <title>AWS security groups</title>
 <style>
-  html, body { margin: 0; height: 100%; font: 13px/1.4 system-ui, sans-serif; color: #222; }
+  /* Design tokens. Light is the "Blueprint" theme, dark the "Console" theme. The dark set appears twice: once for
+     prefers-color-scheme when the user has not chosen, once for the manual toggle (data-theme on <html>). The --c-*
+     tokens colour the graph: the script reads them (Cytoscape cannot use CSS variables) and the legend uses them. */
+  :root {
+    color-scheme: light;
+    --bg: #f6f8fb; --chrome: #ffffff; --panel: #ffffff; --border: #d3dbe6; --hairline: #e8edf3;
+    --text: #1b2636; --muted: #55657a; --accent: #2563c9; --accent-ink: #ffffff;
+    --input-bg: #ffffff; --btn-bg: #ffffff; --chip-on: #e8f0fc; --risky: #b0102f; --group-bg: #f6f8fb;
+    --shadow: rgba(0, 0, 0, .08);
+    --grid: linear-gradient(#e3e9f2 1px, transparent 1px), linear-gradient(90deg, #e3e9f2 1px, transparent 1px);
+    --c-canvas: #f6f8fb; --c-text: #1d242e; --c-muted: #55657a; --c-label: #4a5058;
+    --c-group-fill: #ffffff; --c-group-border: #24364d;
+    --c-cidr-fill: #e8f5f2; --c-cidr-border: #12927e;
+    --c-pl-fill: #fbf1e3; --c-pl-border: #b06a00;
+    --c-unused-border: #7a8798; --c-unused-text: #55657a;
+    --c-box-fill: #2f6fd6; --c-box-opacity: 0.05; --c-box-border: #5f8fcf; --c-box-text: #2a4a75; --c-region-border: #5f8fcf;
+    --c-coll-fill: #e3ecf9; --c-coll-border: #2f6fd6;
+    --c-ingress: #2563c9; --c-egress: #6b7785; --c-risky: #d0103a; --c-risky-text: #b0102f; --c-path: #0b0f19;
+    --c-exposed-border: #d0103a; --c-exposed-fill: #fdecef; --c-accent: #2563c9; --c-dim: 0.15;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1720; --chrome: #232f3e; --panel: #16212e; --border: #33465c; --hairline: #223041;
+      --text: #e9eef4; --muted: #a3b1c2; --accent: #ff9900; --accent-ink: #16191f;
+      --input-bg: #0f1720; --btn-bg: #2b3a4d; --chip-on: rgba(255, 153, 0, 0.14); --risky: #ff7a8a; --group-bg: rgba(255, 255, 255, 0.03);
+      --shadow: rgba(0, 0, 0, .35); --grid: none;
+      --c-canvas: #0f1720; --c-text: #e9eef4; --c-muted: #a3b1c2; --c-label: #b4bcc8;
+      --c-group-fill: #1a2635; --c-group-border: #c5d0dc;
+      --c-cidr-fill: #0f2e2b; --c-cidr-border: #2fb8a6;
+      --c-pl-fill: #251d38; --c-pl-border: #b392f0;
+      --c-unused-border: #7d8a99; --c-unused-text: #a3b1c2;
+      --c-box-fill: #ffffff; --c-box-opacity: 0.025; --c-box-border: #5d7592; --c-box-text: #a3b1c2; --c-region-border: #667f9c;
+      --c-coll-fill: #1d2b3c; --c-coll-border: #8aa0b8;
+      --c-ingress: #4f9dff; --c-egress: #b4bcc8; --c-risky: #ff4d6d; --c-risky-text: #ff7a8a; --c-path: #ffd23f;
+      --c-exposed-border: #ff4d6d; --c-exposed-fill: #3a1620; --c-accent: #ff9900; --c-dim: 0.12;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1720; --chrome: #232f3e; --panel: #16212e; --border: #33465c; --hairline: #223041;
+    --text: #e9eef4; --muted: #a3b1c2; --accent: #ff9900; --accent-ink: #16191f;
+    --input-bg: #0f1720; --btn-bg: #2b3a4d; --chip-on: rgba(255, 153, 0, 0.14); --risky: #ff7a8a; --group-bg: rgba(255, 255, 255, 0.03);
+    --shadow: rgba(0, 0, 0, .35); --grid: none;
+    --c-canvas: #0f1720; --c-text: #e9eef4; --c-muted: #a3b1c2; --c-label: #b4bcc8;
+    --c-group-fill: #1a2635; --c-group-border: #c5d0dc;
+    --c-cidr-fill: #0f2e2b; --c-cidr-border: #2fb8a6;
+    --c-pl-fill: #251d38; --c-pl-border: #b392f0;
+    --c-unused-border: #7d8a99; --c-unused-text: #a3b1c2;
+    --c-box-fill: #ffffff; --c-box-opacity: 0.025; --c-box-border: #5d7592; --c-box-text: #a3b1c2; --c-region-border: #667f9c;
+    --c-coll-fill: #1d2b3c; --c-coll-border: #8aa0b8;
+    --c-ingress: #4f9dff; --c-egress: #b4bcc8; --c-risky: #ff4d6d; --c-risky-text: #ff7a8a; --c-path: #ffd23f;
+    --c-exposed-border: #ff4d6d; --c-exposed-fill: #3a1620; --c-accent: #ff9900; --c-dim: 0.12;
+  }
+  :root {
+    /* Sizes are the same in both themes, so switching never changes the layout of the page. */
+    --radius: 5px; --fs: 13px; --bar-pad: 8px 14px;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --fs-small: 11px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  html, body { margin: 0; height: 100%; font: var(--fs)/1.45 var(--font); color: var(--text); background: var(--bg); }
   #app { display: flex; flex-direction: column; height: 100%; }
-  #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #ccc; background: #f6f6f6; }
-  #bar input[type=search] { width: 220px; padding: 3px 6px; }
-  #main { display: flex; flex: 1; min-height: 0; }
-  #cy { flex: 1; }
-  #details { width: 320px; overflow: auto; padding: 10px 12px; border-left: 1px solid #ccc; background: #fafafa; }
-  #details h2 { margin: 0 0 6px; font-size: 15px; }
-  #details h3 { margin: 12px 0 4px; font-size: 13px; }
-  #details ul { margin: 0; padding-left: 18px; }
-  .risky { color: #b00020; font-weight: bold; }
-  .muted { color: #666; }
-  #legend span { margin-right: 10px; }
+  #bar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding: var(--bar-pad);
+         background: var(--chrome); border-bottom: 1px solid var(--border); }
+  #bar::before { content: "Security groups"; font-weight: 650; letter-spacing: .01em; margin-right: var(--space-2);
+                 padding-right: var(--space-3); border-right: 1px solid var(--border); }
+  input, button, select { font: inherit; color: var(--text); }
+  #bar input[type=search], #pathbar input, #bar select { background: var(--input-bg); border: 1px solid var(--border);
+         border-radius: var(--radius); padding: 5px 8px; outline: none; }
+  #bar input[type=search] { width: 200px; }
+  #bar input::placeholder { color: var(--muted); opacity: 1; }
+  input:focus-visible, button:focus-visible, select:focus-visible, #bar label:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #bar label { display: inline-flex; align-items: center; gap: 6px; }
+  #bar label.chip { padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; color: var(--muted); user-select: none; }
+  #bar label.chip:has(input:checked) { color: var(--text); border-color: var(--accent); background: var(--chip-on); }
+  #bar label.chip:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+  #bar input[type=checkbox] { accent-color: var(--accent); margin: 0; }
+  button { background: var(--btn-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button:disabled, input:disabled { opacity: .55; cursor: not-allowed; }
+  #theme[aria-pressed="true"] { border-color: var(--accent); background: var(--chip-on); }
+  #path-find { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  #pathbar { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 3px 3px 3px 0;
+         border: 1px solid var(--border); border-radius: calc(var(--radius) + 3px); background: var(--group-bg); }
+  #pathbar::before { content: "Path"; font-size: var(--fs-small); font-weight: 600; text-transform: uppercase;
+         letter-spacing: .08em; color: var(--muted); padding: 0 2px 0 10px; }
+  #pathbar input { width: 150px; }
+  #pathbar #path-port { width: 120px; }
+  #main { display: flex; flex: 1; min-height: 0; position: relative; }
+  #cy { flex: 1; background-color: var(--c-canvas); background-image: var(--grid); background-size: 24px 24px; }
+  #details { width: 340px; overflow: auto; padding: var(--space-4); border-left: 1px solid var(--border); background: var(--panel); }
+  #details h2 { margin: 0 0 var(--space-2); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+  #details h3 { margin: var(--space-4) 0 var(--space-1); font-size: var(--fs-small); font-weight: 600; text-transform: uppercase;
+         letter-spacing: .08em; color: var(--muted); }
+  #details p { margin: 6px 0; }
+  #details ul { margin: 0; padding: 0; list-style: none; }
+  #details li { padding: 5px 0; border-bottom: 1px solid var(--hairline); font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+  .risky { color: var(--risky); font-weight: 600; }
+  .risky::before { content: "!"; display: inline-block; width: 14px; height: 14px; margin: 0 4px 0 6px; border-radius: 50%;
+         background: var(--risky); color: var(--panel); font: 700 10px/14px var(--font); text-align: center; vertical-align: 1px; }
+  .muted { color: var(--muted); }
+  #legend { position: absolute; left: var(--space-3); bottom: var(--space-3); z-index: 5; padding: 6px 12px; font-size: 12px; color: var(--text);
+         background: var(--panel); border: 1px solid var(--border); border-radius: calc(var(--radius) + 2px);
+         box-shadow: 0 2px 12px var(--shadow); max-width: 460px; }
+  #legend summary { cursor: pointer; font-weight: 600; color: var(--muted); padding: 2px 0; }
+  #legend[open] summary { margin-bottom: 4px; }
+  #legend .lg-grid { display: grid; grid-template-columns: auto auto; gap: 3px 18px; padding-bottom: 4px; }
+  #legend .lg-h { font-size: var(--fs-small); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  #legend .lg { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  #legend svg { flex: none; }
+  #legend .lg-note { grid-column: 1 / -1; color: var(--muted); font-size: var(--fs-small); margin-top: 4px; }
+  #legend .sg { fill: var(--c-group-fill); stroke: var(--c-group-border); stroke-width: 1.5; }
+  #legend .cidr { fill: var(--c-cidr-fill); stroke: var(--c-cidr-border); stroke-width: 1.5; }
+  #legend .cidr6 { fill: none; stroke: var(--c-cidr-border); stroke-width: 1; }
+  #legend .pl { fill: var(--c-pl-fill); stroke: var(--c-pl-border); stroke-width: 1.5; }
+  #legend .unused { fill: none; stroke: var(--c-unused-border); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  #legend .coll { fill: var(--c-coll-fill); stroke: var(--c-coll-border); stroke-width: 3; }
+  #legend .exposed { fill: var(--c-exposed-fill); stroke: var(--c-exposed-border); stroke-width: 2.5; }
+  #legend .e-in { stroke: var(--c-ingress); stroke-width: 2.2; }
+  #legend .e-in-head { fill: var(--c-ingress); }
+  #legend .e-eg { stroke: var(--c-egress); stroke-width: 1.1; }
+  #legend .e-eg-head { fill: none; stroke: var(--c-egress); stroke-width: 1.1; }
+  #legend .e-risky { stroke: var(--c-risky); stroke-width: 5; }
+  #legend .e-risky-head { fill: var(--c-risky); }
+  #legend .e-path { stroke: var(--c-path); stroke-width: 5; }
+  #legend .e-path-head { fill: var(--c-path); }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="bar">
     <input id="search" type="search" placeholder="Search groups" aria-label="Search groups">
-    <label><input id="ingress" type="checkbox" checked> Ingress</label>
-    <label><input id="egress" type="checkbox" checked> Egress</label>
-    <label><input id="risky-only" type="checkbox"> Risky only</label>
+    <label class="chip"><input id="ingress" type="checkbox" checked> Ingress</label>
+    <label class="chip"><input id="egress" type="checkbox" checked> Egress</label>
+    <label class="chip"><input id="risky-only" type="checkbox"> Risky only</label>
+    <label class="chip"><input id="webgl" type="checkbox"> WebGL</label>
+    <label>Layout <select id="layout" aria-label="Layout">
+      <option value="fcose">Force (fcose)</option>
+      <option value="flow">Traffic flow</option>
+      <option value="rings">Exposure rings</option>
+      <option value="grid">Grid within VPC</option>
+    </select></label>
     <button id="reset" type="button">Reset view</button>
-    <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span class="risky">thick dashed: risky public ingress</span><span>grey dashed node: unused</span></span>
-  </div>
+    <span id="pathbar">
+      <input id="path-from" list="path-names" placeholder="Can this reach..." aria-label="Path source" autocomplete="off">
+      <input id="path-to" list="path-names" placeholder="...this group?" aria-label="Path target" autocomplete="off">
+      <input id="path-port" placeholder="Port (optional)" aria-label="Port filter" autocomplete="off">
+      <button id="path-find" type="button">Find path</button>
+      <button id="path-clear" type="button">Clear path</button>
+      <datalist id="path-names"></datalist>
+    </span>
+    <button id="expand-all" type="button">Expand all</button>
+    <button id="collapse-all" type="button">Collapse all</button>
+    <button id="theme" type="button" aria-pressed="false" title="Switch between the light and dark theme">Dark</button>
+    </div>
   <div id="main">
     <div id="cy"></div>
+    <details id="legend"><summary>Legend</summary><div class="lg-grid">
+      <span class="lg-h">Nodes</span><span class="lg-h">Rules</span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="sg" x="3" y="3" width="28" height="10" rx="3"/></svg><span>Security group</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-in" d="M3 8 H26" fill="none"/><path class="e-in-head" d="M26 3.5 L32 8 L26 12.5 Z"/></svg><span>Ingress (thick, filled arrow)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="cidr" d="M7 3 H27 L31 8 L27 13 H7 L3 8 Z"/></svg><span>CIDR (cut corners)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-eg" d="M3 8 H26" fill="none"/><path class="e-eg-head" d="M26 4.5 L31 8 L26 11.5"/></svg><span>Egress (thin, open arrow)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="cidr" d="M7 3 H27 L31 8 L27 13 H7 L3 8 Z"/><path class="cidr6" d="M9 5 H26 L28 8 L26 11 H9 L7 8 Z"/></svg><span>IPv6 CIDR (double outline)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-risky" d="M3 8 H24" fill="none"/><path class="e-risky-head" d="M22 2.5 L32 8 L22 13.5 Z"/></svg><span><b>Risky</b> public ingress (thickest)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="pl" d="M3 3 H25 L31 8 L25 13 H3 Z"/></svg><span>Prefix list (tag)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-path" d="M3 8 H25" fill="none"/><path class="e-path-head" d="M24 3 L32 8 L24 13 Z"/></svg><span>Path result (rest fades)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="unused" x="3" y="3" width="28" height="10" rx="3"/></svg><span><i>Unused group</i> (dashed)</span></span>
+      <span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="coll" x="3" y="3" width="28" height="10" rx="3"/></svg><span><b>Collapsed VPC</b> (n groups)</span></span>
+      <span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="exposed" x="3" y="3" width="28" height="10" rx="3"/></svg><span>Takes risky ingress</span></span>
+      <span></span>
+      <span class="lg-note">Double-click a VPC to collapse or expand it. Edge labels name the ports.</span>
+    </div></details>
     <div id="details"><p class="muted">Click a group or an edge to see its details.</p></div>
   </div>
 </div>
 <script type="application/json" id="graph-data">/*DATA*/</script>
 <script>/*CYTOSCAPE*/</script>
+<script>/*LAYOUT_BASE*/</script>
+<script>/*COSE_BASE*/</script>
+<script>/*FCOSE*/</script>
+<script>/*DAGRE*/</script>
+<script>/*CYTOSCAPE_DAGRE*/</script>
 <script>
 (function () {
   "use strict";
@@ -45,50 +199,640 @@
   var nodeById = {};
   data.nodes.forEach(function (n) { nodeById[n.id] = n; });
 
+  // Graphs with more than this many security groups inside VPCs (peers such as CIDRs are not counted) open with every VPC collapsed into one node.
+  var COLLAPSE_THRESHOLD = 150;
+
   // Compound parents: region (when several regions were queried) containing VPC.
-  var elements = [];
-  var seen = {};
+  var parentDefs = {};   // region and VPC node definitions; always on the canvas
+  var groupDefs = {};    // security group and peer node definitions
+  var vpcOf = {};        // group id -> id of the VPC node it sits in
+  var vpcGroups = {};    // VPC node id -> ids of its groups
   function parent(id, label, kind, parentId) {
-    if (!seen[id]) {
-      seen[id] = true;
-      var d = { id: id, label: label, kind: kind };
+    if (!parentDefs[id]) {
+      var d = { id: id, label: label, name: label, kind: kind };
       if (parentId) d.parent = parentId;
-      elements.push({ group: "nodes", data: d, classes: kind });
+      parentDefs[id] = { group: "nodes", data: d, classes: kind };
     }
     return id;
+  }
+  // Peers are drawn by kind (cidr4, cidr6, prefix_list), which the data carries so that --obfuscate, which hashes the ids, keeps the shapes.
+  var PEER_CLASSES = { cidr4: "cidr", cidr6: "cidr ipv6", prefix_list: "pl" };
+  // Data without a kind (built by hand) falls back to the id: a CIDR holds a "/" (IPv6 also a ":"), a prefix list starts with "pl-".
+  function peerKind(n) {
+    if (n.peer || n.vpc) return n.peer;
+    var s = String(n.id);
+    return s.indexOf("/") !== -1 ? (s.indexOf(":") !== -1 ? "cidr6" : "cidr4") : (s.indexOf("pl-") === 0 ? "prefix_list" : undefined);
+  }
+  function peerClasses(n) {
+    var internet = n.internet || n.id === "0.0.0.0/0" || n.id === "::/0";
+    return (PEER_CLASSES[peerKind(n)] || "") + (internet && PEER_CLASSES[peerKind(n)] ? " internet" : "");
   }
   data.nodes.forEach(function (n) {
     var d = { id: n.id, label: n.label, kind: "group", unused: !!n.unused };
     var up = null;
     if (n.region) up = parent("region:" + n.region, n.region, "region", null);
-    if (n.vpc) up = parent("vpc:" + (n.region || "") + "|" + n.vpc, n.vpc, "vpc", up);
+    if (n.vpc) {
+      up = parent("vpc:" + (n.region || "") + "|" + n.vpc, n.vpc, "vpc", up);
+      vpcOf[n.id] = up;
+      (vpcGroups[up] = vpcGroups[up] || []).push(n.id);
+    }
     if (up) d.parent = up;
-    elements.push({ group: "nodes", data: d, classes: n.unused ? "unused" : "" });
+    groupDefs[n.id] = { group: "nodes", data: d, classes: (n.unused ? "unused " : "") + peerClasses(n) };
   });
-  data.edges.forEach(function (e) {
-    elements.push({ group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") });
-  });
-
-  var cy = cytoscape({
-    container: document.getElementById("cy"),
-    elements: elements,
-    wheelSensitivity: 0.3,
-    style: [
-      { selector: "node", style: { label: "data(label)", "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "label", height: "label", padding: "8px" } },
-      { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
-      { selector: "node.unused", style: { "background-color": "#eee", "border-style": "dashed", "border-color": "#888", color: "#555" } },
-      { selector: "edge", style: { label: "data(label)", "font-size": 9, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "text-background-color": "#fff", "text-background-opacity": 0.85, "text-background-padding": "1px" } },
-      { selector: "edge.ingress", style: { "line-color": "#1f5fbf", "target-arrow-color": "#1f5fbf" } },
-      { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
-      { selector: "edge.risky", style: { width: 4, "line-style": "dashed", "line-color": "#dc143c", "target-arrow-color": "#dc143c", color: "#b00020" } },
-      { selector: ".dim", style: { opacity: 0.12 } },
-      { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
-      { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
-    ],
-    layout: { name: "cose", animate: false, nodeDimensionsIncludeLabels: true, padding: 30 }
+  var realEdges = data.edges.map(function (e) {
+    return { group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") };
   });
 
-  window.awsSecurityViz = { cy: cy }; // read by the browser spec
+  // Groups that take a risky ingress rule, and the VPCs that hold one, are drawn as exposed. The class is set in desired().
+  var exposed = {};
+  data.edges.forEach(function (e) { if (e.risky) exposed[e.target] = true; });
+  Object.keys(vpcGroups).forEach(function (v) { if (vpcGroups[v].some(function (id) { return exposed[id]; })) exposed[v] = true; });
+
+  // Node sizes are measured here, not left to Cytoscape's "label" sizing: that is only known once the renderer has
+  // drawn a label, and a layout that runs earlier would see zero-size nodes and leave elements invisible.
+  var measure = document.createElement("canvas").getContext("2d");
+  var FONT = "system-ui, sans-serif";
+  // Region and VPC labels are bold 12px, group and peer labels 11px (bold for exposed groups and the internet); see buildStyle.
+  function nodeSize(label, kind, bold) {
+    var parentKind = kind === "vpc" || kind === "region";
+    measure.font = (parentKind ? "bold 12px " : (bold ? "bold 11px " : "11px ")) + FONT;
+    return { w: Math.ceil(measure.measureText(String(label)).width) + 2, h: parentKind ? 15 : 14 };
+  }
+
+  var collapsed = {};
+  var groupCount = Object.keys(vpcGroups).reduce(function (sum, id) { return sum + vpcGroups[id].length; }, 0);
+  if (groupCount > COLLAPSE_THRESHOLD) Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = true; });
+
+  function collapsedLabel(id) { return parentDefs[id].data.name + " (" + vpcGroups[id].length + " groups)"; }
+
+  // Everything that should be on the canvas for the current collapsed set. Edges that touch a collapsed
+  // VPC are merged into one meta edge per (source, target, direction).
+  function desired() {
+    var out = { nodes: [], edges: [] };
+    var internal = {};
+    // Cytoscape keeps the data object it is given, so every element gets its own copy.
+    function copy(def, extra, classes) {
+      var d = Object.assign({}, def.data, extra);
+      var cls = classes === undefined ? def.classes : classes;
+      if (exposed[d.id] && (def.data.kind === "group" || collapsed[d.id])) cls += " exposed";
+      if (def.group === "nodes") Object.assign(d, nodeSize(d.label, d.kind, /\b(exposed|internet)\b/.test(cls)));
+      return { group: def.group, data: d, classes: cls };
+    }
+    Object.keys(parentDefs).forEach(function (id) {
+      var def = parentDefs[id];
+      out.nodes.push(collapsed[id] ? copy(def, { label: collapsedLabel(id), internal: 0, internalRisky: 0 }, def.classes + " collapsed") : copy(def, { label: def.data.name, internal: 0, internalRisky: 0 }));
+    });
+    Object.keys(groupDefs).forEach(function (id) {
+      if (!collapsed[vpcOf[id]]) out.nodes.push(copy(groupDefs[id], {}));
+    });
+    var meta = {};
+    realEdges.forEach(function (def) {
+      var d = def.data;
+      var s = collapsed[vpcOf[d.source]] ? vpcOf[d.source] : d.source;
+      var t = collapsed[vpcOf[d.target]] ? vpcOf[d.target] : d.target;
+      if (s === d.source && t === d.target) { out.edges.push(copy(def, {})); return; }
+      if (s === t) {
+        // Rule between two groups of the same collapsed VPC (or a self-reference): counted on the VPC node.
+        internal[s] = internal[s] || { count: 0, risky: 0 };
+        internal[s].count++;
+        if (d.risky) internal[s].risky++;
+        return;
+      }
+      var key = "meta:" + s + ">" + t + "|" + d.kind;
+      var m = meta[key] = meta[key] || { group: "edges", data: { id: key, source: s, target: t, kind: d.kind, risky: false, meta: true, members: [], riskyMembers: [] }, classes: "meta " + d.kind };
+      m.data.members.push(d.id);
+      if (d.risky) { m.data.risky = true; m.data.riskyMembers.push(d.id); }
+    });
+    Object.keys(meta).forEach(function (key) {
+      var m = meta[key];
+      m.data.label = m.data.members.length + (m.data.members.length === 1 ? " rule" : " rules");
+      if (m.data.risky) m.classes += " risky";
+      out.edges.push(m);
+    });
+    out.nodes.forEach(function (n) {
+      if (internal[n.data.id]) { n.data.internal = internal[n.data.id].count; n.data.internalRisky = internal[n.data.id].risky; }
+    });
+    return out;
+  }
+  var initial = desired();
+  var elements = initial.nodes.concat(initial.edges);
+
+  cytoscape.use(cytoscapeFcose);
+  cytoscape.use(cytoscapeDagre);
+  var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, edgeElasticity: 1.5, padding: 30 };
+
+  // The graph's colours are the --c-* tokens in the stylesheet, read here because Cytoscape cannot use CSS variables.
+  var TOKENS = ["canvas", "text", "muted", "label", "group-fill", "group-border", "cidr-fill", "cidr-border", "pl-fill", "pl-border", "unused-border", "unused-text", "box-fill", "box-opacity", "box-border", "box-text", "region-border", "coll-fill", "coll-border", "ingress", "egress", "risky", "risky-text", "path", "exposed-border", "exposed-fill", "accent", "dim"];
+  function palette() {
+    var css = getComputedStyle(document.documentElement), out = {};
+    TOKENS.forEach(function (t) { out[t] = css.getPropertyValue("--c-" + t).trim(); });
+    return out;
+  }
+  // Shapes, widths and arrow heads say what a node or an edge is; colour only backs that up. The WebGL renderer draws
+  // every arrow head the same and has no dashes, so width is what separates ingress, egress and risky there.
+  function buildStyle(c) {
+    var dim = parseFloat(c.dim);
+    return [
+      { selector: "node", style: { label: "data(label)", "min-zoomed-font-size": 6, "font-family": FONT, "font-size": 11, color: c.text, "text-valign": "center", "text-halign": "center", "background-color": c["group-fill"], "border-width": 1.5, "border-color": c["group-border"], shape: "round-rectangle", "corner-radius": 4, width: "data(w)", height: "data(h)", padding: "8px" } },
+      { selector: "node.cidr", style: { shape: "cut-rectangle", "background-color": c["cidr-fill"], "border-color": c["cidr-border"], padding: "9px" } },
+      { selector: "node.ipv6", style: { "border-style": "double", "border-width": 4.5 } },
+      { selector: "node.pl", style: { shape: "tag", "background-color": c["pl-fill"], "border-color": c["pl-border"], padding: "9px" } },
+      { selector: "node.unused", style: { "background-opacity": 0, "border-style": "dashed", "border-color": c["unused-border"], color: c["unused-text"], "font-style": "italic" } },
+      { selector: "node.region, node.vpc", style: { "text-valign": "top", "text-margin-y": -4, "background-color": c["box-fill"], "background-opacity": parseFloat(c["box-opacity"]), "border-width": 1, "border-color": c["box-border"], "border-style": "solid", padding: "16px", "font-weight": "bold", "font-size": 12, color: c["box-text"], shape: "round-rectangle", "corner-radius": 10 } },
+      { selector: "node.region", style: { "border-style": "dashed", "border-color": c["region-border"], "background-opacity": 0 } },
+      { selector: "node.vpc.collapsed", style: { "text-valign": "center", "text-margin-y": 0, "background-color": c["coll-fill"], "background-opacity": 1, "border-style": "solid", "border-width": 3.5, "border-color": c["coll-border"], padding: "14px", color: c.text } },
+      { selector: "node.internet", style: { "border-color": c.risky, "border-width": 2.5, "font-weight": "bold", "background-color": c["exposed-fill"] } },
+      { selector: "node.exposed", style: { "border-color": c["exposed-border"], "border-width": 2.5, "background-color": c["exposed-fill"], "background-opacity": 1, color: c.text, "font-weight": "bold" } },
+      { selector: "edge", style: { label: "", "min-zoomed-font-size": 6, "font-family": FONT, "font-size": 9, color: c.label, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "arrow-scale": 1, "text-background-color": c.canvas, "text-background-opacity": 0.9, "text-background-padding": "2px", "text-background-shape": "round-rectangle" } },
+      { selector: "edge.ingress", style: { width: 2.2, "arrow-scale": 1.1, "line-color": c.ingress, "target-arrow-color": c.ingress } },
+      { selector: "edge.egress", style: { width: 1.1, "arrow-scale": 0.8, "target-arrow-shape": "vee", "line-color": c.egress, "target-arrow-color": c.egress } },
+      { selector: "edge.meta", style: { width: 3.2 } },
+      { selector: "edge.meta.egress", style: { width: 2 } },
+      { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.3, "target-arrow-shape": "triangle", "line-color": c.risky, "target-arrow-color": c.risky, color: c["risky-text"], "font-weight": "bold", "z-index": 5 } },
+      { selector: "edge.hover, edge.show-label, edge:selected, edge.path", style: { label: "data(label)", "min-zoomed-font-size": 0 } },
+      { selector: "node.show-label, node:selected", style: { "min-zoomed-font-size": 0 } },
+      { selector: "node.path, node.pathvia", style: { "border-width": 3.5, "border-color": c.path, "border-style": "solid", "underlay-color": c.path, "underlay-opacity": 0.18, "underlay-padding": 6 } },
+      { selector: "edge.path", style: { width: 6, "arrow-scale": 1.5, "line-color": c.path, "target-arrow-color": c.path, color: c.text, "font-weight": "bold", "z-index": 10 } },
+      { selector: ".dim", style: { opacity: dim, "text-opacity": dim, "text-background-opacity": dim, "underlay-opacity": 0 } },
+      { selector: ".match", style: { "border-width": 3, "border-color": c.accent, "underlay-color": c.accent, "underlay-opacity": 0.3, "underlay-padding": 6 } },
+      { selector: "node:selected", style: { "border-width": 3, "border-color": c.accent } },
+      { selector: ":selected", style: { "overlay-color": c.accent, "overlay-opacity": 0.18, "overlay-padding": 4 } },
+      // Last, so nothing above (selection, match, dim) can draw a box the layout has no use for: the VPC and region
+      // boxes of a layout that cannot respect them (exposure rings) are not there at all.
+      { selector: "node.flat:parent", style: { label: "", "background-opacity": 0, "border-width": 0, "overlay-opacity": 0, "text-opacity": 0, events: "no" } }
+    ];
+  }
+
+  // Cytoscape's experimental WebGL renderer is much faster on thousands of elements. It is chosen when more
+  // than this many elements are on the canvas, can be switched with the WebGL checkbox, and is skipped when
+  // the browser has no WebGL 2 (headless CI, locked-down browsers): the canvas renderer is used then.
+  var WEBGL_THRESHOLD = 2000;
+  var GAP = 12;          // minimum space between sibling boxes after a layout
+  // Give a canvas's WebGL context back to the browser, which allows only about sixteen live ones.
+  function releaseContext(canvas) {
+    try {
+      var gl = canvas.getContext("webgl2");
+      var lose = gl && gl.getExtension("WEBGL_lose_context");
+      if (lose) lose.loseContext();
+    } catch (e) { /* nothing to release */ }
+  }
+  function releaseContexts(container) {
+    releasing = true;
+    Array.prototype.forEach.call(container.querySelectorAll("canvas"), releaseContext);
+    releasing = false;
+  }
+  var releasing = false;
+  function webglAvailable() {
+    try {
+      var probe = document.createElement("canvas");
+      var ok = !!probe.getContext("webgl2");
+      releaseContext(probe);
+      return ok;
+    } catch (e) { return false; }
+  }
+  var webglSupported = webglAvailable();
+  var webglOn = webglSupported && elements.length > WEBGL_THRESHOLD;
+  var webglManual = false;   // true once the user has used the checkbox; the size rule then stays out of the way
+
+  // The layouts start from random positions. They are seeded from the graph, so the same report always draws the
+  // same picture: layouts run with Math.random replaced by a generator that starts from the same state every time.
+  function prng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var SEED = (function () {
+    var h = 2166136261;
+    data.nodes.forEach(function (n) {
+      String(n.id).split("").forEach(function (ch) { h = Math.imul(h ^ ch.charCodeAt(0), 16777619); });
+    });
+    return h ^ data.edges.length;
+  })();
+  var jitter = prng(SEED);
+  function seeded(run) {
+    var real = Math.random;
+    Math.random = prng(SEED);
+    try { return run(); } finally { Math.random = real; }
+  }
+
+  // ---- Layouts ----------------------------------------------------------------------------------------------
+  // Every layout works from the node sizes measured in desired() (data w and h), places each node and leaves the view
+  // to applyLayout, which fits it. All are deterministic for a given graph.
+  //
+  // "Tiers" are how many hops a group is from the outside along the rule direction (an edge points the way traffic is
+  // allowed to flow): external peers (CIDRs, IPv6 ranges, prefix lists) are tier 0, a group they reach directly is
+  // tier 1, what that group reaches is tier 2, and so on. Groups nothing external reaches start at tier 1.
+  var layoutName = "fcose";
+  var TIER_GAP = 140;    // space between tier columns of the force layout
+  var PEER_GAP = 180;    // space between the external peers' column and the first tier
+  var MAX_TIER = 3;      // the force layout lines up external -> entry -> app -> data; longer chains are left free
+  var LEAF_PAD = 16;     // a node's box is its size plus the 8px padding of the node style on each side
+  var BOX_PAD = 18;      // room a VPC box needs around its groups (its padding plus the border)
+  var BOX_LABEL = 22;    // and above them, for the VPC's name
+
+  function isPeer(n) { return n.data("kind") === "group" && !vpcOf[n.id()]; }
+  function isPublic(n) { return n.hasClass("internet"); }
+  function byLabel(a, b) {
+    var x = String(a.data("label")), y = String(b.data("label"));
+    return x < y ? -1 : x > y ? 1 : (a.id() < b.id() ? -1 : 1);
+  }
+
+  function successors() {
+    var out = {};
+    cy.edges().forEach(function (e) {
+      var s = e.source().id(), t = e.target().id();
+      if (s !== t) (out[s] = out[s] || []).push(t);
+    });
+    return out;
+  }
+  function pointedAt() {
+    var set = {};
+    cy.edges().forEach(function (e) { if (e.source() !== e.target()) set[e.target().id()] = true; });
+    return set;
+  }
+  // Breadth-first from the ids already in `dist` (in queue order), following the rule direction.
+  function spread(dist, queue, out) {
+    for (var i = 0; i < queue.length; i++) {
+      (out[queue[i]] || []).forEach(function (t) {
+        if (!(t in dist)) { dist[t] = dist[queue[i]] + 1; queue.push(t); }
+      });
+    }
+  }
+  function tiers() {
+    var out = successors(), dist = {}, queue = [];
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    leaves.filter(isPeer).forEach(function (n) { dist[n.id()] = 0; queue.push(n.id()); });
+    spread(dist, queue, out);
+    var into = pointedAt();
+    // Nothing external reaches these: start from the ones no rule points at, then from whatever is left (a cycle).
+    [function (n) { return !into[n.id()]; }, function () { return true; }].forEach(function (pick) {
+      leaves.forEach(function (n) {
+        if (n.id() in dist || !pick(n)) return;
+        dist[n.id()] = 1;
+        spread(dist, [n.id()], out);
+      });
+    });
+    return dist;
+  }
+
+  // fcose options for the given leaf nodes: a rule that leads from one tier to a later one (up to tier 3) inside a VPC (or at the
+  // top level) puts its source to the left of its target, so the tiers line up as columns without being forced into
+  // straight stacks; with `withPeers` the external peers share a column to the left of all.
+  function fcoseOptions(leaves, extra, withPeers) {
+    var tier = tiers(), peers = [], seen = {}, rel = [];
+    var ids = {};
+    leaves.forEach(function (n) { ids[n.id()] = n; if (isPeer(n)) peers.push(n.id()); });
+    function parentOf(n) { return n.parent().length ? n.parent().id() : ""; }
+    cy.edges().forEach(function (e) {
+      var a = e.source(), b = e.target();
+      if (!ids[a.id()] || !ids[b.id()] || tier[a.id()] >= tier[b.id()] || tier[b.id()] > MAX_TIER) return;
+      var peerEdge = isPeer(a) && withPeers;
+      if (!peerEdge && (isPeer(a) || parentOf(a) !== parentOf(b))) return;
+      var key = a.id() + ">" + b.id();
+      if (seen[key]) return;
+      seen[key] = true;
+      rel.push({ left: a.id(), right: b.id(), gap: peerEdge ? PEER_GAP : TIER_GAP });
+    });
+    var o = Object.assign({}, LAYOUT, { randomize: true }, extra);
+    if (withPeers && peers.length > 1) o.alignmentConstraint = { vertical: [peers] };
+    if (rel.length) o.relativePlacementConstraint = rel;
+    return o;
+  }
+  function runFcose() {
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    // fcose reads the positions it is given, so every run starts from the same ones: a layout picked again draws
+    // what the first load drew.
+    cy.batch(function () { leaves.forEach(function (n) { n.position({ x: 0, y: 0 }); }); });
+    try {
+      cy.layout(fcoseOptions(leaves, {}, true)).run();
+    } catch (e) {
+      // Constraints fcose cannot satisfy: lay out without them.
+      cy.layout(Object.assign({}, LAYOUT, { randomize: true })).run();
+    }
+    separate();
+  }
+
+  // Stack the external peers in one column left of everything else, each at the height of the groups it talks to.
+  function stackPeers(peers) {
+    if (peers.empty()) return;
+    var rest = cy.nodes().not(peers);
+    var bb = rest.nonempty() ? rest.boundingBox({ includeLabels: true, includeOverlays: false }) : { x1: 0, x2: 0, y1: 0, y2: 0 };
+    var want = peers.map(function (n) {
+      var near = n.neighborhood("node").not(peers);
+      var y = near.nonempty() ? near.reduce(function (sum, m) { return sum + m.position("y"); }, 0) / near.length : (bb.y1 + bb.y2) / 2;
+      return { n: n, y: y };
+    });
+    want.sort(function (a, b) { return a.y - b.y || byLabel(a.n, b.n); });
+    var widest = Math.max.apply(null, want.map(function (w) { return w.n.data("w"); }));
+    var prev = null;
+    want.forEach(function (w) {
+      var h = w.n.data("h");
+      if (prev) w.y = Math.max(w.y, prev.y + prev.h / 2 + LEAF_PAD + GAP + h / 2);
+      prev = { y: w.y, h: h };
+    });
+    var shift = (bb.y1 + bb.y2) / 2 - (want[0].y + want[want.length - 1].y) / 2;
+    cy.batch(function () {
+      want.forEach(function (w) { w.n.position({ x: bb.x1 - 80 - widest / 2, y: w.y + shift }); });
+    });
+  }
+
+  // Layered along the rule direction, left to right: entry groups, then what they reach, and so on. With VPCs open,
+  // each VPC is laid out on its own (dagre, left to right inside the box) and the boxes are packed in rows, so a large
+  // account is a page and not a strip; with every VPC collapsed, dagre ranks the VPC nodes themselves. Edges to the
+  // external peers are left out of the ranking (every group allows egress to 0.0.0.0/0 by default and would collapse
+  // the layers), and the peers get their own column on the left instead.
+  function runFlow() {
+    if (cy.nodes(".vpc:parent").nonempty()) { runPacked(true); return; }
+    var peers = cy.nodes().filter(isPeer);
+    var rest = cy.elements().not(peers).not(peers.connectedEdges());
+    var opts = { name: "dagre", rankDir: "LR", nodeSep: 24, rankSep: 110, edgeSep: 10, animate: false, fit: false, nodeDimensionsIncludeLabels: false };
+    try {
+      rest.layout(opts).run();
+    } catch (e) {
+      // dagre can fail on some nested shapes: rank the groups without their boxes; the boxes follow their groups.
+      rest.not(":parent").layout(opts).run();
+    }
+    separate(undefined, peers);
+    stackPeers(peers);
+  }
+
+  // Rings by hop distance from the internet: the public peers (0.0.0.0/0, ::/0) in the middle, the groups they
+  // reach directly on the first ring, and so on; groups nothing external reaches are on the outermost ring. The
+  // groups of one VPC sit next to each other on a ring. Rings cannot respect VPC boxes, so those are not drawn.
+  function ringOf() {
+    var out = successors(), dist = {}, queue = [];
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    var pub = leaves.filter(function (n) { return isPeer(n) && isPublic(n); });
+    var other = leaves.filter(function (n) { return isPeer(n) && !isPublic(n); });
+    var sources = pub.nonempty() ? [pub, other] : (other.nonempty() ? [other] : []);
+    sources.forEach(function (list, i) {
+      list.forEach(function (n) { dist[n.id()] = i; queue.push(n.id()); });
+    });
+    if (!sources.length) {
+      var into = pointedAt();
+      leaves.forEach(function (n) { if (!into[n.id()]) { dist[n.id()] = 0; queue.push(n.id()); } });
+    }
+    spread(dist, queue, out);
+    var far = Object.keys(dist).reduce(function (m, id) { return Math.max(m, dist[id]); }, 0) + 1;
+    leaves.forEach(function (n) { if (!(n.id() in dist)) dist[n.id()] = far; });
+    return dist;
+  }
+  function runRings() {
+    var ring = ringOf(), byRing = {};
+    cy.nodes().filter(function (n) { return !n.isParent(); }).forEach(function (n) {
+      (byRing[ring[n.id()]] = byRing[ring[n.id()]] || []).push(n);
+    });
+    // Rings are a node's width apart, so a node never reaches the next ring where the ring runs sideways.
+    var step = cy.nodes().filter(function (n) { return !n.isParent(); }).reduce(function (m, n) { return Math.max(m, n.data("w")); }, 0) + 100;
+    var radius = 0;
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    cy.batch(function () {
+      Object.keys(byRing).map(Number).sort(function (a, b) { return a - b; }).forEach(function (r, i) {
+        var nodes = byRing[r].sort(function (a, b) {
+          var pa = vpcOf[a.id()] || "", pb = vpcOf[b.id()] || "";
+          return pa < pb ? -1 : pa > pb ? 1 : byLabel(a, b);
+        });
+        if (i === 0 && nodes.length <= 6) {
+          // The middle: the public peers sit together at the centre, one above the other.
+          nodes.forEach(function (n, k) { n.position({ x: 0, y: (k - (nodes.length - 1) / 2) * (n.data("h") + LEAF_PAD + GAP) }); });
+          return;
+        }
+        var around = nodes.reduce(function (sum, n) { return sum + n.data("w") + GAP * 2 + LEAF_PAD; }, 0);
+        radius = Math.max(radius + step, around / (2 * Math.PI));
+        var at = 0;
+        nodes.forEach(function (n) {
+          var arc = n.data("w") + GAP * 2 + LEAF_PAD;
+          var angle = -Math.PI / 2 + ((at + arc / 2) / around) * 2 * Math.PI;
+          at += arc;
+          n.position({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+        });
+      });
+    });
+    // Nodes of neighbouring rings can still touch where a wide label meets a bend of the ring.
+    pushApart(leaves.toArray());
+  }
+
+  // Each VPC's groups in a grid, a row per tier (a long tier wraps), the VPCs side by side in rows, and the external
+  // peers in a column on the left. Boxes are sized here from the node sizes, so the layout does not depend on a
+  // renderer.
+  function runGrid() { runPacked(false); }
+  function runPacked(flow) {
+    var tier = tiers();
+    function byTierThenLabel(a, b) { return (tier[a.id()] - tier[b.id()]) || byLabel(a, b); }
+    function leafBox(n) {
+      return { w: n.data("w"), h: n.data("h"), put: function (x, y) { n.position({ x: x + this.w / 2, y: y + this.h / 2 }); } };
+    }
+    // Boxes in rows no wider than `wide`, left to right, top to bottom; each gets its offset in `at`.
+    function rows(boxes, wide, pad) {
+      var x = 0, y = 0, rowH = 0, maxX = 0;
+      boxes.forEach(function (b) {
+        if (x > 0 && x + b.w > wide) { x = 0; y += rowH + pad; rowH = 0; }
+        b.at = { x: x, y: y };
+        x += b.w + pad;
+        rowH = Math.max(rowH, b.h);
+        maxX = Math.max(maxX, x - pad);
+      });
+      return { w: maxX, h: y + rowH };
+    }
+    function packed(boxes, pad) {
+      if (!boxes.length) return { w: 0, h: 0, put: function () {} };
+      var area = boxes.reduce(function (sum, b) { return sum + (b.w + pad) * (b.h + pad); }, 0);
+      var widest = Math.max.apply(null, boxes.map(function (b) { return b.w; }));
+      var size = rows(boxes, Math.max(Math.sqrt(area) * 1.6, widest), pad);
+      return { w: size.w, h: size.h, put: function (x, y) { boxes.forEach(function (b) { b.put(x + b.at.x, y + b.at.y); }); } };
+    }
+    function flowBox(v) {
+      var kids = v.children();
+      try {
+        kids.union(kids.edgesWith(kids)).layout({ name: "dagre", rankDir: "LR", nodeSep: 24, rankSep: 90, edgeSep: 10, animate: false, fit: false, nodeDimensionsIncludeLabels: false }).run();
+      } catch (e) {
+        return gridBox(v);
+      }
+      var bb = kids.boundingBox({ includeLabels: false, includeOverlays: false });
+      return {
+        w: bb.w + 2 * BOX_PAD, h: bb.h + 2 * BOX_PAD + BOX_LABEL,
+        put: function (x, y) { kids.shift({ x: x + BOX_PAD - bb.x1, y: y + BOX_PAD + BOX_LABEL - bb.y1 }); }
+      };
+    }
+    function vpcBox(v) { return flow ? flowBox(v) : gridBox(v); }
+    function gridBox(v) {
+      var kids = v.children().toArray().sort(byTierThenLabel);
+      var cw = Math.max.apply(null, kids.map(function (n) { return n.data("w"); })) + GAP * 2;
+      var ch = Math.max.apply(null, kids.map(function (n) { return n.data("h"); })) + 26;
+      var cols = Math.max(3, Math.ceil(Math.sqrt(kids.length) * 1.4));
+      var row = -1, col = 0, last = null, cells = [], wide = 0;
+      kids.forEach(function (n) {
+        if (tier[n.id()] !== last || col >= cols) { row++; col = 0; last = tier[n.id()]; }
+        cells.push({ n: n, col: col, row: row });
+        col++;
+        wide = Math.max(wide, col);
+      });
+      return {
+        w: wide * cw + 2 * BOX_PAD, h: (row + 1) * ch + 2 * BOX_PAD + BOX_LABEL,
+        put: function (x, y) {
+          cells.forEach(function (c) {
+            c.n.position({ x: x + BOX_PAD + c.col * cw + cw / 2, y: y + BOX_PAD + BOX_LABEL + c.row * ch + ch / 2 });
+          });
+        }
+      };
+    }
+    function boxOf(n) {
+      if (!n.isParent()) return leafBox(n);
+      if (n.hasClass("vpc")) return vpcBox(n);
+      var inner = packed(n.children().toArray().sort(byLabel).map(boxOf), GAP * 2);
+      return { w: inner.w + 2 * BOX_PAD, h: inner.h + 2 * BOX_PAD + BOX_LABEL, put: function (x, y) { inner.put(x + BOX_PAD, y + BOX_PAD + BOX_LABEL); } };
+    }
+    var peers = cy.nodes().filter(isPeer);
+    var top = cy.nodes(":orphan").not(peers).toArray().sort(function (a, b) { return (b.isParent() - a.isParent()) || byLabel(a, b); });
+    // The boxes are measured (and, in the flow layout, laid out) before anything is moved.
+    var main = packed(top.map(boxOf), GAP * 3);
+    var peerBoxes = peers.toArray().sort(byLabel).map(leafBox);
+    var column = rows(peerBoxes, 0, GAP * 2);
+    var widest = peerBoxes.reduce(function (m, b) { return Math.max(m, b.w); }, 0);
+    cy.batch(function () {
+      if (flow) {
+        main.put(0, 0);
+      } else {
+        peerBoxes.forEach(function (b) { b.put((widest - b.w) / 2, b.at.y + Math.max(0, (main.h - column.h) / 2)); });
+        main.put(widest + PEER_GAP / 2, 0);
+      }
+    });
+    separate(undefined, peers);
+    if (flow) stackPeers(peers);
+  }
+
+  var LAYOUTS = { fcose: { run: runFcose }, flow: { run: runFlow }, rings: { run: runRings, flat: true }, grid: { run: runGrid } };
+  // Lay the whole graph out with the named layout and fit it. Collapse state, selection, search and the toggles are
+  // untouched: a layout only moves nodes.
+  function applyLayout(name) {
+    layoutName = name;
+    var spec = LAYOUTS[name];
+    cy.nodes(".vpc, .region").toggleClass("flat", !!spec.flat);
+    // Whether a label counts toward a node's size depends on the zoom (see min-zoomed-font-size), so the layout always
+    // starts from the same view: the same picture whatever the zoom was when it was picked.
+    cy.viewport({ zoom: 1, pan: { x: 0, y: 0 } });
+    seeded(spec.run);
+    unselectFlat();
+    fitView(undefined, 30);
+    var box = document.getElementById("layout");
+    if (box.value !== name) box.value = name;
+  }
+  document.getElementById("layout").addEventListener("change", function (evt) {
+    applyLayout(evt.target.value);
+    // A path shown on the old picture is put back with this one's view.
+    if (pathState) { pathState.zoom = cy.zoom(); pathState.pan = Object.assign({}, cy.pan()); }
+  });
+
+  var cy;
+
+  // The legend sits over the bottom left of the canvas, so a fit uses the larger of two free areas: the full width above the
+  // legend, or the full height beside it.
+  function legendBox() {
+    var legend = document.getElementById("legend"), box = document.getElementById("cy").getBoundingClientRect(), r = legend.getBoundingClientRect();
+    return { w: r.right - box.left + 4, h: box.bottom - r.top + 4 };
+  }
+  // Fit `eles` (everything when empty) into the canvas clear of the legend, at most at zoom `maxZoom`.
+  function fitView(eles, pad, maxZoom) {
+    var set = eles && eles.nonempty() ? eles : cy.elements();
+    if (set.empty()) return;
+    var bb = set.boundingBox(), w = cy.width(), h = cy.height(), lg = legendBox();
+    var areas = [{ x: 0, y: 0, w: w, h: Math.max(h - lg.h, h * 0.4) }, { x: Math.min(lg.w, w * 0.6), y: 0, w: w - Math.min(lg.w, w * 0.6), h: h }];
+    var best = null;
+    areas.forEach(function (a) {
+      var z = Math.min((a.w - 2 * pad) / Math.max(bb.w, 1), (a.h - 2 * pad) / Math.max(bb.h, 1), maxZoom || Infinity);
+      if (!best || z > best.z) best = { z: z, a: a };
+    });
+    var zoom = Math.max(cy.minZoom(), Math.min(cy.maxZoom(), best.z)), a = best.a;
+    cy.viewport({ zoom: zoom, pan: { x: a.x + (a.w - zoom * (bb.x1 + bb.x2)) / 2, y: a.y + (a.h - zoom * (bb.y1 + bb.y2)) / 2 } });
+  }
+  // Opening or closing the legend frees or takes room: fit again, unless the user has moved the view.
+  document.getElementById("legend").addEventListener("toggle", function () { if (cy && !userMoved) fitView(undefined, 30); });
+
+  // Light (Blueprint) or dark (Console): the user's choice from the toggle, else the browser's.
+  var themeChoice = null;
+  var darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  function themeName() { return themeChoice || (darkQuery.matches ? "dark" : "light"); }
+  // Colours only: re-style the graph in place. Nothing is laid out again and selection, collapse state, search and a shown
+  // path stay as they are.
+  function applyTheme() {
+    var pal = palette();
+    document.getElementById("cy").style.backgroundColor = pal.canvas;
+    var toggle = document.getElementById("theme");
+    toggle.setAttribute("aria-pressed", themeName() === "dark" ? "true" : "false");
+    if (!cy) return;
+    cy.style(buildStyle(pal));
+    // Cytoscape 3.34 reads the WebGL background from the container's inline style once, when the renderer is created, and has no
+    // API to change it. Writing its private drawing.bgColor (0-255 RGB) is the only way to follow a theme change without
+    // rebuilding the instance (which would drop hover and mid-gesture state). A Cytoscape upgrade that moves it makes the
+    // theme spec's WebGL background check fail ("the WebGL background follows the theme"); then rebuild with setWebgl instead.
+    var drawing = cy.renderer().drawing;
+    if (webglOn && drawing && drawing.bgColor) {
+      drawing.bgColor = [1, 3, 5].map(function (i) { return parseInt(pal.canvas.substr(i, 2), 16); });
+    }
+    applyFilters();
+    cy.forceRender();
+  }
+  document.getElementById("theme").addEventListener("click", function () {
+    themeChoice = themeName() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", themeChoice);
+    applyTheme();
+  });
+  (darkQuery.addEventListener ? darkQuery.addEventListener.bind(darkQuery, "change") : darkQuery.addListener.bind(darkQuery))(function () {
+    if (!themeChoice) applyTheme();
+  });
+
+  // Cytoscape fixes the renderer when it is created, so switching renderer means creating it again.
+  function createCy(els, extra) {
+    var pal = palette();
+    // The WebGL renderer reads its background from the container's own style when it is created.
+    document.getElementById("cy").style.backgroundColor = pal.canvas;
+    var opts = Object.assign({
+      container: document.getElementById("cy"),
+      elements: els,
+      wheelSensitivity: 0.3,
+      style: buildStyle(pal)
+    }, extra);
+    if (webglOn) {
+      try {
+        cy = cytoscape(Object.assign({}, opts, { webgl: true }));
+        return;
+      } catch (e) {
+        // The half-built instance cannot be reached, so clear what it left in the container.
+        webglOn = false;
+        webglSupported = false;
+        releaseContexts(opts.container);
+        opts.container.textContent = "";
+      }
+    }
+    cy = cytoscape(opts);
+  }
+  // The legend covers part of the canvas, so it starts open only where the canvas is tall enough to spare the room.
+  document.getElementById("legend").open = document.getElementById("cy").clientHeight >= 700;
+  createCy(elements, { layout: { name: "preset" } });
+  applyLayout("fcose");
+
+  applyTheme();
+  syncWebglBox();
+  expose();
+
+  // Until the user moves the view, keep the whole graph fitted: the container can still be settling when the first
+  // fit runs, so fit again once it has its final size.
+  var userMoved = false;
+  ["wheel", "mousedown", "touchstart", "keydown"].forEach(function (type) {
+    document.getElementById("cy").addEventListener(type, function () { userMoved = true; }, true);
+  });
+  function refit() {
+    if (userMoved) return;
+    cy.resize();
+    fitView(undefined, 30);
+  }
+  if (window.ResizeObserver) new ResizeObserver(refit).observe(document.getElementById("cy"));
+  requestAnimationFrame(function () { requestAnimationFrame(refit); });
 
   var details = document.getElementById("details");
 
@@ -104,6 +848,17 @@
     p.appendChild(document.createTextNode(value));
     return p;
   }
+  function shownMembers(e) {
+    var all = e.data("members");
+    return document.getElementById("risky-only").checked ? e.data("riskyMembers") : all;
+  }
+  // Ports of an edge; a merged edge lists the ports of the rules it stands for.
+  function edgePorts(e) {
+    if (!e.data("meta")) return e.data("label") || "all";
+    var seen = [];
+    shownMembers(e).forEach(function (id) { var p = edgeData[id].label || "all"; if (seen.indexOf(p) === -1) seen.push(p); });
+    return seen.join(", ");
+  }
   function describeEdges(title, edges, other) {
     var box = document.createDocumentFragment();
     if (!edges.length) return box;
@@ -111,7 +866,7 @@
     var ul = el("ul");
     edges.forEach(function (e) {
       var li = el("li");
-      li.appendChild(document.createTextNode(other(e).data("label") + " : " + (e.data("label") || "all")));
+      li.appendChild(document.createTextNode(other(e).data("label") + " : " + edgePorts(e)));
       if (e.data("risky")) li.appendChild(el("span", " (risky)", "risky"));
       ul.appendChild(li);
     });
@@ -128,8 +883,37 @@
   var edgeData = {};
   data.edges.forEach(function (e) { edgeData[e.id] = e; });
 
+  function nodeLabel(id) { return nodeById[id] ? nodeById[id].label : id; }
+
+  // The way to close a VPC where its box cannot be double-clicked (exposure rings), and a plain button elsewhere.
+  function collapseButton(vpcId) {
+    var close = el("button", "Collapse " + parentDefs[vpcId].data.name);
+    close.type = "button";
+    close.addEventListener("click", function () { if (!collapsed[vpcId]) toggleVpc(vpcId); });
+    return close;
+  }
+
+  var shownId = null;   // element whose details are on the panel
   function show(target) {
+    shownId = target.id();
     details.textContent = "";
+    if (target.isEdge() && target.data("meta")) {
+      details.appendChild(el("h2", target.source().data("label") + " -> " + target.target().data("label")));
+      details.appendChild(field("Direction", target.data("kind")));
+      details.appendChild(field("Merged rules", String(target.data("members").length)));
+      if (target.data("risky")) details.appendChild(el("p", "Includes a risky public ingress rule", "risky"));
+      var ids = shownMembers(target);
+      var list = el("ul");
+      ids.forEach(function (id) {
+        var m = edgeData[id];
+        var li = el("li", nodeLabel(m.source) + " -> " + nodeLabel(m.target) + " : " + (m.label || "all"));
+        if (m.risky) li.appendChild(el("span", " (risky)", "risky"));
+        list.appendChild(li);
+      });
+      details.appendChild(list);
+      appendDescriptions(ids);
+      return;
+    }
     if (target.isEdge()) {
       var e = edgeData[target.id()];
       details.appendChild(el("h2", target.source().data("label") + " -> " + target.target().data("label")));
@@ -146,75 +930,922 @@
     if (!n) {
       details.appendChild(el("h2", target.data("label")));
       details.appendChild(field("Type", target.data("kind").toUpperCase()));
+      if (vpcGroups[target.id()]) {
+        details.appendChild(field("Groups", String(vpcGroups[target.id()].length)));
+        if (collapsed[target.id()]) {
+          details.appendChild(el("p", "Collapsed: double-click to expand.", "muted"));
+        } else {
+          // Double-click needs a box that takes events; the exposure rings draw none, so only the button works there.
+          if (!LAYOUTS[layoutName].flat) details.appendChild(el("p", "Double-click to collapse.", "muted"));
+          details.appendChild(collapseButton(target.id()));
+        }
+        if (collapsed[target.id()]) {
+          details.appendChild(field("Internal rules", String(target.data("internal"))));
+          if (target.data("internalRisky")) details.appendChild(el("p", target.data("internalRisky") + " internal rule(s) are risky", "risky"));
+          details.appendChild(describeEdges("Incoming", riskyFilter(target.incomers("edge").toArray()), function (e) { return e.source(); }));
+          details.appendChild(describeEdges("Outgoing", riskyFilter(target.outgoers("edge").toArray()), function (e) { return e.target(); }));
+          appendDescriptions(descriptionIds(target));
+        }
+      }
       return;
     }
     details.appendChild(el("h2", n.label));
     details.appendChild(field("Id", n.id));
     if (n.vpc) details.appendChild(field("VPC", n.vpc));
+    if (vpcOf[n.id]) {
+      details.appendChild(collapseButton(vpcOf[n.id]));
+    }
     if (n.region) details.appendChild(field("Region", n.region));
     if (n.unused) details.appendChild(el("p", "Unused: no network interfaces attached", "muted"));
-    details.appendChild(describeEdges("Incoming", target.incomers("edge").toArray(), function (e) { return e.source(); }));
-    details.appendChild(describeEdges("Outgoing", target.outgoers("edge").toArray(), function (e) { return e.target(); }));
-    var withDescs = target.connectedEdges().toArray().filter(function (e) { var d = edgeData[e.id()].descriptions; return d && d.length; });
-    if (withDescs.length) {
-      details.appendChild(el("h3", "Rule descriptions"));
-      withDescs.forEach(function (e) {
-        details.appendChild(el("p", e.source().data("label") + " -> " + e.target().data("label"), "muted"));
-        details.appendChild(descriptionList(edgeData[e.id()].descriptions));
-      });
-    }
+    details.appendChild(describeEdges("Incoming", riskyFilter(target.incomers("edge").toArray()), function (e) { return e.source(); }));
+    details.appendChild(describeEdges("Outgoing", riskyFilter(target.outgoers("edge").toArray()), function (e) { return e.target(); }));
+    appendDescriptions(descriptionIds(target));
   }
 
-  function clearFocus() { cy.elements().removeClass("dim"); }
+  // With Risky only on, the lists in the details panel leave out the edges the canvas hides.
+  function riskyFilter(edges) {
+    return document.getElementById("risky-only").checked ? edges.filter(function (e) { return e.data("risky"); }) : edges;
+  }
+  // Real edges behind everything connected to a node, merged edges included.
+  function descriptionIds(target) {
+    var ids = [];
+    riskyFilter(target.connectedEdges().toArray()).forEach(function (e) { ids = ids.concat(e.data("meta") ? shownMembers(e) : [e.id()]); });
+    return ids;
+  }
+
+  // Rule descriptions of the given real edges, each under its own source -> target heading.
+  function appendDescriptions(ids) {
+    var withDescs = ids.filter(function (id) { var d = edgeData[id].descriptions; return d && d.length; });
+    if (!withDescs.length) return;
+    details.appendChild(el("h3", "Rule descriptions"));
+    withDescs.forEach(function (id) {
+      details.appendChild(el("p", nodeLabel(edgeData[id].source) + " -> " + nodeLabel(edgeData[id].target), "muted"));
+      details.appendChild(descriptionList(edgeData[id].descriptions));
+    });
+  }
+
+  function clearFocus() { cy.elements().removeClass("dim show-label"); }
+  function unselectFlat() { cy.nodes(":parent.flat").unselect(); }
   function focus(target) {
     clearFocus();
+    // Port labels are hidden until needed: the selected node's own edges (or the selected edge) show theirs.
+    (target.isNode() ? target.connectedEdges() : target).addClass("show-label");
+    // Their labels (and the neighbours') are readable at any zoom.
+    (target.isNode() ? target.closedNeighborhood("node") : target.connectedNodes()).addClass("show-label");
     var keep = target.isNode() ? target.closedNeighborhood().union(target.ancestors()).union(target.neighborhood().ancestors()) : target.union(target.connectedNodes()).union(target.connectedNodes().ancestors());
     cy.elements().not(keep).addClass("dim");
   }
 
-  cy.on("tap", "node, edge", function (evt) {
+  function onTapElement(evt) {
     var t = evt.target;
     if (t.isNode() && t.isParent()) { show(t); return; }
     show(t);
-    focus(t);
-  });
-  cy.on("tap", function (evt) {
+    // The path highlight stays while a path is shown.
+    if (!pathState) focus(t);
+  }
+  function onTapBackground(evt) {
     if (evt.target === cy) {
+      if (pathState) { shownId = null; pathState.render(); return; }
       clearFocus();
-      details.textContent = "";
-      details.appendChild(el("p", "Click a group or an edge to see its details.", "muted"));
+      shownId = null;
+      showHint();
     }
-  });
+  }
+  function showHint() {
+    details.textContent = "";
+    details.appendChild(el("p", "Click a group or an edge to see its details.", "muted"));
+  }
+  // A layout change can alter what the panel says (a VPC collapsing, merged edges changing); say it again.
+  function refreshDetails() {
+    if (!shownId) return;
+    var t = cy.getElementById(shownId);
+    if (t.nonempty()) show(t); else { shownId = null; showHint(); }
+  }
+  function onDoubleTapVpc(evt) { toggleVpc(evt.target.id()); }
+  function toggleVpc(id) {
+    collapsed[id] = !collapsed[id];
+    searchSnapshot = null;
+    sync();
+    if (!collapsed[id]) bringIntoView(cy.getElementById(id));
+  }
+  // An expanded VPC can run off the screen at the zoom of the collapsed view. Pan to it, and zoom out only as far as
+  // needed; a VPC that is already on screen leaves the view alone.
+  function bringIntoView(v) {
+    var b = v.renderedBoundingBox({ includeLabels: true, includeOverlays: false });
+    var pad = 40;
+    if (b.x1 >= pad / 2 && b.y1 >= pad / 2 && b.x2 <= cy.width() - pad / 2 && b.y2 <= cy.height() - pad / 2) return;
+    var zoom = cy.zoom();
+    fitView(v, pad, zoom);
+  }
+  function bindCy() {
+    cy.on("tap", "node, edge", onTapElement);
+    cy.on("tap", onTapBackground);
+    cy.on("dbltap", "node.vpc", onDoubleTapVpc);
+    // A VPC that was just opened by a double-click is still being selected by the click that opened it.
+    cy.on("select", "node:parent", function (evt) { if (evt.target.hasClass("flat")) evt.target.unselect(); });
+    cy.on("mouseover", "edge", function (evt) { evt.target.addClass("hover"); });
+    cy.on("mouseout", "edge", function (evt) { evt.target.removeClass("hover"); });
+  }
+  bindCy();
 
   function applyFilters() {
     var ingress = document.getElementById("ingress").checked;
     var egress = document.getElementById("egress").checked;
     var riskyOnly = document.getElementById("risky-only").checked;
     cy.edges().forEach(function (e) {
-      var visible = (e.data("kind") === "ingress" ? ingress : egress) && (!riskyOnly || e.data("risky"));
+      var visible = e.hasClass("path") || ((e.data("kind") === "ingress" ? ingress : egress) && (!riskyOnly || e.data("risky")));
+      if (e.data("meta")) {
+        // A merged edge counts only the rules the current filters leave in.
+        var n = shownMembers(e).length;
+        e.data("label", n + (n === 1 ? " rule" : " rules"));
+      }
       e.style("display", visible ? "element" : "none");
     });
   }
   ["ingress", "egress", "risky-only"].forEach(function (id) {
-    document.getElementById(id).addEventListener("change", applyFilters);
+    document.getElementById(id).addEventListener("change", function () { applyFilters(); autoRenderer(); });
   });
 
-  document.getElementById("search").addEventListener("input", function (evt) {
-    var q = evt.target.value.trim().toLowerCase();
-    cy.nodes().removeClass("match");
-    if (!q) return;
-    var hits = cy.nodes().filter(function (n) {
-      return !n.isParent() && (String(n.data("label")).toLowerCase().indexOf(q) !== -1 || String(n.id()).toLowerCase().indexOf(q) !== -1);
+  // Bring the canvas in line with `collapsed`. Only the VPCs that were just expanded are laid out again, each
+  // on its own, and its groups start at the spot the collapsed node occupied; everything else keeps its place.
+  function sync(skipLayout) {
+    var want = desired();
+    var wanted = {};
+    want.nodes.concat(want.edges).forEach(function (def) { wanted[def.data.id] = true; });
+    var centres = {};
+    Object.keys(vpcGroups).forEach(function (id) {
+      var v = cy.getElementById(id);
+      if (v.nonempty()) centres[id] = Object.assign({}, v.position());
     });
-    hits.addClass("match");
-    if (hits.length) cy.animate({ fit: { eles: hits, padding: 80 }, duration: 0 });
+    var stale = cy.elements().filter(function (x) { return !wanted[x.id()]; });
+    var changed = stale.nonempty();
+    cy.remove(stale.edges());
+    cy.remove(stale.nodes());
+    var expanded = [];
+    want.nodes.forEach(function (def) {
+      var existing = cy.getElementById(def.data.id);
+      if (existing.nonempty()) {
+        if (vpcGroups[def.data.id]) {
+          var wasCollapsed = existing.hasClass("collapsed");
+          existing.data({ label: def.data.label, w: def.data.w, h: def.data.h, internal: def.data.internal, internalRisky: def.data.internalRisky });
+          existing.toggleClass("collapsed", !!collapsed[def.data.id]);
+          // Only a collapsed VPC is drawn as exposed; an open one shows its groups.
+          existing.toggleClass("exposed", !!(exposed[def.data.id] && collapsed[def.data.id]));
+          if (!collapsed[def.data.id] && wasCollapsed) expanded.push(def.data.id);
+          else if (collapsed[def.data.id] && !wasCollapsed) existing.position(centres[def.data.id]);
+        }
+        return;
+      }
+      var at = vpcOf[def.data.id] && centres[vpcOf[def.data.id]];
+      changed = true;
+      cy.add(at ? Object.assign({}, def, { position: { x: at.x + jitter() * 20, y: at.y + jitter() * 20 } }) : def);
+    });
+    want.edges.forEach(function (def) {
+      if (cy.getElementById(def.data.id).empty()) { changed = true; cy.add(def); }
+    });
+    if (!skipLayout) {
+      // The force layout is local: an expanded VPC is laid out on its own. The others are a function of the whole
+      // graph, so they are laid out again when it changed.
+      if (layoutName === "fcose") expanded.forEach(function (id) { layoutVpc(id, centres[id]); });
+      else if (changed) applyLayout(layoutName);
+    }
+    clearFocus();
+    unselectFlat();
+    applyFilters();
+    autoRenderer();
+    refreshDetails();
+    if (pathState) markPath();
+  }
+
+  function layoutVpc(id, centre) {
+    var v = cy.getElementById(id);
+    var eles = v.union(v.children());
+    var layout = eles.layout(fcoseOptions(v.children(), { fit: false, packComponents: false }));
+    layout.one("layoutstop", function () {
+      var now = v.position();
+      v.children().shift({ x: centre.x - now.x, y: centre.y - now.y });
+    });
+    seeded(function () { layout.run(); });
+    separate(id);
+  }
+
+  // fcose can leave sibling boxes (VPCs, collapsed VPCs, peers, groups) overlapping, so after a layout the
+  // overlapping siblings are pushed apart, level by level from the innermost out. A pinned VPC stays where it is
+  // and its neighbours move instead.
+  // `skip` is a collection of nodes to leave out (the external peers, which a layout places on its own).
+  function separate(pinnedId, skip) {
+    var levels = [];
+    function keep(n) { return !skip || !skip.contains(n); }
+    cy.nodes().filter(function (n) { return n.isParent(); }).forEach(function (n) {
+      levels.push({ depth: n.ancestors().length, nodes: n.children().toArray() });
+    });
+    levels.sort(function (a, b) { return b.depth - a.depth; });
+    levels.push({ depth: -1, nodes: cy.nodes(":orphan").toArray().filter(keep) });
+    levels.forEach(function (level) { pushApart(level.nodes, pinnedId); });
+  }
+  function pushApart(nodes, pinnedId) {
+    if (nodes.length < 2) return;
+    var boxes = nodes.map(function (n) {
+      var b = n.boundingBox({ includeLabels: true, includeOverlays: false });
+      return { x1: b.x1, y1: b.y1, x2: b.x2, y2: b.y2, dx: 0, dy: 0, pinned: n.id() === pinnedId };
+    });
+    function move(box, dx, dy) { box.x1 += dx; box.x2 += dx; box.y1 += dy; box.y2 += dy; box.dx += dx; box.dy += dy; }
+    for (var round = 0; round < 3000; round++) {
+      // Pushing one box off another can push it onto a third; a growing step breaks such cycles.
+      var step = 1 + round / 100;
+      var moved = false;
+      for (var i = 0; i < boxes.length; i++) {
+        for (var j = i + 1; j < boxes.length; j++) {
+          var a = boxes[i], b = boxes[j];
+          var ox = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1) + GAP;
+          var oy = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1) + GAP;
+          if (ox <= 0 || oy <= 0 || (a.pinned && b.pinned)) continue;
+          ox *= step; oy *= step;
+          var wa = a.pinned ? 0 : (b.pinned ? 1 : 0.5);
+          var wb = 1 - wa;
+          if (ox < oy) {
+            var sx = (a.x1 + a.x2) <= (b.x1 + b.x2) ? -1 : 1;
+            move(a, sx * ox * wa, 0); move(b, -sx * ox * wb, 0);
+          } else {
+            var sy = (a.y1 + a.y2) <= (b.y1 + b.y2) ? -1 : 1;
+            move(a, 0, sy * oy * wa); move(b, 0, -sy * oy * wb);
+          }
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+    nodes.forEach(function (n, i) {
+      var d = boxes[i];
+      if (d.dx || d.dy) (n.isParent() ? n.descendants().nodes() : n).shift({ x: d.dx, y: d.dy });
+    });
+  }
+
+  function setAll(state) {
+    Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = state; });
+    searchSnapshot = null;
+    // Collapsing or expanding everything changes the whole graph, so lay it all out once instead of per VPC.
+    sync(true);
+    applyLayout(layoutName);
+  }
+  document.getElementById("expand-all").addEventListener("click", function () { setAll(false); });
+  document.getElementById("collapse-all").addEventListener("click", function () { setAll(true); });
+
+  function syncWebglBox() {
+    var box = document.getElementById("webgl");
+    box.checked = webglOn;
+    box.disabled = !webglSupported;
+    box.title = webglSupported ? "Faster drawing for large graphs (experimental)" : "WebGL 2 is not available in this browser";
+  }
+  function expose() {
+    // Read by the browser spec.
+    window.awsSecurityViz = {
+      get cy() { return cy; },
+      get layout() { return layoutName; },
+      tiers: tiers,
+      rings: ringOf,
+      collapseThreshold: COLLAPSE_THRESHOLD,
+      webglThreshold: WEBGL_THRESHOLD,
+      get renderer() { return webglOn ? "webgl" : "canvas"; },
+      get theme() { return themeName(); },
+      fit: fitView,
+      palette: palette
+    };
+  }
+  function setWebgl(on) {
+    if (on === webglOn || (on && !webglSupported)) return;
+    var json = cy.elements().jsons();
+    var view = { zoom: cy.zoom(), pan: cy.pan() };
+    // Release the contexts while the canvases are still in the page: destroying the instance removes them.
+    releaseContexts(cy.container());
+    cy.destroy();
+    webglOn = on;
+    createCy(json, { layout: { name: "preset", fit: false }, zoom: view.zoom, pan: view.pan });
+    bindCy();
+    syncWebglBox();
+    applyFilters();
+  }
+  // Until the checkbox has been used, the renderer follows the number of elements on the canvas.
+  function autoRenderer() {
+    if (webglManual) return;
+    var shown = cy.elements().filter(function (x) { return x.style("display") !== "none"; }).length;
+    setWebgl(webglSupported && shown > WEBGL_THRESHOLD);
+  }
+  // If the browser takes the WebGL context away, carry on with the canvas renderer.
+  document.getElementById("cy").addEventListener("webglcontextlost", function () {
+    if (releasing || !webglOn) return;
+    setTimeout(function () {
+      webglSupported = false;
+      setWebgl(false);
+      syncWebglBox();
+    }, 0);
+  }, true);
+  document.getElementById("webgl").addEventListener("change", function (evt) {
+    webglManual = true;
+    setWebgl(evt.target.checked);
+    syncWebglBox();
   });
+
+  // Collapsed set before a search opened VPCs; put back when the search is cleared.
+  var searchSnapshot = null;
+  var MAX_SEARCH_ZOOM = 1.5;
+  var searchBox = document.getElementById("search");
+
+  // A hit inside a collapsed VPC opens it only once the hit is confirmed: Enter, or a single match.
+  // Until then the VPC holding a hit is just highlighted.
+  function runSearch(confirmed) {
+    var q = searchBox.value.trim().toLowerCase();
+    cy.nodes().removeClass("match");
+    if (!q) {
+      if (searchSnapshot) {
+        Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = !!searchSnapshot[id]; });
+        searchSnapshot = null;
+        sync();
+      }
+      return;
+    }
+    var ids = Object.keys(groupDefs).filter(function (id) {
+      return String(groupDefs[id].data.label).toLowerCase().indexOf(q) !== -1 || id.toLowerCase().indexOf(q) !== -1;
+    });
+    if (confirmed || ids.length === 1) {
+      var changed = false;
+      ids.forEach(function (id) {
+        if (collapsed[vpcOf[id]]) {
+          if (!searchSnapshot) searchSnapshot = Object.assign({}, collapsed);
+          collapsed[vpcOf[id]] = false;
+          changed = true;
+        }
+      });
+      if (changed) sync();
+    }
+    var hits = cy.nodes().filter(function (n) { return ids.indexOf(n.id()) !== -1; });
+    ids.forEach(function (id) { if (collapsed[vpcOf[id]]) hits = hits.union(cy.getElementById(vpcOf[id])); });
+    hits.addClass("match");
+    if (hits.length) {
+      // A single small match would otherwise fill the screen.
+      fitView(hits, 80, MAX_SEARCH_ZOOM);
+    }
+  }
+  searchBox.addEventListener("input", function () { runSearch(false); });
+  searchBox.addEventListener("keydown", function (evt) { if (evt.key === "Enter") runSearch(true); });
+
+  // "Can X reach Y": answered from the security group rules, the way AWS evaluates them. A hop from group A to
+  // group B needs A's egress and B's ingress to both allow it, and its ports are what the two sides have in
+  // common. CIDR and prefix-list sources are endpoints and never carry traffic onward. The display toggles do not
+  // matter. Rules are matched by group id, or by CIDR containment; an egress or ingress rule on a CIDR other than
+  // 0.0.0.0/0 and ::/0, or on a prefix list, cannot be tied to a group (instance addresses are not in the data), so
+  // such a hop is only "possible". The shortest path is drawn; the VPCs on it are opened, and Clear path puts the
+  // view back.
+  var pathFrom = document.getElementById("path-from");
+  var pathTo = document.getElementById("path-to");
+  var pathPort = document.getElementById("path-port");
+  var pathState = null;   // set while a path is shown: the view to go back to, and how to show the result again
+  var pathNames = {};     // text shown in the pickers -> node id
+  var nodeInfo = {};      // node id -> { id, label, type: group | ext | cidr | pl | other, rules, in, out, c }
+  var pathData = data.nodes.some(function (n) { return !!n.rules; });
+  var memberOf = {};      // node id -> the peers it stands for, when a rule's peer is drawn under another name (:groups config)
+  var ANY_CIDRS = ["0.0.0.0/0", "::/0"];
+  var ALL_ITEM = { proto: "all" };
+
+  function parseV4(s) {
+    var p = s.split(".");
+    if (p.length !== 4) return null;
+    var v = 0n;
+    for (var i = 0; i < 4; i++) {
+      if (!/^\d{1,3}$/.test(p[i]) || Number(p[i]) > 255) return null;
+      v = (v << 8n) | BigInt(p[i]);
+    }
+    return v;
+  }
+  function parseV6(s) {
+    var halves = s.split("::");
+    if (halves.length > 2) return null;
+    function words(h) { return h === "" ? [] : h.split(":"); }
+    var head = words(halves[0]), tail = halves.length === 2 ? words(halves[1]) : [];
+    var fill = 8 - head.length - tail.length;
+    if (halves.length === 1 ? fill !== 0 : fill < 1) return null;
+    var all = head.concat(new Array(halves.length === 2 ? fill : 0).fill("0"), tail);
+    var v = 0n;
+    for (var i = 0; i < all.length; i++) {
+      if (!/^[0-9a-fA-F]{1,4}$/.test(all[i])) return null;
+      v = (v << 16n) | BigInt(parseInt(all[i], 16));
+    }
+    return v;
+  }
+  var cidrCache = {};
+  function parseCidr(text) {
+    if (text in cidrCache) return cidrCache[text];
+    var m = /^([^\/]+)\/(\d{1,3})$/.exec(text), out = null;
+    if (m) {
+      var v6 = m[1].indexOf(":") !== -1, bits = v6 ? 128 : 32, len = Number(m[2]);
+      var addr = v6 ? parseV6(m[1]) : parseV4(m[1]);
+      if (addr !== null && len <= bits) out = { bits: bits, len: len, addr: addr };
+    }
+    cidrCache[text] = out;
+    return out;
+  }
+  function contains(outer, inner) {
+    if (outer.bits !== inner.bits || outer.len > inner.len) return false;
+    var shift = BigInt(outer.bits - outer.len);
+    return (outer.addr >> shift) === (inner.addr >> shift);
+  }
+
+  // Ports as items: all, tcp/udp ranges, icmp type and code (-1 for any), or another protocol by name.
+  function ruleItem(r) {
+    if (r.item) return r.item;
+    var p = r.proto;
+    if (p === "tcp" || p === "udp") r.item = { proto: p, from: r.from == null ? 0 : r.from, to: r.to == null ? 65535 : r.to };
+    else if (p === "icmp" || p === "icmpv6") r.item = { proto: p, from: r.from == null ? -1 : r.from, to: r.to == null ? -1 : r.to };
+    else r.item = { proto: p };
+    return r.item;
+  }
+  function intersect(a, b) {
+    if (a.proto === "all") return b;
+    if (b.proto === "all") return a;
+    if (a.proto !== b.proto) return null;
+    if (a.proto === "tcp" || a.proto === "udp") {
+      var lo = Math.max(a.from, b.from), hi = Math.min(a.to, b.to);
+      return lo <= hi ? { proto: a.proto, from: lo, to: hi } : null;
+    }
+    if (a.proto === "icmp" || a.proto === "icmpv6") {
+      var type = a.from === -1 ? b.from : (b.from === -1 || a.from === b.from ? a.from : null);
+      var code = a.to === -1 ? b.to : (b.to === -1 || a.to === b.to ? a.to : null);
+      return type === null || code === null ? null : { proto: a.proto, from: type, to: code };
+    }
+    return a;
+  }
+  function itemLabel(it) {
+    if (it.proto === "all") return "all";
+    if (it.proto === "tcp" || it.proto === "udp") return (it.from === it.to ? it.from : it.from + "-" + it.to) + "/" + it.proto;
+    if (it.proto === "icmp" || it.proto === "icmpv6") return it.from === -1 ? it.proto : it.proto + " " + (it.to === -1 ? it.from : it.from + "/" + it.to);
+    return /^\d+$/.test(it.proto) ? "proto " + it.proto : it.proto;
+  }
+  // Union of items as a short list: "all" swallows the rest and touching port ranges join.
+  function mergeItems(items) {
+    if (items.some(function (i) { return i.proto === "all"; })) return [ALL_ITEM];
+    var out = [], ranges = {};
+    items.forEach(function (i) {
+      if (i.proto === "tcp" || i.proto === "udp") (ranges[i.proto] = ranges[i.proto] || []).push(i);
+      else if (!out.some(function (o) { return itemLabel(o) === itemLabel(i); })) out.push(i);
+    });
+    var merged = [];
+    Object.keys(ranges).forEach(function (proto) {
+      ranges[proto].sort(function (a, b) { return a.from - b.from; }).forEach(function (r) {
+        var last = merged.length && merged[merged.length - 1].proto === proto ? merged[merged.length - 1] : null;
+        if (last && r.from <= last.to + 1) last.to = Math.max(last.to, r.to);
+        else merged.push({ proto: proto, from: r.from, to: r.to });
+      });
+    });
+    return merged.sort(function (a, b) { return a.from - b.from || (a.proto < b.proto ? -1 : 1); }).concat(out);
+  }
+  function itemsText(items) {
+    var m = mergeItems(items);
+    return m.length ? m.map(itemLabel).join(", ") : "nothing";
+  }
+
+  var namedGroups = {};   // groups named in a rule that were not described themselves (another account, say)
+  data.nodes.forEach(function (n) {
+    (n.rules || []).forEach(function (r) {
+      if (r.kind === "group") namedGroups[r.peer] = true;
+      if (r.node) (memberOf[r.node] = memberOf[r.node] || []).push({ kind: r.kind, id: r.peer });
+      if (r.kind === "cidr4" || r.kind === "cidr6") { r.c = parseCidr(r.peer); r.any = ANY_CIDRS.indexOf(r.peer) !== -1; }
+    });
+  });
+  // Every endpoint a rule or the graph names, so a CIDR that only egress rules mention (egress edges may not be
+  // drawn) can still be picked. type: group (rules known), ext (a group the input does not describe) or endpoint (an
+  // address range or prefix list, standing for the members).
+  function addInfo(id, label, n) {
+    if (nodeInfo[id]) return;
+    var info = { id: id, label: label, rules: (n && n.rules) || null, unknown: (n && n.unknown) || [] };
+    var c = parseCidr(id);
+    if (info.rules) {
+      info.type = "group";
+      info.in = info.rules.filter(function (r) { return r.dir === "in"; });
+      info.out = info.rules.filter(function (r) { return r.dir === "out"; });
+    } else if (namedGroups[id] && !memberOf[id]) {
+      info.type = "ext";
+    } else {
+      info.type = "endpoint";
+      info.members = memberOf[id] || (c ? [{ kind: c.bits === 32 ? "cidr4" : "cidr6", id: id }] : (/^pl-/.test(id) ? [{ kind: "prefix_list", id: id }] : []));
+      info.members.forEach(function (m) { m.c = m.kind === "cidr4" || m.kind === "cidr6" ? parseCidr(m.id) : null; });
+    }
+    nodeInfo[id] = info;
+  }
+  data.nodes.forEach(function (n) { addInfo(n.id, n.label, n); });
+  data.nodes.forEach(function (n) {
+    (n.rules || []).forEach(function (r) { addInfo(r.node || r.peer, r.node || r.peer, null); });
+  });
+  var groupList = data.nodes.filter(function (n) { return n.rules; }).map(function (n) { return nodeInfo[n.id]; });
+  // Groups that could accept traffic from a given group: named in an ingress rule, or open to addresses (a CIDR or
+  // prefix list), or with no ingress rules in the input.
+  var ingressByPeer = {}, ingressOpen = [];
+  groupList.forEach(function (g) {
+    var open = g.unknown.indexOf("in") !== -1;
+    g.in.forEach(function (r) {
+      if (r.kind === "group") (ingressByPeer[r.peer] = ingressByPeer[r.peer] || []).push(g);
+      else open = true;
+    });
+    if (open) ingressOpen.push(g);
+  });
+  (function () {
+    var all = Object.keys(nodeInfo).map(function (id) { return nodeInfo[id]; });
+    var byLabel = {};
+    all.forEach(function (n) { byLabel[n.label] = (byLabel[n.label] || 0) + 1; });
+    var list = document.getElementById("path-names");
+    all.sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); }).forEach(function (n) {
+      var name = byLabel[n.label] > 1 ? n.label + " (" + n.id + ")" : n.label;
+      pathNames[name] = n.id;
+      var o = document.createElement("option");
+      o.value = name;
+      list.appendChild(o);
+    });
+    if (!pathData) {
+      [pathFrom, pathTo, pathPort, document.getElementById("path-find"), document.getElementById("path-clear")].forEach(function (x) { x.disabled = true; });
+      document.getElementById("pathbar").title = "Path queries need the rules, which an obfuscated report leaves out";
+    }
+  })();
+  // Returns { id } or { candidates } (several groups match) or null.
+  function resolveNode(text) {
+    var q = text.trim().toLowerCase();
+    if (!q) return null;
+    var names = Object.keys(pathNames);
+    var exact = names.filter(function (n) { return n.toLowerCase() === q || pathNames[n].toLowerCase() === q; });
+    if (exact.length === 1) return { id: pathNames[exact[0]] };
+    if (exact.length > 1) return { candidates: exact };
+    var part = names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1 || pathNames[n].toLowerCase().indexOf(q) !== -1; });
+    if (part.length === 1) return { id: pathNames[part[0]] };
+    return part.length ? { candidates: part } : null;
+  }
+
+  // The port box: "443" is that port on tcp and udp, "443/udp" one protocol, "1000-2000" a range, "icmp",
+  // "icmp 8" or "proto 50". Returns { items }, null for an empty box, or { bad: true }.
+  function parsePortFilter(text) {
+    var t = text.trim().toLowerCase(), m;
+    if (!t) return null;
+    if ((m = /^(\d+)(?:-(\d+))?(?:\/(tcp|udp))?$/.exec(t))) {
+      var from = Number(m[1]), to = Number(m[2] || m[1]);
+      if (from > to || to > 65535) return { bad: true };
+      return { items: (m[3] ? [m[3]] : ["tcp", "udp"]).map(function (p) { return { proto: p, from: from, to: to }; }), text: t };
+    }
+    if ((m = /^(icmp|icmpv6)(?: (-?\d+)(?:\/(-?\d+))?)?$/.exec(t))) {
+      return { items: [{ proto: m[1], from: m[2] === undefined ? -1 : Number(m[2]), to: m[3] === undefined ? -1 : Number(m[3]) }], text: t };
+    }
+    if ((m = /^proto (\d+)$/.exec(t))) {
+      var named = { "1": "icmp", "6": "tcp", "17": "udp", "58": "icmpv6" }[m[1]];
+      if (named === "tcp" || named === "udp") return { items: [{ proto: named, from: 0, to: 65535 }], text: t };
+      if (named) return { items: [{ proto: named, from: -1, to: -1 }], text: t };
+      return { items: [{ proto: m[1] }], text: t };
+    }
+    return { bad: true };
+  }
+
+  // How one rule of a group relates to what is on the other side. The answer is null (no), or { c: "yes" } or
+  // { c: "maybe", why } where why says what the data cannot tell: addr (instance addresses), v6 (whether instances
+  // have IPv6 addresses), pl (what a prefix list holds), part (a range only partly covered), some (some of the
+  // ranges behind a name) or unknown (the rules themselves are not in the input).
+  var YES = { c: "yes" };
+  function maybe(why) { return { c: "maybe", why: why }; }
+  // Against one member of an endpoint: a CIDR, a prefix list or a named group.
+  function relMember(rule, m) {
+    if (rule.kind === "group") return m.kind === "group" && rule.peer === m.id ? YES : null;
+    if (rule.kind === "prefix_list") return m.kind === "prefix_list" && rule.peer === m.id ? YES : maybe("pl");
+    if (m.kind === "prefix_list") return rule.peer === "0.0.0.0/0" ? YES : maybe(rule.any ? "v6" : "pl");
+    if (m.kind !== "cidr4" && m.kind !== "cidr6") return null;
+    if (!rule.c || !m.c || rule.c.bits !== m.c.bits) return null;
+    if (contains(rule.c, m.c)) return YES;
+    return contains(m.c, rule.c) ? maybe("part") : null;
+  }
+  function classify(rule, X) {
+    if (X.type === "endpoint") {
+      var results = X.members.map(function (m) { return relMember(rule, m); }).filter(function (r) { return r; });
+      if (!results.length) return null;
+      var vague = results.filter(function (r) { return r.c === "maybe"; });
+      if (vague.length) return vague[0];
+      return results.length === X.members.length ? YES : maybe("some");
+    }
+    // A group, with instances whose addresses the data does not hold.
+    if (rule.kind === "group") return rule.peer === X.id ? YES : null;
+    if (rule.kind === "prefix_list") return maybe("pl");
+    if (!rule.any) return maybe("addr");
+    return rule.c.bits === 32 ? YES : maybe("v6");
+  }
+  // What one side of a hop offers: the rules of the node that match the other end, or a single "anything" for an
+  // end that has no rules to satisfy (an address range), or a "maybe" when its rules are not in the input.
+  function side(node, dir, other) {
+    if (node.type === "group") {
+      if (node.unknown.indexOf(dir) !== -1) return [{ rule: null, c: "maybe", why: "unknown", item: ALL_ITEM }];
+      var out = [];
+      (dir === "out" ? node.out : node.in).forEach(function (r) {
+        var rel = classify(r, other);
+        if (rel) out.push({ rule: r, c: rel.c, why: rel.why, item: ruleItem(r) });
+      });
+      return out;
+    }
+    if (node.type === "ext") return [{ rule: null, c: "maybe", why: "unknown", item: ALL_ITEM }];
+    return [{ rule: null, c: "yes", item: ALL_ITEM }];
+  }
+  function famOf(rule) { return !rule ? null : (rule.kind === "cidr4" ? 4 : (rule.kind === "cidr6" ? 6 : null)); }
+  function peerName(r) {
+    var id = r.node || r.peer;
+    return nodeInfo[id] ? nodeInfo[id].label : id;
+  }
+  function ruleText(r) {
+    return itemLabel(ruleItem(r)) + (r.dir === "out" ? " to " : " from ") + peerName(r);
+  }
+  function reasonText(side, rule, why, node, other) {
+    var which = side === "out" ? "Egress" : "Ingress";
+    if (why === "unknown") return "The " + (side === "out" ? "egress" : "ingress") + " rules of " + node.label + " are not in the input.";
+    var r = which + " " + ruleText(rule);
+    if (why === "v6") return r + " applies only if " + other.label + " has IPv6 addresses, which the data does not say.";
+    if (why === "pl") return r + " may or may not cover " + other.label + ": the contents of the prefix list are not in the data.";
+    if (why === "part") return r + " covers only part of the addresses of " + other.label + ".";
+    if (why === "some") return r + " covers only some of the address ranges behind " + other.label + ".";
+    return r + " cannot be matched to " + other.label + ": instance addresses are not in the data.";
+  }
+
+  // One hop A -> B: the egress rules of A that name B, the ingress rules of B that name A, and what they share.
+  // A rule on a CIDR and one on IPv6 CIDR never meet. null when neither end is a group with rules.
+  function hop(A, B, f, cache) {
+    var key = A.id + "\n" + B.id;
+    if (key in cache) return cache[key];
+    var res = null;
+    if (A.rules || B.rules) {
+      var eg = side(A, "out", B), ing = side(B, "in", A);
+      var pairs = [], famClash = false;
+      eg.forEach(function (e) {
+        ing.forEach(function (i) {
+          var it = intersect(e.item, i.item);
+          if (!it) return;
+          var fe = famOf(e.rule), fi = famOf(i.rule);
+          if (fe && fi && fe !== fi) { famClash = true; return; }
+          pairs.push({ item: it, e: e, i: i, c: e.c === "yes" && i.c === "yes" ? "yes" : "maybe" });
+        });
+      });
+      var entries = [];
+      pairs.forEach(function (p) {
+        (f ? f.items : [ALL_ITEM]).forEach(function (fi) {
+          var it = intersect(p.item, fi);
+          if (it) entries.push(Object.assign({}, p, { item: it }));
+        });
+      });
+      var sure = entries.filter(function (p) { return p.c === "yes"; });
+      var used = sure.length ? sure : entries;
+      res = {
+        from: A, to: B,
+        status: sure.length ? "yes" : (entries.length ? "maybe" : "blocked"),
+        egressOk: eg.length > 0, ingressOk: ing.length > 0, overlap: pairs.length > 0, famClash: famClash,
+        named: eg.concat(ing).some(function (x) { return x.rule && x.rule.kind === "group"; }),
+        egressItems: eg.map(function (e) { return e.item; }), ingressItems: ing.map(function (i) { return i.item; }),
+        items: used.map(function (p) { return p.item; }),
+        egress: uniq(used.map(function (p) { return p.e.rule; })), ingress: uniq(used.map(function (p) { return p.i.rule; })),
+        reasons: [], parts: []
+      };
+      used.forEach(function (p) {
+        if (p.e.c === "maybe") res.reasons.push(reasonText("out", p.e.rule, p.e.why, A, B));
+        if (p.i.c === "maybe") res.reasons.push(reasonText("in", p.i.rule, p.i.why, B, A));
+        if (p.e.why === "part") res.parts.push("only " + p.e.rule.peer + " of " + B.label + " is allowed");
+        if (p.i.why === "part") res.parts.push("only " + p.i.rule.peer + " of " + A.label + " is allowed");
+      });
+      res.reasons = uniq(res.reasons);
+      res.parts = uniq(res.parts);
+    }
+    cache[key] = res;
+    return res;
+  }
+  function uniq(list) {
+    var out = [];
+    list.forEach(function (x) { if (x && out.indexOf(x) === -1) out.push(x); });
+    return out;
+  }
+  function accepted(h, allowMaybe) { return !!h && (h.status === "yes" || (allowMaybe && h.status === "maybe")); }
+
+  // Breadth-first over the groups. Only groups with rules carry traffic onward: an endpoint is the first node or the last.
+  function search(from, to, f, allowMaybe, cache) {
+    var dist = {}, prev = {}, queue = [from];
+    dist[from.id] = 0;
+    for (var i = 0; i < queue.length && !(to.id in dist); i++) {
+      var X = queue[i];
+      var candidates = X.type === "group" ? uniq((ingressByPeer[X.id] || []).concat(ingressOpen)) : groupList;
+      if (candidates.indexOf(to) === -1) candidates = candidates.concat([to]);
+      candidates.forEach(function (Y) {
+        if (Y.id in dist || Y === X) return;
+        var h = hop(X, Y, f, cache);
+        if (!accepted(h, allowMaybe)) return;
+        dist[Y.id] = dist[X.id] + 1;
+        prev[Y.id] = h;
+        queue.push(Y);
+      });
+    }
+    if (!(to.id in dist)) return null;
+    var hops = [];
+    for (var at = to.id; at !== from.id; at = prev[at].from.id) hops.unshift(prev[at]);
+    return hops;
+  }
+  // When nothing gets through: the path with the fewest blocked hops (a blocked hop is one where a rule on at least
+  // one side names the other end), so the report names the hop that actually stops the traffic.
+  var BLOCKED_COST = 1000;
+  function closest(from, to, f, cache) {
+    var cost = {}, prev = {}, done = {}, open = [from];
+    cost[from.id] = 0;
+    while (open.length) {
+      var best = 0;
+      open.forEach(function (n, k) { if (cost[n.id] < cost[open[best].id]) best = k; });
+      var X = open.splice(best, 1)[0];
+      if (done[X.id]) continue;
+      done[X.id] = true;
+      if (X === to) break;
+      var candidates = X.type === "group"
+        ? uniq((ingressByPeer[X.id] || []).concat(ingressOpen, X.out.filter(function (r) { return r.kind === "group" && nodeInfo[r.peer]; }).map(function (r) { return nodeInfo[r.peer]; })))
+        : groupList;
+      if (candidates.indexOf(to) === -1) candidates = candidates.concat([to]);
+      candidates.forEach(function (Y) {
+        if (done[Y.id] || Y === X || (Y !== to && Y.type !== "group")) return;
+        var h = hop(X, Y, f, cache);
+        if (!h) return;
+        var step = accepted(h, true) ? 1 : (h.named || (h.egressOk && h.ingressOk) ? BLOCKED_COST : 0);
+        if (!step) return;
+        if (!(Y.id in cost) || cost[X.id] + step < cost[Y.id]) {
+          cost[Y.id] = cost[X.id] + step;
+          prev[Y.id] = h;
+          open.push(Y);
+        }
+      });
+    }
+    if (!(to.id in cost)) return null;
+    var hops = [];
+    for (var at = to.id; at !== from.id; at = prev[at].from.id) hops.unshift(prev[at]);
+    return hops;
+  }
+  // The verdict: reachable (every hop certain), possible (some hop depends on what the data cannot tell) or blocked,
+  // with the hop that stops the traffic on the closest path.
+  function analyse(from, to, f) {
+    var cache = {}, hops;
+    if (from === to) {
+      var self = hop(from, from, f, cache);
+      if (accepted(self, true)) return { verdict: self.status === "yes" ? "reachable" : "possible", hops: [self] };
+      return { verdict: "blocked", blocked: self, reach: 0 };
+    }
+    if ((hops = search(from, to, f, false, cache))) return { verdict: "reachable", hops: hops };
+    if ((hops = search(from, to, f, true, cache))) return { verdict: "possible", hops: hops };
+    hops = closest(from, to, f, cache);
+    if (!hops) return { verdict: "blocked", blocked: null };
+    var k = 0;
+    while (k < hops.length && accepted(hops[k], true)) k++;
+    return { verdict: "blocked", blocked: hops[k], reach: k };
+  }
+
+  function portNote(f) { return f ? " on port " + f.text : ""; }
+  function showPathMessage(title, lines) {
+    details.textContent = "";
+    details.appendChild(el("h2", title));
+    lines.forEach(function (l) { details.appendChild(el("p", l.text, l.cls)); });
+  }
+  function ruleList(rules) {
+    var ul = el("ul");
+    rules.forEach(function (r) {
+      var li = el("li", ruleText(r));
+      if (r.desc) li.appendChild(el("span", " - " + r.desc, "muted"));
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+  var NOT_CHECKED = "Security groups only: network ACLs, route tables, peering and gateways are not checked.";
+  function showPathResult(res, f) {
+    details.textContent = "";
+    var n = res.hops.length, first = res.hops[0].from, last = res.hops[n - 1].to;
+    var parts = uniq([].concat.apply([], res.hops.map(function (h) { return h.parts; })));
+    details.appendChild(el("h2", first.label + " -> " + last.label));
+    if (res.verdict === "reachable") {
+      details.appendChild(el("p", "Reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": every hop is allowed by both the egress rules of its source and the ingress rules of its target."));
+    } else {
+      details.appendChild(el("p", "Possibly reachable in " + n + (n === 1 ? " hop" : " hops") + portNote(f) + ": at least one hop depends on something the data cannot tell" + (parts.length ? ": " + parts.join("; ") : "") + ".", "risky"));
+    }
+    res.hops.forEach(function (h, i) {
+      details.appendChild(el("h3", "Hop " + (i + 1) + ": " + h.from.label + " -> " + h.to.label + (h.status === "maybe" ? " (possible)" : "")));
+      if (h.egress.length) { details.appendChild(el("p", "Egress on " + h.from.label, "muted")); details.appendChild(ruleList(h.egress)); }
+      if (h.ingress.length) { details.appendChild(el("p", "Ingress on " + h.to.label, "muted")); details.appendChild(ruleList(h.ingress)); }
+      details.appendChild(field("Allowed ports", itemsText(h.items)));
+      h.reasons.forEach(function (r) { details.appendChild(el("p", r, "muted")); });
+    });
+    details.appendChild(el("p", f ? "Every hop allows port " + f.text + "." : "Ports are listed per hop; the ports open along the whole path are not computed. Enter a port to ask about one.", "muted"));
+    details.appendChild(el("p", NOT_CHECKED, "muted"));
+  }
+  function showBlocked(from, to, res, f) {
+    var lines = [{ text: from.label + " cannot reach " + to.label + portNote(f) + "." }];
+    var h = res.blocked;
+    if (!h) {
+      lines.push({ text: "No rule on either side names the other, so nothing connects them.", cls: "muted" });
+    } else {
+      lines.push({ text: "Nearest blocked hop: " + h.from.label + " -> " + h.to.label + (res.reach ? " (" + h.from.label + " is reachable from " + from.label + " in " + res.reach + (res.reach === 1 ? " hop)." : " hops).") : ".") });
+      if (!h.egressOk) lines.push({ text: h.from.label + " has no egress rule that allows " + h.to.label + ". The missing side is the egress of " + h.from.label + "." });
+      if (!h.ingressOk) lines.push({ text: h.to.label + " has no ingress rule that allows " + h.from.label + ". The missing side is the ingress of " + h.to.label + "." });
+      if (h.egressOk && h.ingressOk && !h.overlap && h.famClash) lines.push({ text: "The egress rules of " + h.from.label + " and the ingress rules of " + h.to.label + " cover different address families (IPv4 on one side, IPv6 on the other), so no address satisfies both." });
+      else if (h.egressOk && h.ingressOk && !h.overlap) lines.push({ text: "Egress on " + h.from.label + " allows " + itemsText(h.egressItems) + " and ingress on " + h.to.label + " allows " + itemsText(h.ingressItems) + ": nothing in common." });
+      if (h.overlap && f) lines.push({ text: "Both sides agree on some traffic, but not on port " + f.text + "." });
+    }
+    lines.push({ text: NOT_CHECKED, cls: "muted" });
+    showPathMessage("No path", lines);
+  }
+  function runPath() {
+    var a = resolveNode(pathFrom.value), b = resolveNode(pathTo.value);
+    var vague = [["source", a], ["target", b]].filter(function (x) { return x[1] && x[1].candidates; });
+    if (vague.length) {
+      showPathMessage("Ambiguous name", vague.map(function (x) {
+        var c = x[1].candidates;
+        return { text: "The " + x[0] + " matches " + c.length + " groups: " + c.slice(0, 5).join(", ") + (c.length > 5 ? ", ..." : "") + ". Type more of the name or pick one from the list." };
+      }));
+      return;
+    }
+    if (!a || !b) {
+      showPathMessage("Pick a source and a target", [{ text: "Type a group name or id in both boxes and choose one from the list.", cls: "muted" }]);
+      return;
+    }
+    var f = parsePortFilter(pathPort.value);
+    if (f && f.bad) {
+      showPathMessage("Unrecognised port", [{ text: "Use a port such as 443, 443/udp or 1000-2000, or icmp, icmp 8 or proto 50.", cls: "muted" }]);
+      return;
+    }
+    var from = nodeInfo[a.id], to = nodeInfo[b.id];
+    shownId = null;
+    if (from === to && from.type !== "group") {
+      clearPath(true);
+      showPathMessage("Same endpoint", [{ text: "The source and the target are the same address range; no security group rule is involved.", cls: "muted" }]);
+      return;
+    }
+    var res = analyse(from, to, f);
+    if (res.verdict === "blocked") {
+      clearPath(true);
+      showBlocked(from, to, res, f);
+      return;
+    }
+    if (!pathState) pathState = { collapsed: Object.assign({}, collapsed), zoom: cy.zoom(), pan: Object.assign({}, cy.pan()) };
+    pathState.render = function () { showPathResult(res, f); };
+    pathState.nodes = [from.id].concat(res.hops.map(function (h) { return h.to.id; }));
+    pathState.edgeIds = {};
+    pathState.via = {};
+    res.hops.forEach(function (h) {
+      h.egress.forEach(function (r) { pathState.edgeIds[h.from.id + "-" + (r.node || r.peer)] = true; pathState.via[r.node || r.peer] = true; });
+      h.ingress.forEach(function (r) { pathState.edgeIds[(r.node || r.peer) + "-" + h.to.id] = true; pathState.via[r.node || r.peer] = true; });
+    });
+    var opened = false;
+    pathState.nodes.forEach(function (id) {
+      if (collapsed[vpcOf[id]]) { collapsed[vpcOf[id]] = false; opened = true; }
+    });
+    if (opened) { searchSnapshot = null; sync(); }
+    var on = markPath();
+    pathState.render();
+    userMoved = true;
+    fitView(on, 60, MAX_SEARCH_ZOOM);
+  }
+  // Draw the path on whatever is on the canvas: a collapsed VPC stands in for the path groups inside it, and a merged
+  // edge for the path rules it holds. Runs after every sync so the highlight and the dimming never fall out of step.
+  function markPath() {
+    var nodes = cy.collection(), edges = cy.collection();
+    pathState.nodes.forEach(function (id) {
+      nodes = nodes.union(cy.getElementById(collapsed[vpcOf[id]] ? vpcOf[id] : id));
+    });
+    var vias = cy.collection();
+    Object.keys(pathState.via).forEach(function (id) { vias = vias.union(cy.getElementById(id)); });
+    cy.edges().forEach(function (e) {
+      var hit = e.data("meta") ? e.data("members").some(function (m) { return pathState.edgeIds[m]; }) : pathState.edgeIds[e.id()];
+      if (hit) edges = edges.union(e);
+    });
+    var on = nodes.union(edges);
+    cy.elements().removeClass("path pathvia dim");
+    on.addClass("path");
+    vias.not(nodes).addClass("pathvia");
+    cy.elements().not(on.union(vias).union(nodes.ancestors())).addClass("dim");
+    // The path stays visible whatever the Ingress, Egress and Risky only toggles say.
+    applyFilters();
+    return on.union(vias);
+  }
+  // Remove the highlight and put the view (collapsed VPCs, zoom, pan) back as it was before the first query.
+  function clearPath(keepInputs) {
+    var was = pathState;
+    pathState = null;
+    cy.elements().removeClass("path pathvia dim");
+    applyFilters();
+    if (!keepInputs) { pathFrom.value = ""; pathTo.value = ""; pathPort.value = ""; }
+    if (!was) return;
+    Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = !!was.collapsed[id]; });
+    searchSnapshot = null;
+    sync();
+    cy.viewport({ zoom: was.zoom, pan: was.pan });
+    shownId = null;
+    showHint();
+  }
+  [pathFrom, pathTo, pathPort].forEach(function (box) {
+    box.addEventListener("keydown", function (evt) { if (evt.key === "Enter") runPath(); });
+  });
+  document.getElementById("path-find").addEventListener("click", runPath);
+  document.getElementById("path-clear").addEventListener("click", function () { clearPath(false); showHint(); });
 
   document.getElementById("reset").addEventListener("click", function () {
+    clearPath(false);
     clearFocus();
     cy.nodes().removeClass("match");
     document.getElementById("search").value = "";
-    cy.fit(undefined, 30);
+    fitView(undefined, 30);
   });
 })();
 </script>

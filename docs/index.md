@@ -19,7 +19,7 @@ aws-security-viz reads the EC2 security group configuration from the AWS API, or
 
 <div class="grid cards" markdown>
 
-1. **HTML viewer.** One self-contained page with search, ingress and egress toggles and a details panel. No server, no CDN. See [Outputs](outputs.md#html-viewer).
+1. **HTML viewer.** One self-contained page with search, a "can X reach Y" path query, ingress and egress toggles and a details panel. Large graphs open with each VPC collapsed into one node, and a WebGL renderer takes over for very large ones. No server, no CDN. See [Outputs](outputs.md#html-viewer).
 2. **Risky ingress highlighting.** `0.0.0.0/0` or `::/0` on a sensitive port is drawn as a dashed crimson edge, and `--fail-on-risk` turns it into a failing exit code. See [Filtering and risk checks](filtering-and-risk-checks.md).
 3. **Runs anywhere.** Install the gem, or run the published container image with Ruby and Graphviz built in. See [Installation](installation.md).
 
@@ -42,4 +42,4 @@ The sample [security_groups.json](assets/security_groups.json) needs no AWS acce
 3. [Credentials and IAM](credentials-and-iam.md): how credentials are found and the minimal IAM policy.
 4. [Security](security.md): what leaves your machine and how to verify a release.
 
-aws-security-viz is MIT licensed. The HTML viewer inlines a vendored copy of Cytoscape.js, which is also MIT licensed.
+aws-security-viz is MIT licensed. The HTML viewer inlines vendored copies of Cytoscape.js, cytoscape-fcose, cose-base, layout-base, dagre and cytoscape-dagre, which are also MIT licensed; their notices ship inside the gem under `lib/aws_security_viz/vendor/`.

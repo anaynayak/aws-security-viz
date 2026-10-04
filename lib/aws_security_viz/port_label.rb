@@ -8,6 +8,14 @@ module AwsSecurityViz
     PROTOCOL_NAMES = {"1" => "icmp", "6" => "tcp", "17" => "udp", "58" => "icmpv6"}.freeze
     ICMP = %w[icmp icmpv6].freeze
 
+    # Protocol of a permission as the viewer's path query names it: "all", "tcp", "udp", "icmp", "icmpv6", or the
+    # protocol number as a string.
+    def self.protocol(protocol)
+      protocol = protocol.to_s
+      return ALL if protocol == "-1"
+      PROTOCOL_NAMES.fetch(protocol, protocol)
+    end
+
     # Label for one permission. For tcp/udp from/to are ports; for icmp they are the type and code
     # (-1 meaning any); other protocols carry no ports and are shown by name or number.
     def self.format(protocol, from, to)

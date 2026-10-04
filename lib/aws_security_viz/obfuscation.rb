@@ -17,7 +17,8 @@ module AwsSecurityViz
     end
 
     def self.node_opts(opts)
-      %i[label vpc_id region group_id].each_with_object(opts.dup) { |field, hashed|
+      # Rules name groups, CIDRs and ports in clear text and the path query cannot work on hashed names, so they go.
+      %i[label vpc_id region group_id].each_with_object(opts.except(:rules, :unknown)) { |field, hashed|
         hashed[field] = hash(opts[field]) if opts.key?(field) && !opts[field].nil?
       }
     end

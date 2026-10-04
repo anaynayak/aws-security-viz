@@ -20,10 +20,24 @@ with sync_playwright() as p:
 
     out["canvas"] = True
     out["nodes"] = page.evaluate("awsSecurityViz.cy.nodes().map(n => ({id: n.id(), kind: n.data('kind'), parent: n.data('parent') || null, unused: !!n.data('unused')}))")
+    out["collapsed"] = page.evaluate("awsSecurityViz.cy.nodes('.collapsed').map(n => n.id())")
+    out["threshold"] = page.evaluate("awsSecurityViz.collapseThreshold")
+    out["layout"] = page.evaluate("awsSecurityViz.layout")
+    out["overlaps"] = page.evaluate("""(() => {
+      const groups = {};
+      awsSecurityViz.cy.nodes('.region, .vpc').forEach(n => { (groups[n.data('parent') || ''] = groups[n.data('parent') || ''] || []).push(n); });
+      const bad = [];
+      Object.values(groups).forEach(list => list.forEach((a, i) => list.slice(i + 1).forEach(b => {
+        const x = a.boundingBox(), y = b.boundingBox();
+        if (x.x1 < y.x2 && y.x1 < x.x2 && x.y1 < y.y2 && y.y1 < x.y2) bad.push([a.id(), b.id()]);
+      })));
+      return bad;
+    })()""")
     out["risky_edges"] = page.evaluate("awsSecurityViz.cy.edges('.risky').map(e => e.id())")
 
     def tap(selector_js):
-        page.evaluate("awsSecurityViz.cy.%s.emit('tap')" % selector_js)
+        # emit returns the Cytoscape collection, which Playwright cannot serialise (it exhausts memory), so return null.
+        page.evaluate("(() => { awsSecurityViz.cy.%s.emit('tap'); return null; })()" % selector_js)
         return page.evaluate("document.getElementById('details').textContent")
 
     out["node_details"] = tap("getElementById('sg-web')")
@@ -41,6 +55,19 @@ with sync_playwright() as p:
 
     page.fill("#search", "evil")
     out["matches"] = page.evaluate("awsSecurityViz.cy.nodes('.match').map(n => n.id())")
+
+    # Risky only also trims the plain edges listed for a group.
+    page.click("#risky-only")
+    out["risky_only_group_details"] = tap("getElementById('sg-web')")
+    page.click("#risky-only")
+
+    # A VPC that starts expanded keeps its name through collapse and expand.
+    def toggle_vpc():
+        page.evaluate("(() => { awsSecurityViz.cy.getElementById('vpc:eu-west-1|vpc-1').emit('dbltap'); return null; })()")
+        return page.evaluate("awsSecurityViz.cy.getElementById('vpc:eu-west-1|vpc-1').data('label')")
+
+    out["vpc_label_collapsed"] = toggle_vpc()
+    out["vpc_label_expanded"] = toggle_vpc()
     browser.close()
 
 print(json.dumps(out))
