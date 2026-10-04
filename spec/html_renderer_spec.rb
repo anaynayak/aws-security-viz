@@ -337,6 +337,12 @@ describe AwsSecurityViz::Renderer::Html do
           expect(s["zeroEdges"]).to be_empty, "#{name}: edges without a box #{s["zeroEdges"].first(3)}"
           expect(s["notFinite"]).to be_empty, "#{name}: nodes without a position or size #{s["notFinite"].first(3)}"
           expect(s["overlaps"]).to be_empty, "#{name}: nodes overlap #{s["overlaps"].first(3)}"
+          expect(s["overlapsAll"]).to be_empty, "#{name}: nodes overlap across VPCs #{s["overlapsAll"].first(3)}"
+          if s["flat"]
+            boxes = s["flatBoxes"]
+            expect(boxes["selected"]).to eq(0), "#{name}: a VPC box is selected"
+            expect([boxes["labels"], boxes["overlay"], boxes["fill"], boxes["border"]]).to all(be_empty), "#{name}: VPC boxes draw something: #{boxes}"
+          end
           expect(s["vpcOverlaps"]).to be_empty, "#{name}: VPCs overlap #{s["vpcOverlaps"].first(3)}" unless s["flat"]
           expect(s["flat"]).to be(layout == "rings"), "#{name}: VPC boxes drawn: #{!s["flat"]}"
           expect(s["ink"]).to be > 0, "#{name}: no edge pixels on screen"
@@ -344,6 +350,11 @@ describe AwsSecurityViz::Renderer::Html do
           expect(s["nodeInk"]).to be > 0, "#{name}: no node pixels on screen" if s["nodes"] < 100
           # The force layout keeps the view where it was when one VPC opens or closes; the others fit everything again.
           expect(s["outside"]).to be_empty, "#{name}: not fitted, outside the view: #{s["outside"].first(3)}" unless layout == "fcose" && name.match?(/dblclick/)
+        end
+        expect(r["repick_moved"]).to be < 1, "picking fcose again moved nodes by #{r["repick_moved"]} px"
+        layouts.each do |l|
+          expect(r["button"][l]["text"]).to start_with("Collapse"), "#{l}: no Collapse button in a group's panel"
+          expect(r["button"][l]["collapsed"]).to be(true), "#{l}: the Collapse button did not collapse the VPC"
         end
         expect(r["steps"].select { |k, _| k.end_with?(":webgl") }.values.map { |s| s["renderer"] }.uniq).to eq(["webgl"])
         expect(r["steps"].select { |k, _| k.end_with?(":load") }.values.map { |s| s["renderer"] }.uniq).to eq(["canvas"])
@@ -372,6 +383,8 @@ describe AwsSecurityViz::Renderer::Html do
             expect(s["peerSpread"]).to be < 1
             expect(s["peerLeft"]).to be(true)
           end
+          # Flow with VPCs open uses the width of the view, not a narrow strip.
+          steps_of(r, "flow", "load", "expand_all").each { |s| expect(s["usedWidth"]).to be > 0.6, "flow uses #{(s["usedWidth"] * 100).round}% of the width" }
           # Flow: peers in their own column on the left.
           steps_of(r, "flow", *%w[load expand_all collapse_all dblclick_expand dblclick_collapse webgl]).each do |s|
             expect(s["peerSpread"]).to be < 1
@@ -380,6 +393,7 @@ describe AwsSecurityViz::Renderer::Html do
           # Rings: distance from the centre never decreases with the hop count.
           steps_of(r, "rings", *%w[load expand_all collapse_all dblclick_expand webgl]).each do |s|
             expect(s["ringBad"]).to be_empty, "rings out of order: #{s["ringBad"].first(3)}"
+            expect(s["publicRadius"]).to all(be < 80), "the public peers are not at the centre: #{s["publicRadius"]}"
           end
           # Flow runs along the rule direction when the rules have no cycle (the small shape).
           if shape == "small"
@@ -407,6 +421,11 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["faded"]["opacities"]).to all(be_between(0.05, 0.5))
         expect(r["faded"]["shown"]).to be(true)
         expect(r["neighbour_labels"]).to be > 0
+        # Labels the user asked for show at any zoom.
+        expect(r["out_label_before_hover"]).to eq(0)
+        expect(r["out_label_on_hover"]).to be >= 3, "the hovered edge has no label at zoom #{r["zoom_out"]}"
+        expect(r["out_selected"]).not_to be_empty
+        expect(r["grey_out_selected"]).to be > 20, "a selected node and its neighbours have no labels at zoom #{r["zoom_out_selected"]}"
       end
     end
 
@@ -794,15 +813,14 @@ describe AwsSecurityViz::Renderer::Html do
             expect(a["pathNodes"]).to eq(q["pathNodes"])
             expect(a["pathEdges"]).to eq(q["pathEdges"])
           end
-          # Whole graph in view, so the path is a few thin lines; any orange at all is proof it was drawn. How many
-          # pixels depends on how large the layout makes the graph.
-          expect(expand["orange"]).to be > 50
+          # Exactly the path colour, with the view fitted to the path (the whole graph is a few thin lines).
+          expect(expand["orange_fit"]).to be > 500
           expect(collapse["pathCollapsed"]).to eq([vpc1])
           expect(collapse["pathNodes"]).to eq(%w[sg-0-0 sg-0-1 sg-2-0 sg-2-1])
           expect(collapse["pathEdges"].size).to be > 0
           expect(collapse["pathEdges"].grep(/\Ameta:/).size).to eq(2)
           expect(collapse["dimmed"]).to be > 0
-          expect(collapse["orange"]).to be > 50
+          expect(collapse["orange_fit"]).to be > 500
           expect(q["dimTextOpacity"]).to be_within(0.001).of(0.12)
           expect(expand["dark"]).to be < r["before"]["dark"]
         end
@@ -931,7 +949,7 @@ describe AwsSecurityViz::Renderer::Html do
           expect(path["start"]["path"]).not_to be_empty
           %w[start flow rings grid fcose].each do |layout|
             expect(path[layout]["pathInView"]).to be(true), "path: #{layout}: path groups outside the view"
-            expect(path[layout]["orange"]).to be > 0, "path: #{layout}: the path is not on screen"
+            expect(path[layout]["orange_fit"]).to be > 500, "path: #{layout}: the path is not on screen"
           end
           # Clear path puts the collapsed VPCs back, whatever layout is on.
           expect(r["after_clear"]["path"]).to be_empty

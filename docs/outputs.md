@@ -108,20 +108,25 @@ aws_security_viz -o security_groups.json -f viz.html
       later one (up to tier 3: entry, app, data) places its source left of its target, so the tiers read as columns
       from left to right; the external peers share one column; disconnected parts are packed side by side.
    2. Traffic flow. Layers from left to right along the rule direction: entry groups, then what they reach, and so on.
-      The layout library (dagre) keeps VPC and region boxes as clusters, so a VPC stays one box and its layers cross
-      VPCs. Rules to the external peers are left out of the layering (every group allows egress to `0.0.0.0/0` by
-      default, which would flatten the layers), and the peers are stacked in their own column on the left, each at the
-      height of the groups it talks to. A rule that closes a cycle points backwards.
-   3. Exposure rings. The public peers (`0.0.0.0/0`, `::/0`) are at the centre, the groups they reach directly are on
-      the first ring, what those reach on the second, and so on; the other external peers are on the first ring, and
-      groups nothing external reaches are on the outermost ring. The groups of one VPC sit next to each other on a
-      ring. Rings cannot respect VPC boxes, so VPC and region boxes are not drawn in this layout; a collapsed VPC is
-      still one node, double-click it to open it, and use Collapse all to close the VPCs again.
+      With VPCs open, each VPC is layered on its own (dagre) and the VPC boxes are packed in rows, so a large account
+      fills the view instead of a narrow strip; rules between VPCs are drawn but do not influence the layers. With
+      every VPC collapsed, dagre ranks the VPC nodes themselves. Rules to the external peers are left out of the
+      layering (every group allows egress to `0.0.0.0/0` by default, which would flatten the layers), and the peers
+      are stacked in their own column on the left, each at the height of the groups it talks to. A rule that closes a
+      cycle points backwards.
+   3. Exposure rings. The public peers (`0.0.0.0/0`, `::/0`) are together at the centre, the groups they reach directly
+      are on the first ring, what those reach on the second, and so on; the other external peers are on the first
+      ring, and groups nothing external reaches are on the outermost ring. The groups of one VPC sit next to each
+      other on a ring. Rings cannot respect VPC boxes, so VPC and region boxes are not drawn in this layout and cannot
+      be selected. A collapsed VPC is still one node: double-click it to open it. To close one again, select a group
+      in it and use the Collapse button in the panel, or use Collapse all.
    4. Grid within VPC. Each VPC is a grid with one row per tier (a long tier wraps), the VPCs are packed in rows, and
       the external peers are in a column on the left.
 
-   Labels are hidden when zoomed out too far to read them. An edge's port label is hidden until you hover the edge or
-   select it; selecting a group also shows the labels of its edges. Selecting a group or edge fades everything
+   Labels are hidden when zoomed out too far to read them, except those you asked for: an edge's port label is hidden
+   until you hover the edge or select it, and selecting a group shows its own label, its neighbours' and its edges'
+   labels at any zoom. Picking the force layout again draws the same picture as opening the report. A group's panel
+   has a Collapse button for its VPC, in every layout. Selecting a group or edge fades everything
    outside its neighbourhood instead of hiding it.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)

@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright
 
 report, vpc_id = sys.argv[1:3]
 LAYOUTS = ["fcose", "flow", "rings", "grid"]
-out = {"requests": [], "errors": [], "console": [], "steps": {}}
+out = {"requests": [], "errors": [], "console": [], "steps": {}, "button": {}}
 
 STATE = """() => {
   const cy = awsSecurityViz.cy;
@@ -34,6 +34,21 @@ STATE = """() => {
   leaves.forEach((a, i) => leaves.slice(i + 1).forEach(b => {
     if (a.parent().id() === b.parent().id() && box(a.boundingBox({includeLabels: false}), b.boundingBox({includeLabels: false}))) overlaps.push(a.id() + ' x ' + b.id());
   }));
+  // Whatever their parents, no two groups or peers may touch (rings draw no VPC boxes, so a VPC does not separate them).
+  const overlapsAll = [];
+  leaves.forEach((a, i) => leaves.slice(i + 1).forEach(b => {
+    if (box(a.boundingBox({includeLabels: false}), b.boundingBox({includeLabels: false}))) overlapsAll.push(a.id() + ' x ' + b.id());
+  }));
+  const flatParents = cy.nodes(':parent.flat');
+  const flatBoxes = {
+    count: flatParents.length,
+    selected: flatParents.filter(n => n.selected()).length,
+    labels: flatParents.map(n => n.style('label')).filter(l => l !== ''),
+    overlay: flatParents.map(n => n.numericStyle('overlay-opacity')).filter(o => o !== 0),
+    fill: flatParents.map(n => n.numericStyle('background-opacity')).filter(o => o !== 0),
+    border: flatParents.map(n => n.numericStyle('border-width')).filter(o => o !== 0),
+  };
+  const lb = cy.nodes().filter(n => !n.isParent()).renderedBoundingBox({includeLabels: false, includeOverlays: false});
   const peers = cy.nodes('[kind = "group"]').filter(n => n.isOrphan());
   const peerXs = peers.map(n => n.position('x'));
   const tier = awsSecurityViz.tiers(), ring = awsSecurityViz.rings();
@@ -62,7 +77,8 @@ STATE = """() => {
     invisible: shown.filter(e => !e.visible()).map(e => e.id()),
     zeroEdges: shown.edges().filter(e => { const b = e.renderedBoundingBox(); return b.w === 0 && b.h === 0; }).map(e => e.id()),
     notFinite: cy.nodes().filter(n => !isFinite(n.position('x')) || !isFinite(n.position('y')) || n.width() <= 0 || n.height() <= 0).map(n => n.id()),
-    outside: outside, vpcOverlaps: vpcOverlaps, overlaps: overlaps,
+    outside: outside, vpcOverlaps: vpcOverlaps, overlaps: overlaps, overlapsAll: overlapsAll, flatBoxes: flatBoxes,
+    usedWidth: lb.w / w, usedHeight: lb.h / h,
     peers: peers.length, peerSpread: peers.length ? Math.max(...peerXs) - Math.min(...peerXs) : 0,
     peerLeft: peers.length && groups.length ? Math.max(...peerXs) < Math.min(...groups.map(n => n.position('x'))) : true,
     tierColumns: tierColumns, tierRows: tierRows, flowBack: flowBack, ringBad: ringBad,
@@ -129,6 +145,34 @@ with sync_playwright() as p:
                     return x, y
         raise SystemExit("no spot on " + vpc + " reaches the VPC")
 
+    def positions():
+        return ev("() => Object.fromEntries(awsSecurityViz.cy.nodes().map(n => [n.id(), n.position()]))")
+
+    # Picking a layout again draws what the first load drew.
+    first = positions()
+    page.select_option("#layout", "flow")
+    page.select_option("#layout", "fcose")
+    again = positions()
+    out["repick_moved"] = max(abs(first[k]["x"] - again[k]["x"]) + abs(first[k]["y"] - again[k]["y"]) for k in first)
+
+    def collapse_with_button():
+        # A group's panel closes its VPC: the way to do it where the VPC box cannot be double-clicked.
+        spot = ev("""(vpc) => {
+          const cy = awsSecurityViz.cy, r = document.getElementById('cy').getBoundingClientRect();
+          const n = cy.getElementById(vpc).children().filter(c => { const p = c.renderedPosition(); return p.x > 20 && p.y > 20 && p.x < cy.width() - 20 && p.y < cy.height() - 20; })[0];
+          const p = n.renderedPosition();
+          return {x: r.left + p.x, y: r.top + p.y};
+        }""", vpc_id)
+        page.mouse.move(spot["x"], spot["y"])
+        page.mouse.click(spot["x"], spot["y"])
+        page.wait_for_timeout(200)
+        buttons = page.locator("#details button")
+        out["button_text"] = buttons.first.inner_text() if buttons.count() else None
+        if buttons.count():
+            buttons.first.click()
+        page.wait_for_timeout(300)
+        return ev("(id) => awsSecurityViz.cy.getElementById(id).hasClass('collapsed')", vpc_id)
+
     for layout in LAYOUTS:
         page.select_option("#layout", layout)
         step(layout + ":load")
@@ -145,6 +189,11 @@ with sync_playwright() as p:
             x, y = point(vpc_id)
             page.mouse.dblclick(x, y)
             step(layout + ":dblclick_collapse")
+        if out["steps"][layout + ":dblclick_expand"]["flat"] is False:
+            x, y = point(vpc_id)
+            page.mouse.dblclick(x, y)
+        page.wait_for_timeout(300)
+        out["button"][layout] = {"collapsed": collapse_with_button(), "text": out.get("button_text")}
         page.click("#expand-all")
         page.click("#webgl")
         step(layout + ":webgl")

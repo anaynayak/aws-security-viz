@@ -183,13 +183,16 @@
       { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
       { selector: "edge.meta", style: { width: 3 } },
       { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.6, "line-style": "dashed", "line-color": "#d6006f", "target-arrow-color": "#d6006f", color: "#b00060" } },
-      { selector: "node.vpc.flat:parent, node.region.flat:parent", style: { "background-opacity": 0, "border-width": 0, "text-opacity": 0, events: "no" } },
-      { selector: "edge.hover, edge.show-label, edge:selected, edge.path", style: { label: "data(label)" } },
+            { selector: "edge.hover, edge.show-label, edge:selected, edge.path", style: { label: "data(label)", "min-zoomed-font-size": 0 } },
+      { selector: "node.show-label, node:selected", style: { "min-zoomed-font-size": 0 } },
       { selector: "node.path, node.pathvia", style: { "border-width": 3, "border-color": "#ff8c00" } },
       { selector: "edge.path", style: { width: 6, "arrow-scale": 1.5, "line-color": "#ff8c00", "target-arrow-color": "#ff8c00", "z-index": 10 } },
       { selector: ".dim", style: { opacity: 0.12, "text-opacity": 0.12, "text-background-opacity": 0.12 } },
       { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
-      { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
+      { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } },
+      // Last, so nothing above (selection, match, dim) can draw a box the layout has no use for: the VPC and region
+      // boxes of a layout that cannot respect them (exposure rings) are not there at all.
+      { selector: "node.flat:parent", style: { label: "", "background-opacity": 0, "border-width": 0, "overlay-opacity": 0, "text-opacity": 0, events: "no" } }
   ];
 
   // Cytoscape's experimental WebGL renderer is much faster on thousands of elements. It is chosen when more
@@ -334,6 +337,9 @@
   }
   function runFcose() {
     var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    // fcose reads the positions it is given, so every run starts from the same ones: a layout picked again draws
+    // what the first load drew.
+    cy.batch(function () { leaves.forEach(function (n) { n.position({ x: 0, y: 0 }); }); });
     try {
       cy.layout(fcoseOptions(leaves, {}, true)).run();
     } catch (e) {
@@ -367,11 +373,13 @@
     });
   }
 
-  // Layered along the rule direction, left to right: entry groups, then what they reach, and so on. dagre handles
-  // the region and VPC boxes as clusters, so a VPC stays one box; its ranks cross VPCs. Edges to the external peers
-  // are left out of the ranking (every group allows egress to 0.0.0.0/0 by default and would collapse the layers),
-  // and the peers get their own column on the left instead.
+  // Layered along the rule direction, left to right: entry groups, then what they reach, and so on. With VPCs open,
+  // each VPC is laid out on its own (dagre, left to right inside the box) and the boxes are packed in rows, so a large
+  // account is a page and not a strip; with every VPC collapsed, dagre ranks the VPC nodes themselves. Edges to the
+  // external peers are left out of the ranking (every group allows egress to 0.0.0.0/0 by default and would collapse
+  // the layers), and the peers get their own column on the left instead.
   function runFlow() {
+    if (cy.nodes(".vpc:parent").nonempty()) { runPacked(true); return; }
     var peers = cy.nodes().filter(isPeer);
     var rest = cy.elements().not(peers).not(peers.connectedEdges());
     var opts = { name: "dagre", rankDir: "LR", nodeSep: 24, rankSep: 110, edgeSep: 10, animate: false, fit: false, nodeDimensionsIncludeLabels: false };
@@ -412,32 +420,40 @@
       (byRing[ring[n.id()]] = byRing[ring[n.id()]] || []).push(n);
     });
     // Rings are a node's width apart, so a node never reaches the next ring where the ring runs sideways.
-    var step = cy.nodes().filter(function (n) { return !n.isParent(); }).reduce(function (m, n) { return Math.max(m, n.data("w")); }, 0) + 60;
+    var step = cy.nodes().filter(function (n) { return !n.isParent(); }).reduce(function (m, n) { return Math.max(m, n.data("w")); }, 0) + 100;
     var radius = 0;
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
     cy.batch(function () {
       Object.keys(byRing).map(Number).sort(function (a, b) { return a - b; }).forEach(function (r, i) {
         var nodes = byRing[r].sort(function (a, b) {
           var pa = vpcOf[a.id()] || "", pb = vpcOf[b.id()] || "";
           return pa < pb ? -1 : pa > pb ? 1 : byLabel(a, b);
         });
-        if (i === 0 && nodes.length === 1) { nodes[0].position({ x: 0, y: 0 }); return; }
-        var around = nodes.reduce(function (sum, n) { return sum + n.data("w") + GAP * 2; }, 0);
+        if (i === 0 && nodes.length <= 6) {
+          // The middle: the public peers sit together at the centre, one above the other.
+          nodes.forEach(function (n, k) { n.position({ x: 0, y: (k - (nodes.length - 1) / 2) * (n.data("h") + LEAF_PAD + GAP) }); });
+          return;
+        }
+        var around = nodes.reduce(function (sum, n) { return sum + n.data("w") + GAP * 2 + LEAF_PAD; }, 0);
         radius = Math.max(radius + step, around / (2 * Math.PI));
         var at = 0;
         nodes.forEach(function (n) {
-          var arc = n.data("w") + GAP * 2;
+          var arc = n.data("w") + GAP * 2 + LEAF_PAD;
           var angle = -Math.PI / 2 + ((at + arc / 2) / around) * 2 * Math.PI;
           at += arc;
           n.position({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
         });
       });
     });
+    // Nodes of neighbouring rings can still touch where a wide label meets a bend of the ring.
+    pushApart(leaves.toArray());
   }
 
   // Each VPC's groups in a grid, a row per tier (a long tier wraps), the VPCs side by side in rows, and the external
   // peers in a column on the left. Boxes are sized here from the node sizes, so the layout does not depend on a
   // renderer.
-  function runGrid() {
+  function runGrid() { runPacked(false); }
+  function runPacked(flow) {
     var tier = tiers();
     function byTierThenLabel(a, b) { return (tier[a.id()] - tier[b.id()]) || byLabel(a, b); }
     function leafBox(n) {
@@ -462,7 +478,21 @@
       var size = rows(boxes, Math.max(Math.sqrt(area) * 1.6, widest), pad);
       return { w: size.w, h: size.h, put: function (x, y) { boxes.forEach(function (b) { b.put(x + b.at.x, y + b.at.y); }); } };
     }
-    function vpcBox(v) {
+    function flowBox(v) {
+      var kids = v.children();
+      try {
+        kids.union(kids.edgesWith(kids)).layout({ name: "dagre", rankDir: "LR", nodeSep: 24, rankSep: 90, edgeSep: 10, animate: false, fit: false, nodeDimensionsIncludeLabels: false }).run();
+      } catch (e) {
+        return gridBox(v);
+      }
+      var bb = kids.boundingBox({ includeLabels: false, includeOverlays: false });
+      return {
+        w: bb.w + 2 * BOX_PAD, h: bb.h + 2 * BOX_PAD + BOX_LABEL,
+        put: function (x, y) { kids.shift({ x: x + BOX_PAD - bb.x1, y: y + BOX_PAD + BOX_LABEL - bb.y1 }); }
+      };
+    }
+    function vpcBox(v) { return flow ? flowBox(v) : gridBox(v); }
+    function gridBox(v) {
       var kids = v.children().toArray().sort(byTierThenLabel);
       var cw = Math.max.apply(null, kids.map(function (n) { return n.data("w"); })) + GAP * 2;
       var ch = Math.max.apply(null, kids.map(function (n) { return n.data("h"); })) + 26;
@@ -491,15 +521,21 @@
     }
     var peers = cy.nodes().filter(isPeer);
     var top = cy.nodes(":orphan").not(peers).toArray().sort(function (a, b) { return (b.isParent() - a.isParent()) || byLabel(a, b); });
+    // The boxes are measured (and, in the flow layout, laid out) before anything is moved.
+    var main = packed(top.map(boxOf), GAP * 3);
+    var peerBoxes = peers.toArray().sort(byLabel).map(leafBox);
+    var column = rows(peerBoxes, 0, GAP * 2);
+    var widest = peerBoxes.reduce(function (m, b) { return Math.max(m, b.w); }, 0);
     cy.batch(function () {
-      var peerBoxes = peers.toArray().sort(byLabel).map(leafBox);
-      var column = rows(peerBoxes, 0, GAP * 2);
-      var main = packed(top.map(boxOf), GAP * 3);
-      var widest = peerBoxes.reduce(function (m, b) { return Math.max(m, b.w); }, 0);
-      peerBoxes.forEach(function (b) { b.put((widest - b.w) / 2, b.at.y + Math.max(0, (main.h - column.h) / 2)); });
-      main.put(widest + PEER_GAP / 2, 0);
+      if (flow) {
+        main.put(0, 0);
+      } else {
+        peerBoxes.forEach(function (b) { b.put((widest - b.w) / 2, b.at.y + Math.max(0, (main.h - column.h) / 2)); });
+        main.put(widest + PEER_GAP / 2, 0);
+      }
     });
     separate(undefined, peers);
+    if (flow) stackPeers(peers);
   }
 
   var LAYOUTS = { fcose: { run: runFcose }, flow: { run: runFlow }, rings: { run: runRings, flat: true }, grid: { run: runGrid } };
@@ -509,7 +545,11 @@
     layoutName = name;
     var spec = LAYOUTS[name];
     cy.nodes(".vpc, .region").toggleClass("flat", !!spec.flat);
+    // Whether a label counts toward a node's size depends on the zoom (see min-zoomed-font-size), so the layout always
+    // starts from the same view: the same picture whatever the zoom was when it was picked.
+    cy.viewport({ zoom: 1, pan: { x: 0, y: 0 } });
     seeded(spec.run);
+    unselectFlat();
     cy.fit(undefined, 30);
     var box = document.getElementById("layout");
     if (box.value !== name) box.value = name;
@@ -667,6 +707,13 @@
     details.appendChild(el("h2", n.label));
     details.appendChild(field("Id", n.id));
     if (n.vpc) details.appendChild(field("VPC", n.vpc));
+    if (vpcOf[n.id]) {
+      // The way to close a VPC where its box cannot be double-clicked (exposure rings), and a plain button elsewhere.
+      var close = el("button", "Collapse " + n.vpc);
+      close.type = "button";
+      close.addEventListener("click", function () { var id = vpcOf[n.id]; if (!collapsed[id]) toggleVpc(id); });
+      details.appendChild(close);
+    }
     if (n.region) details.appendChild(field("Region", n.region));
     if (n.unused) details.appendChild(el("p", "Unused: no network interfaces attached", "muted"));
     details.appendChild(describeEdges("Incoming", riskyFilter(target.incomers("edge").toArray()), function (e) { return e.source(); }));
@@ -697,10 +744,13 @@
   }
 
   function clearFocus() { cy.elements().removeClass("dim show-label"); }
+  function unselectFlat() { cy.nodes(":parent.flat").unselect(); }
   function focus(target) {
     clearFocus();
     // Port labels are hidden until needed: the selected node's own edges (or the selected edge) show theirs.
     (target.isNode() ? target.connectedEdges() : target).addClass("show-label");
+    // Their labels (and the neighbours') are readable at any zoom.
+    (target.isNode() ? target.closedNeighborhood("node") : target.connectedNodes()).addClass("show-label");
     var keep = target.isNode() ? target.closedNeighborhood().union(target.ancestors()).union(target.neighborhood().ancestors()) : target.union(target.connectedNodes()).union(target.connectedNodes().ancestors());
     cy.elements().not(keep).addClass("dim");
   }
@@ -730,8 +780,8 @@
     var t = cy.getElementById(shownId);
     if (t.nonempty()) show(t); else { shownId = null; showHint(); }
   }
-  function onDoubleTapVpc(evt) {
-    var id = evt.target.id();
+  function onDoubleTapVpc(evt) { toggleVpc(evt.target.id()); }
+  function toggleVpc(id) {
     collapsed[id] = !collapsed[id];
     searchSnapshot = null;
     sync();
@@ -751,6 +801,8 @@
     cy.on("tap", "node, edge", onTapElement);
     cy.on("tap", onTapBackground);
     cy.on("dbltap", "node.vpc", onDoubleTapVpc);
+    // A VPC that was just opened by a double-click is still being selected by the click that opened it.
+    cy.on("select", "node:parent", function (evt) { if (evt.target.hasClass("flat")) evt.target.unselect(); });
     cy.on("mouseover", "edge", function (evt) { evt.target.addClass("hover"); });
     cy.on("mouseout", "edge", function (evt) { evt.target.removeClass("hover"); });
   }
@@ -816,6 +868,7 @@
       else if (changed) applyLayout(layoutName);
     }
     clearFocus();
+    unselectFlat();
     applyFilters();
     autoRenderer();
     refreshDetails();

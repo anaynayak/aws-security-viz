@@ -38,10 +38,10 @@ SNAPSHOT = """() => {
 
 
 def orange(png):
-    # The path colour (#ff8c00) is used by nothing else: counting it proves the highlight reached the screen.
+    # Exactly the path colour (#ff8c00); the match and selection colour (#f39c12) must not count.
     img = Image.open(io.BytesIO(png)).convert("RGB")
     raw = img.tobytes()
-    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r > 235 and 110 < g < 165 and b < 40)
+    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r >= 250 and 134 <= g <= 146 and b <= 10)
 
 
 with sync_playwright() as p:
@@ -64,6 +64,12 @@ with sync_playwright() as p:
         page.wait_for_timeout(300)
         s = page.evaluate(SNAPSHOT)
         s["orange"] = orange(page.locator("#cy").screenshot())
+        # The path colour at a readable size: fitted to the path for the count, the view put back after.
+        view = ev("() => ({zoom: awsSecurityViz.cy.zoom(), pan: awsSecurityViz.cy.pan()})")
+        ev("() => { const cy = awsSecurityViz.cy; const on = cy.elements('.path'); if (on.nonempty()) cy.fit(on, 60); return null; }")
+        page.wait_for_timeout(200)
+        s["orange_fit"] = orange(page.locator("#cy").screenshot())
+        ev("(v) => { awsSecurityViz.cy.viewport({zoom: v.zoom, pan: v.pan}); return null; }", view)
         return s
 
     def type_into(selector, text):

@@ -34,18 +34,22 @@ with sync_playwright() as p:
     out["zoom_in"] = ev("() => awsSecurityViz.cy.zoom()")
     out["grey_in"] = grey(page.locator("#cy").screenshot())
 
-    # An edge whose midpoint is clear of every node, so the pixels there can only be its label.
-    spot = ev("""() => {
-      const cy = awsSecurityViz.cy, r = document.getElementById('cy').getBoundingClientRect();
-      const nodes = cy.nodes().filter(n => !n.isParent());
-      for (const e of cy.edges().toArray()) {
-        const m = e.midpoint(), z = cy.zoom(), p = cy.pan();
-        const x = m.x * z + p.x, y = m.y * z + p.y;
-        const clear = nodes.every(n => { const b = n.renderedBoundingBox({includeLabels: true}); return x + 24 < b.x1 || x - 24 > b.x2 || y + 12 < b.y1 || y - 12 > b.y2; });
-        if (clear && e.data('label')) return {id: e.id(), label: e.data('label'), x: r.left + x, y: r.top + y};
-      }
-      return null;
-    }""")
+    def find_spot():
+        # An edge whose midpoint is clear of every node, so the pixels there can only be its label.
+        return ev("""() => {
+          const cy = awsSecurityViz.cy, r = document.getElementById('cy').getBoundingClientRect();
+          const nodes = cy.nodes().filter(n => !n.isParent());
+          for (const e of cy.edges().toArray()) {
+            const m = e.midpoint(), z = cy.zoom(), p = cy.pan();
+            const x = m.x * z + p.x, y = m.y * z + p.y;
+            if (x < 30 || y < 30 || x > cy.width() - 30 || y > cy.height() - 30) continue;
+            const clear = nodes.every(n => { const b = n.renderedBoundingBox({includeLabels: true}); return x + 24 < b.x1 || x - 24 > b.x2 || y + 12 < b.y1 || y - 12 > b.y2; });
+            if (clear && e.data('label')) return {id: e.id(), label: e.data('label'), x: r.left + x, y: r.top + y};
+          }
+          return null;
+        }""")
+
+    spot = find_spot()
     out["spot"] = spot
     clip = {"x": spot["x"] - 24, "y": spot["y"] - 12, "width": 48, "height": 24}
     page.mouse.move(5, 5)
@@ -91,6 +95,30 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     out["zoom_out"] = ev("() => awsSecurityViz.cy.zoom()")
     out["grey_out"] = grey(page.locator("#cy").screenshot())
+
+    # Zoomed out, an edge you hover or select, and the node you select with its neighbours, are still labelled.
+    page.mouse.move(5, 5)
+    spot = find_spot()
+    clip = {"x": spot["x"] - 24, "y": spot["y"] - 12, "width": 48, "height": 24}
+    out["out_label_before_hover"] = grey(page.screenshot(clip=clip))
+    page.mouse.move(spot["x"] - 3, spot["y"])
+    page.mouse.move(spot["x"], spot["y"])
+    page.wait_for_timeout(300)
+    out["out_label_on_hover"] = grey(page.screenshot(clip=clip))
+    page.mouse.move(5, 5)
+    node = ev("""() => {
+      const cy = awsSecurityViz.cy, r = document.getElementById('cy').getBoundingClientRect();
+      const n = cy.nodes('[kind = "group"]').filter(n => n.degree() > 2 && n.renderedPosition().x > 20 && n.renderedPosition().y > 20)[0];
+      const p = n.renderedPosition();
+      return {id: n.id(), x: r.left + p.x, y: r.top + p.y};
+    }""")
+    page.mouse.move(node["x"] - 2, node["y"])
+    page.mouse.click(node["x"], node["y"])
+    page.mouse.move(5, 5)
+    page.wait_for_timeout(300)
+    out["out_selected"] = ev("() => awsSecurityViz.cy.elements(':selected').map(e => e.id())")
+    out["grey_out_selected"] = grey(page.locator("#cy").screenshot())
+    out["zoom_out_selected"] = ev("() => awsSecurityViz.cy.zoom()")
     browser.close()
 
 print(json.dumps(out))

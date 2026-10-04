@@ -23,10 +23,10 @@ def dark(png):
 
 
 def orange(png):
-    # The path colour (#ff8c00) is used by nothing else, so counting it proves the highlight reached the screen.
+    # Exactly the path colour (#ff8c00); the match and selection colour (#f39c12) must not count.
     img = Image.open(io.BytesIO(png)).convert("RGB")
     raw = img.tobytes()
-    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r > 235 and 110 < g < 165 and b < 40)
+    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r >= 250 and 134 <= g <= 146 and b <= 10)
 
 
 with sync_playwright() as p:
@@ -104,6 +104,15 @@ with sync_playwright() as p:
                     return x, y
         raise SystemExit("no spot on " + vpc + " reaches the VPC")
 
+    def orange_fitted():
+        # The path colour at a readable size: the view is fitted to the path for the count and put back after.
+        view_before = ev("() => ({zoom: awsSecurityViz.cy.zoom(), pan: awsSecurityViz.cy.pan()})")
+        ev("() => { const cy = awsSecurityViz.cy; const on = cy.elements('.path'); if (on.nonempty()) cy.fit(on, 60); return null; }")
+        page.wait_for_timeout(200)
+        n = orange(page.locator("#cy").screenshot())
+        ev("(v) => { awsSecurityViz.cy.viewport({zoom: v.zoom, pan: v.pan}); return null; }", view_before)
+        return n
+
     def act(a):
         if a["do"] == "search":
             type_into("#search", a["text"])
@@ -118,6 +127,7 @@ with sync_playwright() as p:
         page.wait_for_timeout(500)
         res = view()
         res["orange"] = orange(page.locator("#cy").screenshot())
+        res["orange_fit"] = orange_fitted()
         res["dark"] = dark(page.locator("#cy").screenshot())
         return res
 
