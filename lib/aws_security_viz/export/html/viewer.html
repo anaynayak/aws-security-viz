@@ -32,6 +32,12 @@
     <label><input id="egress" type="checkbox" checked> Egress</label>
     <label><input id="risky-only" type="checkbox"> Risky only</label>
     <label><input id="webgl" type="checkbox"> WebGL</label>
+    <label>Layout <select id="layout" aria-label="Layout">
+      <option value="fcose">Force (fcose)</option>
+      <option value="flow">Traffic flow</option>
+      <option value="rings">Exposure rings</option>
+      <option value="grid">Grid within VPC</option>
+    </select></label>
     <button id="reset" type="button">Reset view</button>
     <span id="pathbar">
       <input id="path-from" list="path-names" placeholder="Can this reach..." aria-label="Path source" autocomplete="off">
@@ -164,18 +170,21 @@
   var elements = initial.nodes.concat(initial.edges);
 
   cytoscape.use(cytoscapeFcose);
-  var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, padding: 30 };
+  cytoscape.use(cytoscapeDagre);
+  var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, edgeElasticity: 1.5, padding: 30 };
 
   var STYLE = [
-      { selector: "node", style: { label: "data(label)", "font-family": FONT, "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "data(w)", height: "data(h)", padding: "8px" } },
+      { selector: "node", style: { label: "data(label)", "min-zoomed-font-size": 6, "font-family": FONT, "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "data(w)", height: "data(h)", padding: "8px" } },
       { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
       { selector: "node.vpc.collapsed", style: { "text-valign": "center", "background-opacity": 0.2, "border-style": "solid", "border-width": 2, padding: "12px", shape: "round-rectangle" } },
       { selector: "node.unused", style: { "background-color": "#eee", "border-style": "dashed", "border-color": "#888", color: "#555" } },
-      { selector: "edge", style: { label: "data(label)", "font-size": 9, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "text-background-color": "#fff", "text-background-opacity": 0.85, "text-background-padding": "1px" } },
+      { selector: "edge", style: { label: "", "min-zoomed-font-size": 6, "font-size": 9, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "text-background-color": "#fff", "text-background-opacity": 0.85, "text-background-padding": "1px" } },
       { selector: "edge.ingress", style: { "line-color": "#1f5fbf", "target-arrow-color": "#1f5fbf" } },
       { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
       { selector: "edge.meta", style: { width: 3 } },
       { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.6, "line-style": "dashed", "line-color": "#d6006f", "target-arrow-color": "#d6006f", color: "#b00060" } },
+      { selector: "node.vpc.flat:parent, node.region.flat:parent", style: { "background-opacity": 0, "border-width": 0, "text-opacity": 0, events: "no" } },
+      { selector: "edge.hover, edge.show-label, edge:selected, edge.path", style: { label: "data(label)" } },
       { selector: "node.path, node.pathvia", style: { "border-width": 3, "border-color": "#ff8c00" } },
       { selector: "edge.path", style: { width: 6, "arrow-scale": 1.5, "line-color": "#ff8c00", "target-arrow-color": "#ff8c00", "z-index": 10 } },
       { selector: ".dim", style: { opacity: 0.12, "text-opacity": 0.12, "text-background-opacity": 0.12 } },
@@ -240,6 +249,277 @@
     try { return run(); } finally { Math.random = real; }
   }
 
+  // ---- Layouts ----------------------------------------------------------------------------------------------
+  // Every layout works from the node sizes measured in desired() (data w and h), places each node and leaves the view
+  // to applyLayout, which fits it. All are deterministic for a given graph.
+  //
+  // "Tiers" are how many hops a group is from the outside along the rule direction (an edge points the way traffic is
+  // allowed to flow): external peers (CIDRs, IPv6 ranges, prefix lists) are tier 0, a group they reach directly is
+  // tier 1, what that group reaches is tier 2, and so on. Groups nothing external reaches start at tier 1.
+  var layoutName = "fcose";
+  var TIER_GAP = 140;    // space between tier columns of the force layout
+  var PEER_GAP = 180;    // space between the external peers' column and the first tier
+  var MAX_TIER = 3;      // the force layout lines up external -> entry -> app -> data; longer chains are left free
+  var LEAF_PAD = 16;     // a node's box is its size plus the 8px padding of the node style on each side
+  var BOX_PAD = 18;      // room a VPC box needs around its groups (its padding plus the border)
+  var BOX_LABEL = 22;    // and above them, for the VPC's name
+
+  function isPeer(n) { return n.data("kind") === "group" && !vpcOf[n.id()]; }
+  function isPublic(n) { return n.id() === "0.0.0.0/0" || n.id() === "::/0"; }
+  function byLabel(a, b) {
+    var x = String(a.data("label")), y = String(b.data("label"));
+    return x < y ? -1 : x > y ? 1 : (a.id() < b.id() ? -1 : 1);
+  }
+
+  function successors() {
+    var out = {};
+    cy.edges().forEach(function (e) {
+      var s = e.source().id(), t = e.target().id();
+      if (s !== t) (out[s] = out[s] || []).push(t);
+    });
+    return out;
+  }
+  function pointedAt() {
+    var set = {};
+    cy.edges().forEach(function (e) { if (e.source() !== e.target()) set[e.target().id()] = true; });
+    return set;
+  }
+  // Breadth-first from the ids already in `dist` (in queue order), following the rule direction.
+  function spread(dist, queue, out) {
+    for (var i = 0; i < queue.length; i++) {
+      (out[queue[i]] || []).forEach(function (t) {
+        if (!(t in dist)) { dist[t] = dist[queue[i]] + 1; queue.push(t); }
+      });
+    }
+  }
+  function tiers() {
+    var out = successors(), dist = {}, queue = [];
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    leaves.filter(isPeer).forEach(function (n) { dist[n.id()] = 0; queue.push(n.id()); });
+    spread(dist, queue, out);
+    var into = pointedAt();
+    // Nothing external reaches these: start from the ones no rule points at, then from whatever is left (a cycle).
+    [function (n) { return !into[n.id()]; }, function () { return true; }].forEach(function (pick) {
+      leaves.forEach(function (n) {
+        if (n.id() in dist || !pick(n)) return;
+        dist[n.id()] = 1;
+        spread(dist, [n.id()], out);
+      });
+    });
+    return dist;
+  }
+
+  // fcose options for the given leaf nodes: a rule that leads from one tier to a later one (up to tier 3) inside a VPC (or at the
+  // top level) puts its source to the left of its target, so the tiers line up as columns without being forced into
+  // straight stacks; with `withPeers` the external peers share a column to the left of all.
+  function fcoseOptions(leaves, extra, withPeers) {
+    var tier = tiers(), peers = [], seen = {}, rel = [];
+    var ids = {};
+    leaves.forEach(function (n) { ids[n.id()] = n; if (isPeer(n)) peers.push(n.id()); });
+    function parentOf(n) { return n.parent().length ? n.parent().id() : ""; }
+    cy.edges().forEach(function (e) {
+      var a = e.source(), b = e.target();
+      if (!ids[a.id()] || !ids[b.id()] || tier[a.id()] >= tier[b.id()] || tier[b.id()] > MAX_TIER) return;
+      var peerEdge = isPeer(a) && withPeers;
+      if (!peerEdge && (isPeer(a) || parentOf(a) !== parentOf(b))) return;
+      var key = a.id() + ">" + b.id();
+      if (seen[key]) return;
+      seen[key] = true;
+      rel.push({ left: a.id(), right: b.id(), gap: peerEdge ? PEER_GAP : TIER_GAP });
+    });
+    var o = Object.assign({}, LAYOUT, { randomize: true }, extra);
+    if (withPeers && peers.length > 1) o.alignmentConstraint = { vertical: [peers] };
+    if (rel.length) o.relativePlacementConstraint = rel;
+    return o;
+  }
+  function runFcose() {
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    try {
+      cy.layout(fcoseOptions(leaves, {}, true)).run();
+    } catch (e) {
+      // Constraints fcose cannot satisfy: lay out without them.
+      cy.layout(Object.assign({}, LAYOUT, { randomize: true })).run();
+    }
+    separate();
+  }
+
+  // Stack the external peers in one column left of everything else, each at the height of the groups it talks to.
+  function stackPeers(peers) {
+    if (peers.empty()) return;
+    var rest = cy.nodes().not(peers);
+    var bb = rest.nonempty() ? rest.boundingBox({ includeLabels: true, includeOverlays: false }) : { x1: 0, x2: 0, y1: 0, y2: 0 };
+    var want = peers.map(function (n) {
+      var near = n.neighborhood("node").not(peers);
+      var y = near.nonempty() ? near.reduce(function (sum, m) { return sum + m.position("y"); }, 0) / near.length : (bb.y1 + bb.y2) / 2;
+      return { n: n, y: y };
+    });
+    want.sort(function (a, b) { return a.y - b.y || byLabel(a.n, b.n); });
+    var widest = Math.max.apply(null, want.map(function (w) { return w.n.data("w"); }));
+    var prev = null;
+    want.forEach(function (w) {
+      var h = w.n.data("h");
+      if (prev) w.y = Math.max(w.y, prev.y + prev.h / 2 + LEAF_PAD + GAP + h / 2);
+      prev = { y: w.y, h: h };
+    });
+    var shift = (bb.y1 + bb.y2) / 2 - (want[0].y + want[want.length - 1].y) / 2;
+    cy.batch(function () {
+      want.forEach(function (w) { w.n.position({ x: bb.x1 - 80 - widest / 2, y: w.y + shift }); });
+    });
+  }
+
+  // Layered along the rule direction, left to right: entry groups, then what they reach, and so on. dagre handles
+  // the region and VPC boxes as clusters, so a VPC stays one box; its ranks cross VPCs. Edges to the external peers
+  // are left out of the ranking (every group allows egress to 0.0.0.0/0 by default and would collapse the layers),
+  // and the peers get their own column on the left instead.
+  function runFlow() {
+    var peers = cy.nodes().filter(isPeer);
+    var rest = cy.elements().not(peers).not(peers.connectedEdges());
+    var opts = { name: "dagre", rankDir: "LR", nodeSep: 24, rankSep: 110, edgeSep: 10, animate: false, fit: false, nodeDimensionsIncludeLabels: false };
+    try {
+      rest.layout(opts).run();
+    } catch (e) {
+      // dagre can fail on some nested shapes: rank the groups without their boxes; the boxes follow their groups.
+      rest.not(":parent").layout(opts).run();
+    }
+    separate(undefined, peers);
+    stackPeers(peers);
+  }
+
+  // Rings by hop distance from the internet: the public peers (0.0.0.0/0, ::/0) in the middle, the groups they
+  // reach directly on the first ring, and so on; groups nothing external reaches are on the outermost ring. The
+  // groups of one VPC sit next to each other on a ring. Rings cannot respect VPC boxes, so those are not drawn.
+  function ringOf() {
+    var out = successors(), dist = {}, queue = [];
+    var leaves = cy.nodes().filter(function (n) { return !n.isParent(); });
+    var pub = leaves.filter(function (n) { return isPeer(n) && isPublic(n); });
+    var other = leaves.filter(function (n) { return isPeer(n) && !isPublic(n); });
+    var sources = pub.nonempty() ? [pub, other] : (other.nonempty() ? [other] : []);
+    sources.forEach(function (list, i) {
+      list.forEach(function (n) { dist[n.id()] = i; queue.push(n.id()); });
+    });
+    if (!sources.length) {
+      var into = pointedAt();
+      leaves.forEach(function (n) { if (!into[n.id()]) { dist[n.id()] = 0; queue.push(n.id()); } });
+    }
+    spread(dist, queue, out);
+    var far = Object.keys(dist).reduce(function (m, id) { return Math.max(m, dist[id]); }, 0) + 1;
+    leaves.forEach(function (n) { if (!(n.id() in dist)) dist[n.id()] = far; });
+    return dist;
+  }
+  function runRings() {
+    var ring = ringOf(), byRing = {};
+    cy.nodes().filter(function (n) { return !n.isParent(); }).forEach(function (n) {
+      (byRing[ring[n.id()]] = byRing[ring[n.id()]] || []).push(n);
+    });
+    // Rings are a node's width apart, so a node never reaches the next ring where the ring runs sideways.
+    var step = cy.nodes().filter(function (n) { return !n.isParent(); }).reduce(function (m, n) { return Math.max(m, n.data("w")); }, 0) + 60;
+    var radius = 0;
+    cy.batch(function () {
+      Object.keys(byRing).map(Number).sort(function (a, b) { return a - b; }).forEach(function (r, i) {
+        var nodes = byRing[r].sort(function (a, b) {
+          var pa = vpcOf[a.id()] || "", pb = vpcOf[b.id()] || "";
+          return pa < pb ? -1 : pa > pb ? 1 : byLabel(a, b);
+        });
+        if (i === 0 && nodes.length === 1) { nodes[0].position({ x: 0, y: 0 }); return; }
+        var around = nodes.reduce(function (sum, n) { return sum + n.data("w") + GAP * 2; }, 0);
+        radius = Math.max(radius + step, around / (2 * Math.PI));
+        var at = 0;
+        nodes.forEach(function (n) {
+          var arc = n.data("w") + GAP * 2;
+          var angle = -Math.PI / 2 + ((at + arc / 2) / around) * 2 * Math.PI;
+          at += arc;
+          n.position({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+        });
+      });
+    });
+  }
+
+  // Each VPC's groups in a grid, a row per tier (a long tier wraps), the VPCs side by side in rows, and the external
+  // peers in a column on the left. Boxes are sized here from the node sizes, so the layout does not depend on a
+  // renderer.
+  function runGrid() {
+    var tier = tiers();
+    function byTierThenLabel(a, b) { return (tier[a.id()] - tier[b.id()]) || byLabel(a, b); }
+    function leafBox(n) {
+      return { w: n.data("w"), h: n.data("h"), put: function (x, y) { n.position({ x: x + this.w / 2, y: y + this.h / 2 }); } };
+    }
+    // Boxes in rows no wider than `wide`, left to right, top to bottom; each gets its offset in `at`.
+    function rows(boxes, wide, pad) {
+      var x = 0, y = 0, rowH = 0, maxX = 0;
+      boxes.forEach(function (b) {
+        if (x > 0 && x + b.w > wide) { x = 0; y += rowH + pad; rowH = 0; }
+        b.at = { x: x, y: y };
+        x += b.w + pad;
+        rowH = Math.max(rowH, b.h);
+        maxX = Math.max(maxX, x - pad);
+      });
+      return { w: maxX, h: y + rowH };
+    }
+    function packed(boxes, pad) {
+      if (!boxes.length) return { w: 0, h: 0, put: function () {} };
+      var area = boxes.reduce(function (sum, b) { return sum + (b.w + pad) * (b.h + pad); }, 0);
+      var widest = Math.max.apply(null, boxes.map(function (b) { return b.w; }));
+      var size = rows(boxes, Math.max(Math.sqrt(area) * 1.6, widest), pad);
+      return { w: size.w, h: size.h, put: function (x, y) { boxes.forEach(function (b) { b.put(x + b.at.x, y + b.at.y); }); } };
+    }
+    function vpcBox(v) {
+      var kids = v.children().toArray().sort(byTierThenLabel);
+      var cw = Math.max.apply(null, kids.map(function (n) { return n.data("w"); })) + GAP * 2;
+      var ch = Math.max.apply(null, kids.map(function (n) { return n.data("h"); })) + 26;
+      var cols = Math.max(3, Math.ceil(Math.sqrt(kids.length) * 1.4));
+      var row = -1, col = 0, last = null, cells = [], wide = 0;
+      kids.forEach(function (n) {
+        if (tier[n.id()] !== last || col >= cols) { row++; col = 0; last = tier[n.id()]; }
+        cells.push({ n: n, col: col, row: row });
+        col++;
+        wide = Math.max(wide, col);
+      });
+      return {
+        w: wide * cw + 2 * BOX_PAD, h: (row + 1) * ch + 2 * BOX_PAD + BOX_LABEL,
+        put: function (x, y) {
+          cells.forEach(function (c) {
+            c.n.position({ x: x + BOX_PAD + c.col * cw + cw / 2, y: y + BOX_PAD + BOX_LABEL + c.row * ch + ch / 2 });
+          });
+        }
+      };
+    }
+    function boxOf(n) {
+      if (!n.isParent()) return leafBox(n);
+      if (n.hasClass("vpc")) return vpcBox(n);
+      var inner = packed(n.children().toArray().sort(byLabel).map(boxOf), GAP * 2);
+      return { w: inner.w + 2 * BOX_PAD, h: inner.h + 2 * BOX_PAD + BOX_LABEL, put: function (x, y) { inner.put(x + BOX_PAD, y + BOX_PAD + BOX_LABEL); } };
+    }
+    var peers = cy.nodes().filter(isPeer);
+    var top = cy.nodes(":orphan").not(peers).toArray().sort(function (a, b) { return (b.isParent() - a.isParent()) || byLabel(a, b); });
+    cy.batch(function () {
+      var peerBoxes = peers.toArray().sort(byLabel).map(leafBox);
+      var column = rows(peerBoxes, 0, GAP * 2);
+      var main = packed(top.map(boxOf), GAP * 3);
+      var widest = peerBoxes.reduce(function (m, b) { return Math.max(m, b.w); }, 0);
+      peerBoxes.forEach(function (b) { b.put((widest - b.w) / 2, b.at.y + Math.max(0, (main.h - column.h) / 2)); });
+      main.put(widest + PEER_GAP / 2, 0);
+    });
+    separate(undefined, peers);
+  }
+
+  var LAYOUTS = { fcose: { run: runFcose }, flow: { run: runFlow }, rings: { run: runRings, flat: true }, grid: { run: runGrid } };
+  // Lay the whole graph out with the named layout and fit it. Collapse state, selection, search and the toggles are
+  // untouched: a layout only moves nodes.
+  function applyLayout(name) {
+    layoutName = name;
+    var spec = LAYOUTS[name];
+    cy.nodes(".vpc, .region").toggleClass("flat", !!spec.flat);
+    seeded(spec.run);
+    cy.fit(undefined, 30);
+    var box = document.getElementById("layout");
+    if (box.value !== name) box.value = name;
+  }
+  document.getElementById("layout").addEventListener("change", function (evt) {
+    applyLayout(evt.target.value);
+    // A path shown on the old picture is put back with this one's view.
+    if (pathState) { pathState.zoom = cy.zoom(); pathState.pan = Object.assign({}, cy.pan()); }
+  });
+
   var cy;
   // Cytoscape fixes the renderer when it is created, so switching renderer means creating it again.
   function createCy(els, extra) {
@@ -263,14 +543,8 @@
     }
     cy = cytoscape(opts);
   }
-  seeded(function () {
-    createCy(elements, {
-      // Collapsed VPC nodes are near-symmetric, which the deterministic spectral start can fold onto a line.
-      layout: Object.keys(collapsed).length ? Object.assign({}, LAYOUT, { randomize: true }) : LAYOUT
-    });
-  });
-  separate();
-  cy.fit(undefined, 30);
+  createCy(elements, { layout: { name: "preset" } });
+  applyLayout("fcose");
 
   syncWebglBox();
   expose();
@@ -422,9 +696,11 @@
     });
   }
 
-  function clearFocus() { cy.elements().removeClass("dim"); }
+  function clearFocus() { cy.elements().removeClass("dim show-label"); }
   function focus(target) {
     clearFocus();
+    // Port labels are hidden until needed: the selected node's own edges (or the selected edge) show theirs.
+    (target.isNode() ? target.connectedEdges() : target).addClass("show-label");
     var keep = target.isNode() ? target.closedNeighborhood().union(target.ancestors()).union(target.neighborhood().ancestors()) : target.union(target.connectedNodes()).union(target.connectedNodes().ancestors());
     cy.elements().not(keep).addClass("dim");
   }
@@ -475,6 +751,8 @@
     cy.on("tap", "node, edge", onTapElement);
     cy.on("tap", onTapBackground);
     cy.on("dbltap", "node.vpc", onDoubleTapVpc);
+    cy.on("mouseover", "edge", function (evt) { evt.target.addClass("hover"); });
+    cy.on("mouseout", "edge", function (evt) { evt.target.removeClass("hover"); });
   }
   bindCy();
 
@@ -508,6 +786,7 @@
       if (v.nonempty()) centres[id] = Object.assign({}, v.position());
     });
     var stale = cy.elements().filter(function (x) { return !wanted[x.id()]; });
+    var changed = stale.nonempty();
     cy.remove(stale.edges());
     cy.remove(stale.nodes());
     var expanded = [];
@@ -524,12 +803,18 @@
         return;
       }
       var at = vpcOf[def.data.id] && centres[vpcOf[def.data.id]];
+      changed = true;
       cy.add(at ? Object.assign({}, def, { position: { x: at.x + jitter() * 20, y: at.y + jitter() * 20 } }) : def);
     });
     want.edges.forEach(function (def) {
-      if (cy.getElementById(def.data.id).empty()) cy.add(def);
+      if (cy.getElementById(def.data.id).empty()) { changed = true; cy.add(def); }
     });
-    if (!skipLayout) expanded.forEach(function (id) { layoutVpc(id, centres[id]); });
+    if (!skipLayout) {
+      // The force layout is local: an expanded VPC is laid out on its own. The others are a function of the whole
+      // graph, so they are laid out again when it changed.
+      if (layoutName === "fcose") expanded.forEach(function (id) { layoutVpc(id, centres[id]); });
+      else if (changed) applyLayout(layoutName);
+    }
     clearFocus();
     applyFilters();
     autoRenderer();
@@ -540,7 +825,7 @@
   function layoutVpc(id, centre) {
     var v = cy.getElementById(id);
     var eles = v.union(v.children());
-    var layout = eles.layout(Object.assign({}, LAYOUT, { randomize: true, fit: false, packComponents: false }));
+    var layout = eles.layout(fcoseOptions(v.children(), { fit: false, packComponents: false }));
     layout.one("layoutstop", function () {
       var now = v.position();
       v.children().shift({ x: centre.x - now.x, y: centre.y - now.y });
@@ -552,13 +837,15 @@
   // fcose can leave sibling boxes (VPCs, collapsed VPCs, peers, groups) overlapping, so after a layout the
   // overlapping siblings are pushed apart, level by level from the innermost out. A pinned VPC stays where it is
   // and its neighbours move instead.
-  function separate(pinnedId) {
+  // `skip` is a collection of nodes to leave out (the external peers, which a layout places on its own).
+  function separate(pinnedId, skip) {
     var levels = [];
+    function keep(n) { return !skip || !skip.contains(n); }
     cy.nodes().filter(function (n) { return n.isParent(); }).forEach(function (n) {
       levels.push({ depth: n.ancestors().length, nodes: n.children().toArray() });
     });
     levels.sort(function (a, b) { return b.depth - a.depth; });
-    levels.push({ depth: -1, nodes: cy.nodes(":orphan").toArray() });
+    levels.push({ depth: -1, nodes: cy.nodes(":orphan").toArray().filter(keep) });
     levels.forEach(function (level) { pushApart(level.nodes, pinnedId); });
   }
   function pushApart(nodes, pinnedId) {
@@ -604,9 +891,7 @@
     searchSnapshot = null;
     // Collapsing or expanding everything changes the whole graph, so lay it all out once instead of per VPC.
     sync(true);
-    seeded(function () { cy.layout(Object.assign({}, LAYOUT, { randomize: true })).run(); });
-    separate();
-    cy.fit(undefined, 30);
+    applyLayout(layoutName);
   }
   document.getElementById("expand-all").addEventListener("click", function () { setAll(false); });
   document.getElementById("collapse-all").addEventListener("click", function () { setAll(true); });
@@ -621,6 +906,9 @@
     // Read by the browser spec.
     window.awsSecurityViz = {
       get cy() { return cy; },
+      get layout() { return layoutName; },
+      tiers: tiers,
+      rings: ringOf,
       collapseThreshold: COLLAPSE_THRESHOLD,
       webglThreshold: WEBGL_THRESHOLD,
       get renderer() { return webglOn ? "webgl" : "canvas"; }

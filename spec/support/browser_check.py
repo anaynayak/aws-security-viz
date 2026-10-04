@@ -22,7 +22,7 @@ with sync_playwright() as p:
     out["nodes"] = page.evaluate("awsSecurityViz.cy.nodes().map(n => ({id: n.id(), kind: n.data('kind'), parent: n.data('parent') || null, unused: !!n.data('unused')}))")
     out["collapsed"] = page.evaluate("awsSecurityViz.cy.nodes('.collapsed').map(n => n.id())")
     out["threshold"] = page.evaluate("awsSecurityViz.collapseThreshold")
-    out["layout"] = page.evaluate("awsSecurityViz.cy.options().layout.name")
+    out["layout"] = page.evaluate("awsSecurityViz.layout")
     out["overlaps"] = page.evaluate("""(() => {
       const groups = {};
       awsSecurityViz.cy.nodes('.region, .vpc').forEach(n => { (groups[n.data('parent') || ''] = groups[n.data('parent') || ''] || []).push(n); });

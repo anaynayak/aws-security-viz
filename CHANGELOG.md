@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- The HTML viewer has a layout picker: force (fcose, the default), traffic flow (layered along the rule direction with dagre, external peers in their own column), exposure rings (public peers in the centre, rings by hop distance; VPC boxes are not drawn) and grid within VPC (a row per tier). Switching keeps collapse state, selection, search, toggles and a shown path, on canvas and WebGL. dagre and cytoscape-dagre are vendored, pinned and checksummed
 - The HTML viewer draws the same picture every time a report is opened: layouts are seeded from the graph
 - The HTML viewer answers "can X reach Y" from the security group rules: a hop needs the source's egress and the target's ingress to allow it, with the ports both sides share (and an optional port filter); CIDR, IPv6 and prefix-list sources match by containment and are never stops along the way; a hop that rests on addresses, prefix-list contents, IPv6 presence, a partly covered range or rules that are not in the input is reported as possible; address families must agree; the blocked hop is named on the closest path; the Ingress, Egress and Risky only toggles never change the answer. The shortest path is drawn, collapsed VPCs on it are opened, and Clear path restores the previous view. The HTML data now carries each group's rules (left out under `--obfuscate`)
 - The HTML viewer switches to Cytoscape's WebGL renderer above 2,000 elements on the canvas, has a WebGL checkbox to switch it by hand, and keeps the canvas renderer where WebGL 2 is not available
@@ -17,6 +18,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - CI builds and smoke-tests the Docker image on every pull request
 
 ### Changed
+- The HTML viewer's default layout lines groups up by tier inside each VPC (external -> entry -> app -> data, left to right), puts the external peers in one column and pulls components closer together; labels hide when zoomed out and edge port labels show on hover or selection only
 - The HTML viewer lays out regions and VPCs with the compound-aware fcose layout (vendored with `cose-base` and `layout-base`, pinned and checksummed) instead of Cytoscape's built-in `cose`
 - The Docker base image is pinned by digest
 - `--obfuscate` help text lists everything it hashes

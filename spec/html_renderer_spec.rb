@@ -293,6 +293,138 @@ describe AwsSecurityViz::Renderer::Html do
       end
     end
 
+    describe "the layout picker" do
+      let(:layouts) { %w[fcose flow rings grid] }
+
+      def small_shape(file = "layouts-small.html")
+        renderer = described_class.new(file, config)
+        2.times do |v|
+          8.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "svc-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          7.times { |i| renderer.add_edge("sg-#{v}-#{i}", "sg-#{v}-#{i + 1}", {color: :blue, label: "443"}) }
+          renderer.add_edge("sg-#{v}-0", "sg-#{1 - v}-3", {color: :red, label: "all"})
+        end
+        renderer.add_node("0.0.0.0/0", {label: "0.0.0.0/0"})
+        renderer.add_node("10.0.0.0/8", {label: "10.0.0.0/8"})
+        renderer.add_edge("0.0.0.0/0", "sg-0-0", {color: :blue, label: "22", risky: true})
+        renderer.add_edge("10.0.0.0/8", "sg-1-2", {color: :blue, label: "22"})
+        renderer.output
+        file
+      end
+
+      # Twelve VPCs of fifteen groups: opens collapsed.
+      def large_shape(file = "layouts-large.html")
+        renderer = described_class.new(file, config)
+        12.times do |v|
+          15.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "app-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          15.times { |i| renderer.add_edge("sg-#{v}-#{i}", "sg-#{v}-#{(i + 1) % 15}", {color: :blue, label: "443"}) }
+          renderer.add_edge("sg-#{v}-1", "sg-#{(v + 1) % 12}-0", {color: :red, label: "5432"})
+          renderer.add_edge("sg-#{v}-2", "sg-#{(v + 5) % 12}-3", {color: :blue, label: "22"})
+        end
+        %w[0.0.0.0/0 10.0.0.0/8 ::/0].each { |peer| renderer.add_node(peer, {label: peer}) }
+        12.times { |v| renderer.add_edge("0.0.0.0/0", "sg-#{v}-4", {color: :blue, label: "22", risky: v.zero?}) }
+        renderer.add_edge("10.0.0.0/8", "sg-3-3", {color: :blue, label: "22"})
+        renderer.output
+        file
+      end
+
+      def layout_report(file, vpc)
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
+          File.expand_path("support/browser_layouts.py", __dir__), File.expand_path(file), vpc)
+        raise "browser check failed: #{err}" unless status.success?
+        JSON.parse(out.lines.last).tap do |r|
+          expect(r["picker"]).to be(true), "the viewer has no #layout picker"
+          expect(r["options"]).to eq(layouts)
+        end
+      end
+
+      # What every layout owes: all of it drawn, fitted, not overlapping, on screen as pixels, from file:// only.
+      def expect_laid_out(r, file)
+        expect(r["requests"]).to eq(["file://" + File.expand_path(file)])
+        expect(r["errors"]).to be_empty
+        expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
+        expect(r["steps"].keys).to include(*layouts.flat_map { |l| %W[#{l}:load #{l}:expand_all #{l}:collapse_all #{l}:dblclick_expand #{l}:webgl] })
+        r["steps"].each do |name, s|
+          layout = name.split(":").first
+          expect(s["layout"]).to eq(layout), "#{name}: layout is #{s["layout"]}"
+          expect(s["invisible"]).to be_empty, "#{name}: invisible #{s["invisible"].first(3)}"
+          expect(s["zeroEdges"]).to be_empty, "#{name}: edges without a box #{s["zeroEdges"].first(3)}"
+          expect(s["notFinite"]).to be_empty, "#{name}: nodes without a position or size #{s["notFinite"].first(3)}"
+          expect(s["overlaps"]).to be_empty, "#{name}: nodes overlap #{s["overlaps"].first(3)}"
+          expect(s["vpcOverlaps"]).to be_empty, "#{name}: VPCs overlap #{s["vpcOverlaps"].first(3)}" unless s["flat"]
+          expect(s["flat"]).to be(layout == "rings"), "#{name}: VPC boxes drawn: #{!s["flat"]}"
+          expect(s["ink"]).to be > 0, "#{name}: no edge pixels on screen"
+          # Two hundred nodes fitted on one screen are a few pixels each, too small to tell from their outline.
+          expect(s["nodeInk"]).to be > 0, "#{name}: no node pixels on screen" if s["nodes"] < 100
+          # The force layout keeps the view where it was when one VPC opens or closes; the others fit everything again.
+          expect(s["outside"]).to be_empty, "#{name}: not fitted, outside the view: #{s["outside"].first(3)}" unless layout == "fcose" && name.match?(/dblclick/)
+        end
+        expect(r["steps"].select { |k, _| k.end_with?(":webgl") }.values.map { |s| s["renderer"] }.uniq).to eq(["webgl"])
+        expect(r["steps"].select { |k, _| k.end_with?(":load") }.values.map { |s| s["renderer"] }.uniq).to eq(["canvas"])
+        expect(r["steps"].select { |k, _| k.end_with?(":dblclick_expand") }.values.map { |s| s["children"] }).to all(be > 0)
+      end
+
+      def steps_of(r, layout, *names)
+        names.map { |n| r["steps"]["#{layout}:#{n}"] }
+      end
+
+      [["small", :small_shape, "vpc:eu-west-1|vpc-1"], ["large", :large_shape, "vpc:eu-west-1|vpc-3"]].each do |shape, builder, vpc|
+        it "lays out the #{shape} demo shape with every layout, drawn and fitted, with external peers in a column or in the centre" do
+          file = send(builder)
+          r = layout_report(file, vpc)
+          expect_laid_out(r, file)
+          expanded = %w[load expand_all webgl]
+          # Force layout: sources of rules lie left of their targets for the first tiers; peers share one column.
+          steps_of(r, "fcose", *expanded).each do |s|
+            expect(s["tierColumns"]).to be_empty, "tiers do not run left to right: #{s["tierColumns"].first(3)}"
+            expect(s["peerSpread"]).to be < 1
+          end
+          # Grid: a row per tier inside each VPC, peers in a column left of the grid.
+          layouts.each { |l| expect(steps_of(r, l, "load").first["peers"]).to be > 0 }
+          steps_of(r, "grid", *%w[load expand_all collapse_all dblclick_expand dblclick_collapse webgl]).each do |s|
+            expect(s["tierRows"]).to be_empty, "tiers do not run top to bottom: #{s["tierRows"].first(3)}"
+            expect(s["peerSpread"]).to be < 1
+            expect(s["peerLeft"]).to be(true)
+          end
+          # Flow: peers in their own column on the left.
+          steps_of(r, "flow", *%w[load expand_all collapse_all dblclick_expand dblclick_collapse webgl]).each do |s|
+            expect(s["peerSpread"]).to be < 1
+            expect(s["peerLeft"]).to be(true)
+          end
+          # Rings: distance from the centre never decreases with the hop count.
+          steps_of(r, "rings", *%w[load expand_all collapse_all dblclick_expand webgl]).each do |s|
+            expect(s["ringBad"]).to be_empty, "rings out of order: #{s["ringBad"].first(3)}"
+          end
+          # Flow runs along the rule direction when the rules have no cycle (the small shape).
+          if shape == "small"
+            steps_of(r, "flow", *expanded).each { |s| expect(s["flowBack"]).to be_empty, "rules run right to left: #{s["flowBack"].first(3)}" }
+            steps_of(r, "rings", "load").each { |s| expect(s["publicRadius"].first).to be < 1 }
+          end
+        end
+      end
+
+      it "hides labels when zoomed out, shows an edge's port label on hover and while selected, and fades what a selection leaves out" do
+        file = small_shape
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
+          File.expand_path("support/browser_readability.py", __dir__), File.expand_path(file))
+        raise "browser check failed: #{err}" unless status.success?
+        r = JSON.parse(out.lines.last)
+        expect(r["errors"]).to be_empty
+        expect(r["grey_in"]).to be > 500
+        expect(r["zoom_out"]).to be < 0.3
+        expect(r["grey_out"]).to be < 150, "label text still drawn when zoomed out (#{r["grey_out"]} grey pixels, #{r["grey_in"]} when fitted)"
+        expect(r["label_before_hover"]).to eq(0), "an edge label is drawn without hover or selection"
+        expect(r["hovered"]).to eq([r["spot"]["id"]])
+        expect(r["label_on_hover"]).to be > 5
+        expect(r["selected"]).to eq([r["spot"]["id"]])
+        expect(r["label_selected"]).to be > 5
+        expect(r["faded"]["count"]).to be > 0
+        expect(r["faded"]["count"]).to be < r["faded"]["total"]
+        expect(r["faded"]["opacities"]).to all(be_between(0.05, 0.5))
+        expect(r["faded"]["shown"]).to be(true)
+        expect(r["neighbour_labels"]).to be > 0
+      end
+    end
+
     describe "the WebGL renderer" do
       def webgl_report(file, *flags)
         out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
@@ -685,13 +817,15 @@ describe AwsSecurityViz::Renderer::Html do
             expect(a["pathNodes"]).to eq(q["pathNodes"])
             expect(a["pathEdges"]).to eq(q["pathEdges"])
           end
-          expect(expand["orange"]).to be > 200
+          # Whole graph in view, so the path is a few thin lines; any orange at all is proof it was drawn. How many
+          # pixels depends on how large the layout makes the graph.
+          expect(expand["orange"]).to be > 50
           expect(collapse["pathCollapsed"]).to eq([vpc1])
           expect(collapse["pathNodes"]).to eq(%w[sg-0-0 sg-0-1 sg-2-0 sg-2-1])
           expect(collapse["pathEdges"].size).to be > 0
           expect(collapse["pathEdges"].grep(/\Ameta:/).size).to eq(2)
           expect(collapse["dimmed"]).to be > 0
-          expect(collapse["orange"]).to be > 200
+          expect(collapse["orange"]).to be > 50
           expect(q["dimTextOpacity"]).to be_within(0.001).of(0.12)
           expect(expand["dark"]).to be < r["before"]["dark"]
         end
@@ -782,6 +916,55 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["all_expanded"]["groups"]).to eq(vpcs * per_vpc + 1)
         expect(r["expanded_overlaps"]).to be_empty
         expect(r["all_collapsed"]["collapsed"].size).to eq(vpcs)
+      end
+
+      describe "switching layout" do
+        let(:kept) { %w[collapsed selected matches hidden details search toggles dimmed] }
+
+        def state_report
+          out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
+            File.expand_path("support/browser_layout_state.py", __dir__), File.expand_path(render_chain), "app-5-3", "sg-5-3", "app-0-0", "app-2-1")
+          raise "browser check failed: #{err}" unless status.success?
+          JSON.parse(out.lines.last).tap { |r| expect(r["picker"]).to be(true), "the viewer has no #layout picker" }
+        end
+
+        it "keeps collapse state, the selection, search hits, the toggles and a shown path, on canvas and WebGL" do
+          r = state_report
+          expect(r["errors"]).to be_empty
+          expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
+          %w[search_select_toggle search_select_toggle_webgl path].each do |run|
+            start = r["runs"][run]["start"]
+            expect(start["collapsed"].size).to be < 12 if run == "search_select_toggle"
+            expect(start["notFinite"]).to eq(0)
+            %w[flow rings grid fcose].each do |layout|
+              now = r["runs"][run][layout]
+              expect(now["layout"]).to eq(layout)
+              expect(now["renderer"]).to eq(start["renderer"])
+              kept.each { |key| expect(now[key]).to eq(start[key]), "#{run}/#{layout}: #{key} changed from #{start[key].inspect[0, 120]} to #{now[key].inspect[0, 120]}" }
+              expect(now["notFinite"]).to eq(0)
+            end
+          end
+          select = r["runs"]["search_select_toggle"]["start"]
+          expect(select["selected"]).to eq(["sg-5-3"])
+          expect(select["matches"]).to include("sg-5-3")
+          expect(select["details"]).to include("app-5-3")
+          expect(select["hidden"]).not_to be_empty
+          expect(select["dimmed"]).to be > 0
+          expect(select["toggles"]).to eq([false, true, false])
+          expect(r["runs"]["search_select_toggle_webgl"]["start"]["renderer"]).to eq("webgl")
+          %w[flow rings grid fcose].each { |l| expect(r["runs"]["search_select_toggle"][l]["selectedInView"]).to be(true) }
+
+          path = r["runs"]["path"]
+          expect(path["start"]["path"]).not_to be_empty
+          %w[start flow rings grid fcose].each do |layout|
+            expect(path[layout]["pathInView"]).to be(true), "path: #{layout}: path groups outside the view"
+            expect(path[layout]["orange"]).to be > 0, "path: #{layout}: the path is not on screen"
+          end
+          # Clear path puts the collapsed VPCs back, whatever layout is on.
+          expect(r["after_clear"]["path"]).to be_empty
+          expect(r["after_clear"]["collapsed"].size).to eq(12)
+          expect(r["after_clear"]["orange"]).to eq(0)
+        end
       end
     end
   end

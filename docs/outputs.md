@@ -24,7 +24,7 @@ Colour is never the only signal: the viewer legend and the JSON `risky` flag sta
 
 ## HTML viewer
 
-`-f out.html` writes one file with Cytoscape.js and the graph data inlined. Open it from disk in a browser; no web
+`-f out.html` writes one file with Cytoscape.js, its layout libraries and the graph data inlined. Open it from disk in a browser; no web
 server and no network access are needed.
 
 ```
@@ -97,6 +97,32 @@ aws_security_viz -o security_groups.json -f viz.html
    instance addresses, VPC peering or transit gateway routing, or anything else outside the security group rules. A
    reachable answer means the security groups do not stop it. Groups left out of the report (by the `exclude` list or
    by `--source-filter` and `--target-filter`) are not seen, and a report written with `--obfuscate` has no rules, so its path boxes are disabled.
+
+9. Layouts. The Layout menu in the toolbar redraws the whole graph; collapse state, the selected group, search hits,
+   the toggles and a path on screen stay as they are, with either renderer. The layouts are deterministic: the same
+   report always draws the same picture. Boxes are never drawn over each other, and every layout fits the graph in the
+   view. Rules point the way traffic is allowed to flow, so a group's tier is its hop count from the outside:
+   external peers (CIDRs, IPv6 ranges and prefix lists) are tier 0, a group an external peer can reach is tier 1, what
+   that group reaches is tier 2, and groups no external peer reaches start at tier 1.
+   1. Force (fcose), the default. Region and VPC boxes are kept; inside a VPC, a rule that leads from one tier to a
+      later one (up to tier 3: entry, app, data) places its source left of its target, so the tiers read as columns
+      from left to right; the external peers share one column; disconnected parts are packed side by side.
+   2. Traffic flow. Layers from left to right along the rule direction: entry groups, then what they reach, and so on.
+      The layout library (dagre) keeps VPC and region boxes as clusters, so a VPC stays one box and its layers cross
+      VPCs. Rules to the external peers are left out of the layering (every group allows egress to `0.0.0.0/0` by
+      default, which would flatten the layers), and the peers are stacked in their own column on the left, each at the
+      height of the groups it talks to. A rule that closes a cycle points backwards.
+   3. Exposure rings. The public peers (`0.0.0.0/0`, `::/0`) are at the centre, the groups they reach directly are on
+      the first ring, what those reach on the second, and so on; the other external peers are on the first ring, and
+      groups nothing external reaches are on the outermost ring. The groups of one VPC sit next to each other on a
+      ring. Rings cannot respect VPC boxes, so VPC and region boxes are not drawn in this layout; a collapsed VPC is
+      still one node, double-click it to open it, and use Collapse all to close the VPCs again.
+   4. Grid within VPC. Each VPC is a grid with one row per tier (a long tier wraps), the VPCs are packed in rows, and
+      the external peers are in a column on the left.
+
+   Labels are hidden when zoomed out too far to read them. An edge's port label is hidden until you hover the edge or
+   select it; selecting a group also shows the labels of its edges. Selecting a group or edge fades everything
+   outside its neighbourhood instead of hiding it.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 
