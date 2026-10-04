@@ -61,14 +61,8 @@ describe AwsSecurityViz::Renderer::Html do
     let(:script) { File.expand_path("support/browser_check.py", __dir__) }
 
     def browser_report(path)
-      out, err, status = Open3.capture3("uv", "run", "--quiet", "--locked", "--project", File.expand_path("..", __dir__),
-        "--group", "browser", "python", script, path)
-      skip "Chromium is not installed (uv run --group browser playwright install chromium)" if err.include?("Executable doesn't exist")
-      raise "browser check failed: #{err}" unless status.success?
-      JSON.parse(out.lines.last)
+      JSON.parse(run_browser_script(script, path).lines.last)
     end
-
-    before { skip "uv is not installed" unless system("which uv > /dev/null 2>&1") }
 
     it "opens from file:// with no network requests, shows the model and treats hostile names as text" do
       render
