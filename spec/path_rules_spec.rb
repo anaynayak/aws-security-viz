@@ -58,4 +58,17 @@ describe AwsSecurityViz::SecurityGroups, "#path_rules" do
       end
     end
   end
+
+  it "marks a direction the input has no rule list for, which is not an empty list" do
+    fixture = File.expand_path("fixtures/path_adversarial.json", __dir__)
+    recorded = {}
+    renderer = Class.new {
+      define_method(:add_node) { |id, opts| recorded[id] = opts }
+      define_method(:add_edge) { |*| }
+      define_method(:output) {}
+    }.new
+    AwsSecurityViz::VisualizeAws.new(AwsSecurityViz::AwsConfig.new({}), source_file: fixture).build.output(renderer)
+    expect(recorded.fetch("sg-nokey")[:unknown]).to eq(["out"])
+    expect(recorded.fetch("sg-noeg")).not_to have_key(:unknown)
+  end
 end

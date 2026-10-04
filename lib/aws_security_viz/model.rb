@@ -20,8 +20,10 @@ module AwsSecurityViz
 
   # region is only set when several regions are queried, so nodes can be grouped by region.
   # unused is true only when --show-unused found no network interface attached to the group.
-  SecurityGroup = Data.define(:id, :name, :vpc_id, :ingress, :egress, :region, :unused) do
-    def initialize(id:, name:, vpc_id:, ingress:, egress:, region: nil, unused: false)
+  # unknown_sides lists "in" and "out" when the input had no rule list at all for that direction (an absent
+  # IpPermissions or IpPermissionsEgress key, which is not the same as an empty list that denies everything).
+  SecurityGroup = Data.define(:id, :name, :vpc_id, :ingress, :egress, :region, :unused, :unknown_sides) do
+    def initialize(id:, name:, vpc_id:, ingress:, egress:, region: nil, unused: false, unknown_sides: [])
       super
     end
 
@@ -30,7 +32,8 @@ module AwsSecurityViz
       new(
         id: hash[:group_id], name: hash[:group_name], vpc_id: hash[:vpc_id],
         ingress: (hash[:ip_permissions] || []).map { |ip| Rule.from_hash(ip) },
-        egress: (hash[:ip_permissions_egress] || []).map { |ip| Rule.from_hash(ip) }
+        egress: (hash[:ip_permissions_egress] || []).map { |ip| Rule.from_hash(ip) },
+        unknown_sides: {"in" => :ip_permissions, "out" => :ip_permissions_egress}.reject { |_, key| hash.key?(key) }.keys
       )
     end
   end
