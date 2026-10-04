@@ -77,6 +77,8 @@ describe AwsSecurityViz::Renderer::Html do
       dir = File.join(vendor, "..", File.dirname(file))
       readme = File.read(File.join(dir, "README.md"))
       expect(File.read(File.join(dir, "LICENSE"))).to include("Permission is hereby granted, free of charge")
+      expect(File.read(File.join(dir, "LICENSE"))).to include("OpenJS Foundation") if file.start_with?("dagre/") # dagre.min.js bundles lodash
+      expect(readme).to include("lodash") if file.start_with?("dagre/")
       expect(readme).to include(version, "https://registry.npmjs.org/", tarball, Digest::SHA256.file(File.join(vendor, "..", file)).hexdigest)
     end
   end
