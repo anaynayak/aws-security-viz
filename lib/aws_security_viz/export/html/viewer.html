@@ -212,6 +212,32 @@
   var webglOn = webglSupported && elements.length > WEBGL_THRESHOLD;
   var webglManual = false;   // true once the user has used the checkbox; the size rule then stays out of the way
 
+  // The layouts start from random positions. They are seeded from the graph, so the same report always draws the
+  // same picture: layouts run with Math.random replaced by a generator that starts from the same state every time.
+  function prng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var SEED = (function () {
+    var h = 2166136261;
+    data.nodes.forEach(function (n) {
+      String(n.id).split("").forEach(function (ch) { h = Math.imul(h ^ ch.charCodeAt(0), 16777619); });
+    });
+    return h ^ data.edges.length;
+  })();
+  var jitter = prng(SEED);
+  function seeded(run) {
+    var real = Math.random;
+    Math.random = prng(SEED);
+    try { return run(); } finally { Math.random = real; }
+  }
+
   var cy;
   // Cytoscape fixes the renderer when it is created, so switching renderer means creating it again.
   function createCy(els, extra) {
@@ -235,9 +261,11 @@
     }
     cy = cytoscape(opts);
   }
-  createCy(elements, {
-    // Collapsed VPC nodes are near-symmetric, which the deterministic spectral start can fold onto a line.
-    layout: Object.keys(collapsed).length ? Object.assign({}, LAYOUT, { randomize: true }) : LAYOUT
+  seeded(function () {
+    createCy(elements, {
+      // Collapsed VPC nodes are near-symmetric, which the deterministic spectral start can fold onto a line.
+      layout: Object.keys(collapsed).length ? Object.assign({}, LAYOUT, { randomize: true }) : LAYOUT
+    });
   });
   separate();
   cy.fit(undefined, 30);
@@ -494,7 +522,7 @@
         return;
       }
       var at = vpcOf[def.data.id] && centres[vpcOf[def.data.id]];
-      cy.add(at ? Object.assign({}, def, { position: { x: at.x + Math.random() * 20, y: at.y + Math.random() * 20 } }) : def);
+      cy.add(at ? Object.assign({}, def, { position: { x: at.x + jitter() * 20, y: at.y + jitter() * 20 } }) : def);
     });
     want.edges.forEach(function (def) {
       if (cy.getElementById(def.data.id).empty()) cy.add(def);
@@ -515,7 +543,7 @@
       var now = v.position();
       v.children().shift({ x: centre.x - now.x, y: centre.y - now.y });
     });
-    layout.run();
+    seeded(function () { layout.run(); });
     separate(id);
   }
 
@@ -574,7 +602,7 @@
     searchSnapshot = null;
     // Collapsing or expanding everything changes the whole graph, so lay it all out once instead of per VPC.
     sync(true);
-    cy.layout(Object.assign({}, LAYOUT, { randomize: true })).run();
+    seeded(function () { cy.layout(Object.assign({}, LAYOUT, { randomize: true })).run(); });
     separate();
     cy.fit(undefined, 30);
   }

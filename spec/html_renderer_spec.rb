@@ -655,6 +655,18 @@ describe AwsSecurityViz::Renderer::Html do
         end
       end
 
+      it "draws the same picture every time the same report is opened" do
+        file = render_large
+        positions = 2.times.map {
+          out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
+            File.expand_path("support/browser_positions.py", __dir__), File.expand_path(file))
+          raise "browser check failed: #{err}" unless status.success?
+          JSON.parse(out.lines.last)
+        }
+        expect(positions[0]["load"].size).to be > 12
+        expect(positions[1]).to eq(positions[0])
+      end
+
       it "starts with every VPC collapsed and expands, collapses and searches on demand" do
         r = collapse_report(render_large)
         expect(vpcs * per_vpc + 1).to be > r["threshold"]
