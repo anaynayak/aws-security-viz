@@ -20,6 +20,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - `--obfuscate` help text lists everything it hashes
 
 ### Fixed
+- The HTML viewer no longer opens blank or without edges: node sizes are measured up front instead of left to the renderer, so layouts no longer see zero-size nodes (this also fixes clicks missing nodes, Expand all drawing no edges and the WebGL switch showing a blank canvas)
+- Collapsed VPCs, expanded VPCs, peers and groups no longer overlap after a layout; expanding a VPC moves its neighbours instead of covering them
+- Collapsing a VPC with a real double-click no longer throws, and double-click works under WebGL
+- Switching renderer keeps the zoom and pan, releases the WebGL context, falls back to canvas if WebGL fails or is lost, and the size rule counts only visible elements and follows the filters
+- Risky edges are magenta, thicker and with a larger arrowhead so they differ from merged egress edges, and the legend describes them correctly
+- Searching for a single group no longer zooms in past 1.5x
 - With `--obfuscate`, the warnings for skipped regions and for `--show-unused` without `ec2:DescribeNetworkInterfaces` printed the raw region name
 
 ## [1.0.0] - 2026-10-03

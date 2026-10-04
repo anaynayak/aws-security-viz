@@ -17,8 +17,8 @@ extension is rejected with a message listing the supported ones.
 
 The older `--renderer` flag is deprecated. It still works and prints a warning; use the extension instead.
 
-Edge colours are the same in every format: blue for ingress, red for egress, and a thick dashed crimson edge for
-[risky public ingress](filtering-and-risk-checks.md#what-counts-as-risky). With `--show-unused`, groups that no network
+Edge colours follow the same scheme in every format: blue for ingress, red for egress, and a thick dashed edge for
+(crimson in the images, magenta in the HTML viewer) [risky public ingress](filtering-and-risk-checks.md#what-counts-as-risky). With `--show-unused`, groups that no network
 interface uses are marked: dashed grey in DOT, an `unused` class in Mermaid, and `unused: true` in JSON and HTML data.
 Colour is never the only signal: the viewer legend and the JSON `risky` flag state the same facts in text.
 
@@ -50,8 +50,10 @@ aws_security_viz -o security_groups.json -f viz.html
    large account, the viewer switches to Cytoscape's experimental WebGL renderer, which draws large graphs much
    faster. The WebGL checkbox in the toolbar switches it on or off at any size; after you use it, the size rule no
    longer changes the renderer. The checkbox is disabled when the browser has no WebGL 2, and the viewer then keeps
-   the canvas renderer. WebGL does not draw dashed edges, so a risky edge is a thick solid crimson line there; the
-   details panel and the legend text still mark it as risky.
+   the canvas renderer. The renderer switches on the elements that are showing, so the filter checkboxes can move it too. WebGL does not
+   draw dashed edges, so a risky edge is a thick solid line there; risky edges are magenta, thicker than every other
+   edge and have a larger arrowhead in both renderers, and the details panel still marks them as risky. If the browser
+   takes the WebGL context away, the viewer carries on with the canvas renderer.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 

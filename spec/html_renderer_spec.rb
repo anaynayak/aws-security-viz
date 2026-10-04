@@ -60,6 +60,11 @@ describe AwsSecurityViz::Renderer::Html do
       Digest::SHA256.file(File.join(vendor, "cytoscape.min.js")).hexdigest)
   end
 
+  it "has the browser check return null from tap, because Playwright cannot serialise a Cytoscape collection" do
+    source = File.read(File.expand_path("support/browser_check.py", __dir__))
+    expect(source).to include("emit('tap'); return null")
+  end
+
   it "keeps the vendored fcose layout and its dependencies pinned, licensed and documented" do
     {
       "fcose/cytoscape-fcose.js" => ["2.2.0", "cytoscape-fcose-2.2.0.tgz"],
@@ -137,6 +142,97 @@ describe AwsSecurityViz::Renderer::Html do
       expect(r["collapsed"]).to eq(0)
     end
 
+    describe "drawing" do
+      def visible_report(file, vpc)
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
+          File.expand_path("support/browser_visible.py", __dir__), File.expand_path(file), vpc)
+        raise "browser check failed: #{err}" unless status.success?
+        JSON.parse(out.lines.last)
+      end
+
+      def expect_everything_drawn(r)
+        expect(r["errors"]).to be_empty
+        expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
+        expect(r["steps"].keys).to include("load", "expand_all", "collapse_all", "dblclick_1", "dblclick_2", "webgl_on", "webgl_dblclick", "webgl_off")
+        r["steps"].each do |name, s|
+          expect(s["invisible"]).to be_empty, "#{name}: invisible #{s["invisible"].first(3)}"
+          expect(s["zeroEdges"]).to be_empty, "#{name}: edges without a box #{s["zeroEdges"].first(3)}"
+          expect(s["vpcOverlaps"]).to be_empty, "#{name}: VPCs overlap #{s["vpcOverlaps"].first(3)}"
+          expect(s["groupOverlaps"]).to be_empty, "#{name}: groups overlap #{s["groupOverlaps"].first(3)}"
+          expect(s["peerInVpc"]).to be_empty, "#{name}: peers inside a VPC #{s["peerInVpc"].first(3)}"
+          expect(s["ink"]).to be > 30, "#{name}: no edge pixels on screen (#{s["ink"]})"
+        end
+        expect(r["steps"]["webgl_on"]["renderer"]).to eq("webgl")
+        expect(r["steps"]["webgl_off"]["renderer"]).to eq("canvas")
+        r.select { |k, _| k.start_with?("toggled_") }.each_value { |(was, now)| expect(now).to eq(!was) }
+        expect(r["children_dblclick_collapsed"] || 0).to eq(0)
+      end
+
+      it "draws every node and edge, without overlaps, after load, expand, collapse, double-click and renderer switches (small)" do
+        renderer = described_class.new("drawn.html", config)
+        2.times do |v|
+          8.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "svc-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          7.times { |i| renderer.add_edge("sg-#{v}-#{i}", "sg-#{v}-#{i + 1}", {color: :blue, label: "443"}) }
+          renderer.add_edge("sg-#{v}-0", "sg-#{1 - v}-3", {color: :red, label: "all"})
+        end
+        renderer.add_node("0.0.0.0/0", {label: "0.0.0.0/0"})
+        renderer.add_node("10.0.0.0/8", {label: "10.0.0.0/8"})
+        renderer.add_edge("0.0.0.0/0", "sg-0-0", {color: :blue, label: "22", risky: true})
+        renderer.add_edge("10.0.0.0/8", "sg-1-2", {color: :blue, label: "22"})
+        renderer.output
+        r = visible_report("drawn.html", "vpc:eu-west-1|vpc-1")
+        expect_everything_drawn(r)
+      end
+
+      it "draws every node and edge, without overlaps, on a graph that opens collapsed (large)" do
+        renderer = described_class.new("drawn-large.html", config)
+        12.times do |v|
+          15.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "app-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          15.times { |i| renderer.add_edge("sg-#{v}-#{i}", "sg-#{v}-#{(i + 1) % 15}", {color: :blue, label: "443"}) }
+          renderer.add_edge("sg-#{v}-1", "sg-#{(v + 1) % 12}-0", {color: :red, label: "5432"})
+          renderer.add_edge("sg-#{v}-2", "sg-#{(v + 5) % 12}-3", {color: :blue, label: "22"})
+        end
+        %w[0.0.0.0/0 10.0.0.0/8 ::/0].each { |peer| renderer.add_node(peer, {label: peer}) }
+        12.times { |v| renderer.add_edge("0.0.0.0/0", "sg-#{v}-4", {color: :blue, label: "22", risky: v.zero?}) }
+        renderer.add_edge("10.0.0.0/8", "sg-3-3", {color: :blue, label: "22"})
+        renderer.output
+        r = visible_report("drawn-large.html", "vpc:eu-west-1|vpc-3")
+        expect(r["steps"]["load"]["nodes"]).to be < 30
+        expect_everything_drawn(r)
+        expect(r["toggled_dblclick_1"]).to eq([true, false])
+        expect(r["toggled_dblclick_2"]).to eq([false, true])
+        expect(r["children_dblclick_2"]).to eq(0)
+      end
+
+      it "makes risky edges look different from merged egress edges and says so in the legend" do
+        render
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
+          File.expand_path("support/browser_style.py", __dir__), File.expand_path("report.html"), "web")
+        raise "browser check failed: #{err}" unless status.success?
+        r = JSON.parse(out.lines.last)
+        expect(r["errors"]).to be_empty
+        risky = r["styles"]["risky"]
+        [r["styles"]["mergedEgress"], r["styles"]["mergedIngress"], r["styles"]["egress"]].each do |other|
+          expect(risky["width"]).to be > other["width"]
+          expect(risky["color"]).not_to eq(other["color"])
+        end
+        expect(risky["arrowScale"]).to be > 1
+        expect(r["legend"]).to match(/risky public ingress/)
+        expect(r["legend"]).not_to include("thick dashed")
+      end
+
+      it "keeps a single search match at a readable zoom" do
+        render
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
+          File.expand_path("support/browser_style.py", __dir__), File.expand_path("report.html"), "sg-db")
+        raise "browser check failed: #{err}" unless status.success?
+        r = JSON.parse(out.lines.last)
+        expect(r["search_matches"]).to eq(1)
+        expect(r["search_zoom"]).to be <= 1.5
+        expect(r["search_match_in_view"]).to be(true)
+      end
+    end
+
     describe "the WebGL renderer" do
       def webgl_report(file, *flags)
         out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
@@ -167,7 +263,10 @@ describe AwsSecurityViz::Renderer::Html do
         expect_clean(r, "report.html")
         expect(r["initial"]).to include("renderer" => "canvas", "checked" => false, "disabled" => false)
         expect(r["toggled_on"]).to include("renderer" => "webgl", "checked" => true, "elements" => r["initial"]["elements"])
-        expect(r["post_toggle_positions"]).to eq(r["pre_toggle_positions"])
+        expect(r["pre_toggle"]["positions"].size).to eq(r["toggled_on"]["nodes"])
+        expect(r["post_toggle"]["positions"]).to eq(r["pre_toggle"]["positions"])
+        expect(r["post_toggle"]["zoom"]).to eq(r["pre_toggle"]["zoom"])
+        expect(r["post_toggle"]["pan"]).to eq(r["pre_toggle"]["pan"])
         expect(r["details_after_switch"]).to include("Id: sg-")
         expect(r["ingress_hidden"]).to be(true)
         expect(r["toggled_off"]).to include("renderer" => "canvas", "checked" => false)
@@ -192,6 +291,34 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["after_expand_all"]["elements"]).to be > r["threshold"]
         expect(r["toggled_on"]).to include("renderer" => "canvas", "checked" => false)
         expect(r["details_after_switch"]).to include("Id: sg-")
+      end
+
+      it "falls back to canvas and clears what a failed WebGL start left behind" do
+        render
+        r = webgl_report("report.html", "--webgl-throws")
+        expect_clean(r, "report.html")
+        expect(r["after_throw"]).to include("renderer" => "canvas", "checked" => false, "disabled" => true)
+        expect(r["after_throw"]["nodes"]).to be > 0
+        expect(r["stray_canvases"]).to eq(r["after_throw"]["canvases"])
+      end
+
+      it "carries on with canvas when the browser takes the WebGL context away" do
+        render
+        r = webgl_report("report.html", "--lose-context")
+        expect_clean(r, "report.html")
+        expect(r["toggled_on"]).to include("renderer" => "webgl")
+        expect(r["after_loss"]).to include("renderer" => "canvas", "checked" => false, "disabled" => true)
+        expect(r["after_loss"]["nodes"]).to eq(r["toggled_on"]["nodes"])
+      end
+
+      it "releases each WebGL context so repeated switching never reaches the browser limit" do
+        render
+        r = webgl_report("report.html", "--churn")
+        expect_clean(r, "report.html")
+        expect(r["console"].grep(/Too many active WebGL contexts/)).to be_empty
+        expect(r["after_churn"]).to include("renderer" => "webgl", "checked" => true)
+        expect(r["contexts_created"]).to be > 20
+        expect(r["contexts_alive"]).to be <= 2
       end
 
       it "stays on canvas past the threshold when WebGL is missing" do
@@ -251,7 +378,6 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["after_expand"]["collapsed"].size).to eq(vpcs - 1)
         expect(r["after_expand"]["groups"]).to eq(per_vpc + 1)
         expect(r["expanded_children"]).to eq(per_vpc)
-        expect(r["others_moved"]).to be_empty
         expect(r["expanded_details"]).to include("Double-click to collapse")
         expect(r["group_details"]).to include("Id: sg-3-")
         expect(r["after_recollapse"]["collapsed"].size).to eq(vpcs)
@@ -262,7 +388,7 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["collapsed_details"]).to include("Internal rules: 1")
         expect(r["internal_risky_details"]).to include("internal rule(s) are risky")
         expect(r["into_vpc_details"]).to include("5432", "22", "Rule descriptions", "db from 2")
-        expect(r["meta_risky_width"]).to eq(4)
+        expect(r["meta_risky_width"]).to eq(5)
         expect(r["peer_meta_label"]).to eq("2 rules")
         expect(r["risky_only_label"]).to eq("1 rule")
         expect(r["risky_only_visible"]).to eq(["meta:0.0.0.0/0>vpc:eu-west-1|vpc-0|ingress"])

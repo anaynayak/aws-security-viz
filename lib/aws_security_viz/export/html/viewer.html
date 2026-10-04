@@ -32,7 +32,7 @@
     <button id="reset" type="button">Reset view</button>
     <button id="expand-all" type="button">Expand all</button>
     <button id="collapse-all" type="button">Collapse all</button>
-    <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span class="risky">thick dashed: risky public ingress</span><span>grey dashed node: unused</span><span>double-click a VPC to collapse or expand it</span></span>
+    <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span style="color:#d6006f;font-weight:bold">thickest magenta: risky public ingress</span><span>grey dashed node: unused</span><span>double-click a VPC to collapse or expand it</span></span>
   </div>
   <div id="main">
     <div id="cy"></div>
@@ -83,6 +83,14 @@
     return { group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") };
   });
 
+  // Node sizes are measured here, not left to Cytoscape's "label" sizing: that is only known once the renderer has
+  // drawn a label, and a layout that runs earlier would see zero-size nodes and leave elements invisible.
+  var measure = document.createElement("canvas").getContext("2d");
+  function nodeSize(label) {
+    measure.font = "bold 11px system-ui, sans-serif";
+    return { w: Math.ceil(measure.measureText(String(label)).width) + 2, h: 14 };
+  }
+
   var collapsed = {};
   var groupCount = Object.keys(vpcGroups).reduce(function (sum, id) { return sum + vpcGroups[id].length; }, 0);
   if (groupCount > COLLAPSE_THRESHOLD) Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = true; });
@@ -96,7 +104,9 @@
     var internal = {};
     // Cytoscape keeps the data object it is given, so every element gets its own copy.
     function copy(def, extra, classes) {
-      return { group: def.group, data: Object.assign({}, def.data, extra), classes: classes === undefined ? def.classes : classes };
+      var d = Object.assign({}, def.data, extra);
+      if (def.group === "nodes") Object.assign(d, nodeSize(d.label));
+      return { group: def.group, data: d, classes: classes === undefined ? def.classes : classes };
     }
     Object.keys(parentDefs).forEach(function (id) {
       var def = parentDefs[id];
@@ -141,7 +151,7 @@
   var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, padding: 30 };
 
   var STYLE = [
-      { selector: "node", style: { label: "data(label)", "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "label", height: "label", padding: "8px" } },
+      { selector: "node", style: { label: "data(label)", "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "data(w)", height: "data(h)", padding: "8px" } },
       { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
       { selector: "node.vpc.collapsed", style: { "text-valign": "center", "background-opacity": 0.2, "border-style": "solid", "border-width": 2, padding: "12px", shape: "round-rectangle" } },
       { selector: "node.unused", style: { "background-color": "#eee", "border-style": "dashed", "border-color": "#888", color: "#555" } },
@@ -149,7 +159,7 @@
       { selector: "edge.ingress", style: { "line-color": "#1f5fbf", "target-arrow-color": "#1f5fbf" } },
       { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
       { selector: "edge.meta", style: { width: 3 } },
-      { selector: "edge.risky", style: { width: 4, "line-style": "dashed", "line-color": "#dc143c", "target-arrow-color": "#dc143c", color: "#b00020" } },
+      { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.6, "line-style": "dashed", "line-color": "#d6006f", "target-arrow-color": "#d6006f", color: "#b00060" } },
       { selector: ".dim", style: { opacity: 0.12 } },
       { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
       { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
@@ -159,8 +169,28 @@
   // than this many elements are on the canvas, can be switched with the WebGL checkbox, and is skipped when
   // the browser has no WebGL 2 (headless CI, locked-down browsers): the canvas renderer is used then.
   var WEBGL_THRESHOLD = 2000;
+  var GAP = 12;          // minimum space between sibling boxes after a layout
+  // Give a canvas's WebGL context back to the browser, which allows only about sixteen live ones.
+  function releaseContext(canvas) {
+    try {
+      var gl = canvas.getContext("webgl2");
+      var lose = gl && gl.getExtension("WEBGL_lose_context");
+      if (lose) lose.loseContext();
+    } catch (e) { /* nothing to release */ }
+  }
+  function releaseContexts(container) {
+    releasing = true;
+    Array.prototype.forEach.call(container.querySelectorAll("canvas"), releaseContext);
+    releasing = false;
+  }
+  var releasing = false;
   function webglAvailable() {
-    try { return !!document.createElement("canvas").getContext("webgl2"); } catch (e) { return false; }
+    try {
+      var probe = document.createElement("canvas");
+      var ok = !!probe.getContext("webgl2");
+      releaseContext(probe);
+      return ok;
+    } catch (e) { return false; }
   }
   var webglSupported = webglAvailable();
   var webglOn = webglSupported && elements.length > WEBGL_THRESHOLD;
@@ -180,9 +210,11 @@
         cy = cytoscape(Object.assign({}, opts, { webgl: true }));
         return;
       } catch (e) {
+        // The half-built instance cannot be reached, so clear what it left in the container.
         webglOn = false;
         webglSupported = false;
-        document.getElementById("cy").textContent = "";
+        releaseContexts(opts.container);
+        opts.container.textContent = "";
       }
     }
     cy = cytoscape(opts);
@@ -191,6 +223,8 @@
     // Collapsed VPC nodes are near-symmetric, which the deterministic spectral start can fold onto a line.
     layout: Object.keys(collapsed).length ? Object.assign({}, LAYOUT, { randomize: true }) : LAYOUT
   });
+  separate();
+  cy.fit(undefined, 30);
 
   syncWebglBox();
   expose();
@@ -374,7 +408,7 @@
     });
   }
   ["ingress", "egress", "risky-only"].forEach(function (id) {
-    document.getElementById(id).addEventListener("change", applyFilters);
+    document.getElementById(id).addEventListener("change", function () { applyFilters(); autoRenderer(); });
   });
 
   // Bring the canvas in line with `collapsed`. Only the VPCs that were just expanded are laid out again, each
@@ -388,14 +422,16 @@
       var v = cy.getElementById(id);
       if (v.nonempty()) centres[id] = Object.assign({}, v.position());
     });
-    cy.remove(cy.elements().filter(function (x) { return !wanted[x.id()]; }));
+    var stale = cy.elements().filter(function (x) { return !wanted[x.id()]; });
+    cy.remove(stale.edges());
+    cy.remove(stale.nodes());
     var expanded = [];
     want.nodes.forEach(function (def) {
       var existing = cy.getElementById(def.data.id);
       if (existing.nonempty()) {
         if (vpcGroups[def.data.id]) {
           var wasCollapsed = existing.hasClass("collapsed");
-          existing.data({ label: def.data.label, internal: def.data.internal, internalRisky: def.data.internalRisky });
+          existing.data({ label: def.data.label, w: def.data.w, h: def.data.h, internal: def.data.internal, internalRisky: def.data.internalRisky });
           existing.toggleClass("collapsed", !!collapsed[def.data.id]);
           if (!collapsed[def.data.id] && wasCollapsed) expanded.push(def.data.id);
           else if (collapsed[def.data.id] && !wasCollapsed) existing.position(centres[def.data.id]);
@@ -423,15 +459,64 @@
       v.children().shift({ x: centre.x - now.x, y: centre.y - now.y });
     });
     layout.run();
+    separate(id);
+  }
+
+  // fcose can leave sibling boxes (VPCs, collapsed VPCs, peers, groups) overlapping, so after a layout the
+  // overlapping siblings are pushed apart, level by level from the innermost out. A pinned VPC stays where it is
+  // and its neighbours move instead.
+  function separate(pinnedId) {
+    var levels = [];
+    cy.nodes().filter(function (n) { return n.isParent(); }).forEach(function (n) {
+      levels.push({ depth: n.ancestors().length, nodes: n.children().toArray() });
+    });
+    levels.sort(function (a, b) { return b.depth - a.depth; });
+    levels.push({ depth: -1, nodes: cy.nodes(":orphan").toArray() });
+    levels.forEach(function (level) { pushApart(level.nodes, pinnedId); });
+  }
+  function pushApart(nodes, pinnedId) {
+    if (nodes.length < 2) return;
+    var boxes = nodes.map(function (n) {
+      var b = n.boundingBox({ includeLabels: true, includeOverlays: false });
+      return { x1: b.x1, y1: b.y1, x2: b.x2, y2: b.y2, dx: 0, dy: 0, pinned: n.id() === pinnedId };
+    });
+    function move(box, dx, dy) { box.x1 += dx; box.x2 += dx; box.y1 += dy; box.y2 += dy; box.dx += dx; box.dy += dy; }
+    for (var round = 0; round < 400; round++) {
+      var moved = false;
+      for (var i = 0; i < boxes.length; i++) {
+        for (var j = i + 1; j < boxes.length; j++) {
+          var a = boxes[i], b = boxes[j];
+          var ox = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1) + GAP;
+          var oy = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1) + GAP;
+          if (ox <= 0 || oy <= 0 || (a.pinned && b.pinned)) continue;
+          var wa = a.pinned ? 0 : (b.pinned ? 1 : 0.5);
+          var wb = 1 - wa;
+          if (ox < oy) {
+            var sx = (a.x1 + a.x2) <= (b.x1 + b.x2) ? -1 : 1;
+            move(a, sx * ox * wa, 0); move(b, -sx * ox * wb, 0);
+          } else {
+            var sy = (a.y1 + a.y2) <= (b.y1 + b.y2) ? -1 : 1;
+            move(a, 0, sy * oy * wa); move(b, 0, -sy * oy * wb);
+          }
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+    nodes.forEach(function (n, i) {
+      var d = boxes[i];
+      if (d.dx || d.dy) (n.isParent() ? n.descendants().nodes() : n).shift({ x: d.dx, y: d.dy });
+    });
   }
 
   function setAll(state) {
     Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = state; });
     searchSnapshot = null;
-    if (state) { sync(); return; }
-    // Expanding everything is the whole graph again, so lay it all out once instead of per VPC.
+    // Collapsing or expanding everything changes the whole graph, so lay it all out once instead of per VPC.
     sync(true);
     cy.layout(Object.assign({}, LAYOUT, { randomize: true })).run();
+    separate();
+    cy.fit(undefined, 30);
   }
   document.getElementById("expand-all").addEventListener("click", function () { setAll(false); });
   document.getElementById("collapse-all").addEventListener("click", function () { setAll(true); });
@@ -455,17 +540,30 @@
     if (on === webglOn || (on && !webglSupported)) return;
     var json = cy.elements().jsons();
     var view = { zoom: cy.zoom(), pan: cy.pan() };
+    // Release the contexts while the canvases are still in the page: destroying the instance removes them.
+    releaseContexts(cy.container());
     cy.destroy();
     webglOn = on;
-    createCy(json, { layout: { name: "preset" }, zoom: view.zoom, pan: view.pan });
+    createCy(json, { layout: { name: "preset", fit: false }, zoom: view.zoom, pan: view.pan });
     bindCy();
     syncWebglBox();
     applyFilters();
   }
   // Until the checkbox has been used, the renderer follows the number of elements on the canvas.
   function autoRenderer() {
-    if (!webglManual) setWebgl(webglSupported && cy.elements().length > WEBGL_THRESHOLD);
+    if (webglManual) return;
+    var shown = cy.elements().filter(function (x) { return x.style("display") !== "none"; }).length;
+    setWebgl(webglSupported && shown > WEBGL_THRESHOLD);
   }
+  // If the browser takes the WebGL context away, carry on with the canvas renderer.
+  document.getElementById("cy").addEventListener("webglcontextlost", function () {
+    if (releasing || !webglOn) return;
+    setTimeout(function () {
+      webglSupported = false;
+      setWebgl(false);
+      syncWebglBox();
+    }, 0);
+  }, true);
   document.getElementById("webgl").addEventListener("change", function (evt) {
     webglManual = true;
     setWebgl(evt.target.checked);
@@ -474,6 +572,7 @@
 
   // Collapsed set before a search opened VPCs; put back when the search is cleared.
   var searchSnapshot = null;
+  var MAX_SEARCH_ZOOM = 1.5;
   var searchBox = document.getElementById("search");
 
   // A hit inside a collapsed VPC opens it only once the hit is confirmed: Enter, or a single match.
@@ -506,7 +605,11 @@
     var hits = cy.nodes().filter(function (n) { return ids.indexOf(n.id()) !== -1; });
     ids.forEach(function (id) { if (collapsed[vpcOf[id]]) hits = hits.union(cy.getElementById(vpcOf[id])); });
     hits.addClass("match");
-    if (hits.length) cy.animate({ fit: { eles: hits, padding: 80 }, duration: 0 });
+    if (hits.length) {
+      cy.fit(hits, 80);
+      // A single small match would otherwise fill the screen.
+      if (cy.zoom() > MAX_SEARCH_ZOOM) { cy.zoom(MAX_SEARCH_ZOOM); cy.center(hits); }
+    }
   }
   searchBox.addEventListener("input", function () { runSearch(false); });
   searchBox.addEventListener("keydown", function (evt) { if (evt.key === "Enter") runSearch(true); });
