@@ -86,9 +86,12 @@
   // Node sizes are measured here, not left to Cytoscape's "label" sizing: that is only known once the renderer has
   // drawn a label, and a layout that runs earlier would see zero-size nodes and leave elements invisible.
   var measure = document.createElement("canvas").getContext("2d");
-  function nodeSize(label) {
-    measure.font = "bold 11px system-ui, sans-serif";
-    return { w: Math.ceil(measure.measureText(String(label)).width) + 2, h: 14 };
+  var FONT = "system-ui, sans-serif";
+  // Region and VPC labels are bold 12px, group and peer labels 11px; see STYLE.
+  function nodeSize(label, kind) {
+    var parentKind = kind === "vpc" || kind === "region";
+    measure.font = (parentKind ? "bold 12px " : "11px ") + FONT;
+    return { w: Math.ceil(measure.measureText(String(label)).width) + 2, h: parentKind ? 15 : 14 };
   }
 
   var collapsed = {};
@@ -105,7 +108,7 @@
     // Cytoscape keeps the data object it is given, so every element gets its own copy.
     function copy(def, extra, classes) {
       var d = Object.assign({}, def.data, extra);
-      if (def.group === "nodes") Object.assign(d, nodeSize(d.label));
+      if (def.group === "nodes") Object.assign(d, nodeSize(d.label, d.kind));
       return { group: def.group, data: d, classes: classes === undefined ? def.classes : classes };
     }
     Object.keys(parentDefs).forEach(function (id) {
@@ -151,7 +154,7 @@
   var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, padding: 30 };
 
   var STYLE = [
-      { selector: "node", style: { label: "data(label)", "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "data(w)", height: "data(h)", padding: "8px" } },
+      { selector: "node", style: { label: "data(label)", "font-family": FONT, "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "data(w)", height: "data(h)", padding: "8px" } },
       { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
       { selector: "node.vpc.collapsed", style: { "text-valign": "center", "background-opacity": 0.2, "border-style": "solid", "border-width": 2, padding: "12px", shape: "round-rectangle" } },
       { selector: "node.unused", style: { "background-color": "#eee", "border-style": "dashed", "border-color": "#888", color: "#555" } },
@@ -229,6 +232,20 @@
   syncWebglBox();
   expose();
 
+  // Until the user moves the view, keep the whole graph fitted: the container can still be settling when the first
+  // fit runs, so fit again once it has its final size.
+  var userMoved = false;
+  ["wheel", "mousedown", "touchstart", "keydown"].forEach(function (type) {
+    document.getElementById("cy").addEventListener(type, function () { userMoved = true; }, true);
+  });
+  function refit() {
+    if (userMoved) return;
+    cy.resize();
+    cy.fit(undefined, 30);
+  }
+  if (window.ResizeObserver) new ResizeObserver(refit).observe(document.getElementById("cy"));
+  requestAnimationFrame(function () { requestAnimationFrame(refit); });
+
   var details = document.getElementById("details");
 
   function el(tag, text, cls) {
@@ -280,7 +297,9 @@
 
   function nodeLabel(id) { return nodeById[id] ? nodeById[id].label : id; }
 
+  var shownId = null;   // element whose details are on the panel
   function show(target) {
+    shownId = target.id();
     details.textContent = "";
     if (target.isEdge() && target.data("meta")) {
       details.appendChild(el("h2", target.source().data("label") + " -> " + target.target().data("label")));
@@ -376,15 +395,36 @@
   function onTapBackground(evt) {
     if (evt.target === cy) {
       clearFocus();
-      details.textContent = "";
-      details.appendChild(el("p", "Click a group or an edge to see its details.", "muted"));
+      shownId = null;
+      showHint();
     }
+  }
+  function showHint() {
+    details.textContent = "";
+    details.appendChild(el("p", "Click a group or an edge to see its details.", "muted"));
+  }
+  // A layout change can alter what the panel says (a VPC collapsing, merged edges changing); say it again.
+  function refreshDetails() {
+    if (!shownId) return;
+    var t = cy.getElementById(shownId);
+    if (t.nonempty()) show(t); else { shownId = null; showHint(); }
   }
   function onDoubleTapVpc(evt) {
     var id = evt.target.id();
     collapsed[id] = !collapsed[id];
     searchSnapshot = null;
     sync();
+    if (!collapsed[id]) bringIntoView(cy.getElementById(id));
+  }
+  // An expanded VPC can run off the screen at the zoom of the collapsed view. Pan to it, and zoom out only as far as
+  // needed; a VPC that is already on screen leaves the view alone.
+  function bringIntoView(v) {
+    var b = v.renderedBoundingBox({ includeLabels: true, includeOverlays: false });
+    var pad = 40;
+    if (b.x1 >= pad / 2 && b.y1 >= pad / 2 && b.x2 <= cy.width() - pad / 2 && b.y2 <= cy.height() - pad / 2) return;
+    var zoom = cy.zoom();
+    cy.fit(v, pad);
+    if (cy.zoom() > zoom) { cy.zoom(zoom); cy.center(v); }
   }
   function bindCy() {
     cy.on("tap", "node, edge", onTapElement);
@@ -448,6 +488,7 @@
     clearFocus();
     applyFilters();
     autoRenderer();
+    refreshDetails();
   }
 
   function layoutVpc(id, centre) {
@@ -481,7 +522,9 @@
       return { x1: b.x1, y1: b.y1, x2: b.x2, y2: b.y2, dx: 0, dy: 0, pinned: n.id() === pinnedId };
     });
     function move(box, dx, dy) { box.x1 += dx; box.x2 += dx; box.y1 += dy; box.y2 += dy; box.dx += dx; box.dy += dy; }
-    for (var round = 0; round < 400; round++) {
+    for (var round = 0; round < 3000; round++) {
+      // Pushing one box off another can push it onto a third; a growing step breaks such cycles.
+      var step = 1 + round / 100;
       var moved = false;
       for (var i = 0; i < boxes.length; i++) {
         for (var j = i + 1; j < boxes.length; j++) {
@@ -489,6 +532,7 @@
           var ox = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1) + GAP;
           var oy = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1) + GAP;
           if (ox <= 0 || oy <= 0 || (a.pinned && b.pinned)) continue;
+          ox *= step; oy *= step;
           var wa = a.pinned ? 0 : (b.pinned ? 1 : 0.5);
           var wb = 1 - wa;
           if (ox < oy) {

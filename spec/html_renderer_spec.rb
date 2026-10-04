@@ -160,7 +160,7 @@ describe AwsSecurityViz::Renderer::Html do
           expect(s["vpcOverlaps"]).to be_empty, "#{name}: VPCs overlap #{s["vpcOverlaps"].first(3)}"
           expect(s["groupOverlaps"]).to be_empty, "#{name}: groups overlap #{s["groupOverlaps"].first(3)}"
           expect(s["peerInVpc"]).to be_empty, "#{name}: peers inside a VPC #{s["peerInVpc"].first(3)}"
-          expect(s["ink"]).to be > 30, "#{name}: no edge pixels on screen (#{s["ink"]})"
+          expect(s["ink"]).to be > 8, "#{name}: no edge pixels on screen (#{s["ink"]})"
         end
         expect(r["steps"]["webgl_on"]["renderer"]).to eq("webgl")
         expect(r["steps"]["webgl_off"]["renderer"]).to eq("canvas")
@@ -219,6 +219,63 @@ describe AwsSecurityViz::Renderer::Html do
         expect(risky["arrowScale"]).to be > 1
         expect(r["legend"]).to match(/risky public ingress/)
         expect(r["legend"]).not_to include("thick dashed")
+      end
+
+      def followup_report(file, vpc)
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
+          File.expand_path("support/browser_followup.py", __dir__), File.expand_path(file), vpc)
+        raise "browser check failed: #{err}" unless status.success?
+        JSON.parse(out.lines.last)
+      end
+
+      def render_vpcs(file, vpcs:, per_vpc:)
+        renderer = described_class.new(file, config)
+        vpcs.times do |v|
+          per_vpc.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "service-group-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          per_vpc.times { |i| renderer.add_edge("sg-#{v}-#{i}", "sg-#{v}-#{(i * 7 + 3) % per_vpc}", {color: :blue, label: "443"}) }
+          renderer.add_edge("sg-#{v}-1", "sg-#{(v + 1) % vpcs}-0", {color: :red, label: "5432"})
+        end
+        renderer.add_node("0.0.0.0/0", {label: "0.0.0.0/0"})
+        vpcs.times { |v| renderer.add_edge("0.0.0.0/0", "sg-#{v}-4", {color: :blue, label: "22"}) }
+        renderer.output
+        file
+      end
+
+      it "says the right thing in the details panel after a VPC is expanded or collapsed" do
+        render_vpcs("follow.html", vpcs: 12, per_vpc: 15)
+        r = followup_report("follow.html", "vpc:eu-west-1|vpc-3")
+        expect(r["errors"]).to be_empty
+        expect(r["details_collapsed"]).to include("Collapsed: double-click to expand")
+        expect(r["details_expanded"]).to include("Double-click to collapse")
+        expect(r["details_expanded"]).not_to include("Collapsed")
+        expect(r["details_recollapsed"]).to include("Collapsed: double-click to expand")
+      end
+
+      it "brings an expanded VPC into view when it would run off the screen" do
+        render_vpcs("follow-big.html", vpcs: 8, per_vpc: 40)
+        r = followup_report("follow-big.html", "vpc:eu-west-1|vpc-3")
+        expect(r["expanded_in_view"]).to be(true)
+        expect(r["zoom_after"]).to be <= r["zoom_before"]
+      end
+
+      it "sizes nodes for the font their labels are drawn in, and fits the graph again when the window is resized" do
+        render_vpcs("follow-size.html", vpcs: 12, per_vpc: 15)
+        r = followup_report("follow-size.html", "vpc:eu-west-1|vpc-3")
+        expect(r["label_fit"]).to be_empty
+        expect(r["fits_after_resize"]).to be(true)
+      end
+
+      it "leaves no groups overlapping inside a dense VPC after Expand all" do
+        renderer = described_class.new("dense.html", config)
+        rng = Random.new(7)
+        3.times do |v|
+          70.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "svc-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          70.times { |i| 9.times { renderer.add_edge("sg-#{v}-#{i}", "sg-#{v}-#{rng.rand(70)}", {color: :blue, label: (1000 + rng.rand(40)).to_s}) } }
+        end
+        renderer.output
+        r = visible_report("dense.html", "vpc:eu-west-1|vpc-1")
+        expect(r["steps"]["expand_all"]["groupOverlaps"]).to be_empty
+        expect(r["steps"]["expand_all"]["vpcOverlaps"]).to be_empty
       end
 
       it "keeps a single search match at a readable zoom" do

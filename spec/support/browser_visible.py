@@ -80,8 +80,10 @@ with sync_playwright() as p:
           const b = cy.getElementById(id).renderedBoundingBox({includeLabels: false, includeOverlays: false});
           return {x: r.left + b.x1, y: r.top + b.y1, w: b.w, h: b.h};
         }""", vpc)
-        for fy in (0.1, 0.25, 0.5, 0.75, 0.9):
-            for fx in (0.1, 0.25, 0.5, 0.75, 0.9):
+        coarse = (0.1, 0.25, 0.5, 0.75, 0.9)
+        fine = tuple(i / 20 for i in range(1, 20))
+        for fy in (0.02, 0.05) + coarse + fine:
+            for fx in coarse + fine:
                 x, y = box["x"] + box["w"] * fx, box["y"] + box["h"] * fy
                 page.mouse.move(x - 1, y)
                 page.mouse.move(x, y)
