@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - `--obfuscate` help text lists everything it hashes
 
 ### Fixed
+- The HTML viewer draws a VPC as exposed (red outline) whenever it is collapsed, including by Collapse all or a double-click, and no longer keeps that fill when it is opened
 - The HTML viewer's panel for an opened VPC has a Collapse button in every layout and mentions double-click only where it works (the exposure rings draw no VPC boxes to double-click)
 - The HTML viewer no longer opens blank or without edges: node sizes are measured up front instead of left to the renderer, so layouts no longer see zero-size nodes (this also fixes clicks missing nodes, Expand all drawing no edges and the WebGL switch showing a blank canvas)
 - Collapsed VPCs, expanded VPCs, peers and groups no longer overlap after a layout; expanding a VPC moves its neighbours instead of covering them

@@ -33,7 +33,7 @@ aws_security_viz -o security_groups.json -f viz.html
 
 ![HTML viewer overview in the light theme: three VPCs, the groups in them, the external peers on the left and a thick red edge from 0.0.0.0/0 to a bastion group](assets/viewer-overview.png)
 
-![The same viewer in the dark theme](assets/viewer-overview-dark.png)
+![The same viewer in the dark theme, zoomed to the dev VPC and the external peers](assets/viewer-overview-dark.png)
 
 1. Search. Type in the search box to find and centre matching groups.
 2. Ingress, Egress and Risky only toggles. Risky only keeps the risky edges and hides the rest.
@@ -61,7 +61,7 @@ aws_security_viz -o security_groups.json -f viz.html
 8. Can X reach Y. Type a source and a target (a security group, CIDR or other peer, by name or id; the boxes suggest
    matches) and press Enter or Find path. The answer comes from the security group rules, the way AWS evaluates them,
    and not from the drawn edges, so the Ingress, Egress and Risky only toggles never change it (the path stays visible
-   whatever they say). The shortest path is drawn in the theme's path colour (orange in the dark theme, black in the light one) and the rest dimmed; collapsed VPCs on the path are opened,
+   whatever they say). The shortest path is drawn in the theme's path colour (yellow in the dark theme, black in the light one) and the rest dimmed; collapsed VPCs on the path are opened,
    the view is fitted to the path, and Clear path (or Reset view) puts back the collapsed VPCs, zoom and position.
    The exact rules:
    1. A hop from group A to group B is allowed only when A has an egress rule that allows B and B has an ingress rule
@@ -144,11 +144,11 @@ aws_security_viz -o security_groups.json -f viz.html
     colours keep a contrast of at least 3:1 against the canvas (4.5:1 for text). No web fonts are loaded: the page
     uses the system font stack. Reports made with `--obfuscate` keep these shapes.
 
-![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
+![Risky only toggle in the dark theme: only the 22/tcp edge from 0.0.0.0/0 to dev-bastion is left](assets/viewer-risky-only.png)
 
-![Details panel for the risky edge: direction ingress, ports 22/tcp, risky public ingress](assets/viewer-details.png)
+![Details panel for the risky edge from 0.0.0.0/0 to dev-bastion: direction ingress, ports 22/tcp, risky public ingress, with the rest of the graph dimmed](assets/viewer-details.png)
 
-![Search for "app": the matching group is centred and the rest dimmed](assets/viewer-search.png)
+![Search for "orders": the matching groups in both environments have a highlighted outline](assets/viewer-search.png)
 
 The page has a Content-Security-Policy and makes no network requests; see [Security](security.md#4-data-handling).
 

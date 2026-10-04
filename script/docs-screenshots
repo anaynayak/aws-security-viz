@@ -46,8 +46,16 @@ def main():
                 page.wait_for_timeout(800)
                 return page
 
+            def zoom_in(page):
+                # Fitted whole, a graph this size is too small for labels to draw: show the dev VPC and the external peers instead.
+                page.evaluate(
+                    "() => { const cy = window.awsSecurityViz.cy; window.awsSecurityViz.fit(cy.nodes('.vpc').filter(n => n.data('name') === 'vpc-dev').union(cy.nodes('.cidr, .pl')), 30); }"
+                )
+                page.wait_for_timeout(300)
+
             # The light theme is the default for a browser with no preference; the dark one follows prefers-color-scheme.
             light = open_page("light")
+            zoom_in(light)
             light.screenshot(path=str(ASSETS / "viewer-overview.png"))
 
             light.fill("#search", "orders")
@@ -57,6 +65,7 @@ def main():
             light.fill("#search", "")
             light.click("#reset")
             light.wait_for_timeout(300)
+            zoom_in(light)
             light.evaluate(
                 "() => { const e = window.awsSecurityViz.cy.edges('[?risky]')[0]; e.emit('tap'); }"
             )
@@ -64,6 +73,7 @@ def main():
             light.screenshot(path=str(ASSETS / "viewer-details.png"))
 
             page = open_page("dark")
+            zoom_in(page)
             page.screenshot(path=str(ASSETS / "viewer-overview-dark.png"))
             page.check("#risky-only")
             page.wait_for_timeout(500)

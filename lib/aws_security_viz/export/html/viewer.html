@@ -734,7 +734,7 @@
   // legend, or the full height beside it.
   function legendBox() {
     var legend = document.getElementById("legend"), box = document.getElementById("cy").getBoundingClientRect(), r = legend.getBoundingClientRect();
-    return { w: r.right - box.left + 12, h: box.bottom - r.top + 12 };
+    return { w: r.right - box.left + 4, h: box.bottom - r.top + 4 };
   }
   // Fit `eles` (everything when empty) into the canvas clear of the legend, at most at zoom `maxZoom`.
   function fitView(eles, pad, maxZoom) {
