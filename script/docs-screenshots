@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uv run --group browser python3
-"""Regenerate the viewer screenshots and the social card in docs/assets from spec/integration/dummy.json.
+"""Regenerate the viewer screenshots and the social card in docs/assets from spec/integration/docs_vpcs.json (two environment VPCs and a shared one).
 
 Needs headless Chromium: uv run --group browser playwright install chromium
 Usage: script/docs-screenshots
@@ -32,34 +32,42 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         page_file = pathlib.Path(tmp) / "viewer.html"
         subprocess.run(
-            ["bundle", "exec", "exe/aws_security_viz", "-o", "spec/integration/dummy.json", "-f", str(page_file)],
+            ["bundle", "exec", "exe/aws_security_viz", "-o", "spec/integration/docs_vpcs.json", "-f", str(page_file)],
             cwd=ROOT,
             check=True,
         )
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 1000, "height": 560})
-            page.goto(page_file.as_uri())
-            page.wait_for_timeout(800)
-            page.screenshot(path=str(ASSETS / "viewer-overview.png"))
 
+            def open_page(scheme):
+                page = browser.new_page(viewport={"width": 1440, "height": 900}, color_scheme=scheme)
+                page.goto(page_file.as_uri())
+                page.wait_for_selector("canvas")
+                page.wait_for_timeout(800)
+                return page
+
+            # The light theme is the default for a browser with no preference; the dark one follows prefers-color-scheme.
+            light = open_page("light")
+            light.screenshot(path=str(ASSETS / "viewer-overview.png"))
+
+            light.fill("#search", "orders")
+            light.press("#search", "Enter")
+            light.wait_for_timeout(500)
+            light.screenshot(path=str(ASSETS / "viewer-search.png"))
+            light.fill("#search", "")
+            light.click("#reset")
+            light.wait_for_timeout(300)
+            light.evaluate(
+                "() => { const e = window.awsSecurityViz.cy.edges('[?risky]')[0]; e.emit('tap'); }"
+            )
+            light.wait_for_timeout(300)
+            light.screenshot(path=str(ASSETS / "viewer-details.png"))
+
+            page = open_page("dark")
+            page.screenshot(path=str(ASSETS / "viewer-overview-dark.png"))
             page.check("#risky-only")
             page.wait_for_timeout(500)
             page.screenshot(path=str(ASSETS / "viewer-risky-only.png"))
-            page.uncheck("#risky-only")
-
-            page.fill("#search", "app")
-            page.wait_for_timeout(500)
-            page.screenshot(path=str(ASSETS / "viewer-search.png"))
-            page.fill("#search", "")
-
-            page.click("#reset")
-            page.wait_for_timeout(300)
-            page.evaluate(
-                "() => { const e = window.awsSecurityViz.cy.edges('[?risky]')[0]; e.emit('tap'); }"
-            )
-            page.wait_for_timeout(300)
-            page.screenshot(path=str(ASSETS / "viewer-details.png"))
 
             shot = base64.b64encode((ASSETS / "viewer-risky-only.png").read_bytes()).decode()
             card = browser.new_page(viewport={"width": 1200, "height": 630})

@@ -60,6 +60,7 @@ with sync_playwright() as p:
     page.on("console", lambda m: out["console"].append(m.type + ": " + m.text) if m.type in ("error", "warning") else None)
     page.goto("file://" + report)
     page.wait_for_selector("canvas")
+    page.add_style_tag(content="#legend { visibility: hidden; }")  # the legend sits over the canvas and would count as ink
 
     def ev(js, arg=None):
         return page.evaluate("(arg) => { const r = (" + js + ")(arg); return r && r.cy ? null : r; }", arg)

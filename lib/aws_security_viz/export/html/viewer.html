@@ -6,32 +6,143 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:">
 <title>AWS security groups</title>
 <style>
-  html, body { margin: 0; height: 100%; font: 13px/1.4 system-ui, sans-serif; color: #222; }
+  /* Design tokens. Light is the "Blueprint" theme, dark the "Console" theme. The dark set appears twice: once for
+     prefers-color-scheme when the user has not chosen, once for the manual toggle (data-theme on <html>). The --c-*
+     tokens colour the graph: the script reads them (Cytoscape cannot use CSS variables) and the legend uses them. */
+  :root {
+    color-scheme: light;
+    --bg: #f6f8fb; --chrome: #ffffff; --panel: #ffffff; --border: #d3dbe6; --hairline: #e8edf3;
+    --text: #1b2636; --muted: #55657a; --accent: #2563c9; --accent-ink: #ffffff;
+    --input-bg: #ffffff; --btn-bg: #ffffff; --chip-on: #e8f0fc; --risky: #b0102f; --group-bg: #f6f8fb;
+    --shadow: rgba(0, 0, 0, .08);
+    --grid: linear-gradient(#e3e9f2 1px, transparent 1px), linear-gradient(90deg, #e3e9f2 1px, transparent 1px);
+    --c-canvas: #f6f8fb; --c-text: #1d242e; --c-muted: #55657a; --c-label: #4a5058;
+    --c-group-fill: #ffffff; --c-group-border: #24364d;
+    --c-cidr-fill: #e8f5f2; --c-cidr-border: #12927e;
+    --c-pl-fill: #fbf1e3; --c-pl-border: #b06a00;
+    --c-unused-border: #7a8798; --c-unused-text: #55657a;
+    --c-box-fill: #2f6fd6; --c-box-opacity: 0.05; --c-box-border: #5f8fcf; --c-box-text: #2a4a75; --c-region-border: #5f8fcf;
+    --c-coll-fill: #e3ecf9; --c-coll-border: #2f6fd6;
+    --c-ingress: #2563c9; --c-egress: #6b7785; --c-risky: #d0103a; --c-risky-text: #b0102f; --c-path: #0b0f19;
+    --c-exposed-border: #d0103a; --c-exposed-fill: #fdecef; --c-accent: #2563c9; --c-dim: 0.15;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1720; --chrome: #232f3e; --panel: #16212e; --border: #33465c; --hairline: #223041;
+      --text: #e9eef4; --muted: #a3b1c2; --accent: #ff9900; --accent-ink: #16191f;
+      --input-bg: #0f1720; --btn-bg: #2b3a4d; --chip-on: rgba(255, 153, 0, 0.14); --risky: #ff7a8a; --group-bg: rgba(255, 255, 255, 0.03);
+      --shadow: rgba(0, 0, 0, .35); --grid: none;
+      --c-canvas: #0f1720; --c-text: #e9eef4; --c-muted: #a3b1c2; --c-label: #b4bcc8;
+      --c-group-fill: #1a2635; --c-group-border: #c5d0dc;
+      --c-cidr-fill: #0f2e2b; --c-cidr-border: #2fb8a6;
+      --c-pl-fill: #251d38; --c-pl-border: #b392f0;
+      --c-unused-border: #7d8a99; --c-unused-text: #a3b1c2;
+      --c-box-fill: #ffffff; --c-box-opacity: 0.025; --c-box-border: #5d7592; --c-box-text: #a3b1c2; --c-region-border: #667f9c;
+      --c-coll-fill: #1d2b3c; --c-coll-border: #8aa0b8;
+      --c-ingress: #4f9dff; --c-egress: #b4bcc8; --c-risky: #ff4d6d; --c-risky-text: #ff7a8a; --c-path: #ffd23f;
+      --c-exposed-border: #ff4d6d; --c-exposed-fill: #3a1620; --c-accent: #ff9900; --c-dim: 0.12;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1720; --chrome: #232f3e; --panel: #16212e; --border: #33465c; --hairline: #223041;
+    --text: #e9eef4; --muted: #a3b1c2; --accent: #ff9900; --accent-ink: #16191f;
+    --input-bg: #0f1720; --btn-bg: #2b3a4d; --chip-on: rgba(255, 153, 0, 0.14); --risky: #ff7a8a; --group-bg: rgba(255, 255, 255, 0.03);
+    --shadow: rgba(0, 0, 0, .35); --grid: none;
+    --c-canvas: #0f1720; --c-text: #e9eef4; --c-muted: #a3b1c2; --c-label: #b4bcc8;
+    --c-group-fill: #1a2635; --c-group-border: #c5d0dc;
+    --c-cidr-fill: #0f2e2b; --c-cidr-border: #2fb8a6;
+    --c-pl-fill: #251d38; --c-pl-border: #b392f0;
+    --c-unused-border: #7d8a99; --c-unused-text: #a3b1c2;
+    --c-box-fill: #ffffff; --c-box-opacity: 0.025; --c-box-border: #5d7592; --c-box-text: #a3b1c2; --c-region-border: #667f9c;
+    --c-coll-fill: #1d2b3c; --c-coll-border: #8aa0b8;
+    --c-ingress: #4f9dff; --c-egress: #b4bcc8; --c-risky: #ff4d6d; --c-risky-text: #ff7a8a; --c-path: #ffd23f;
+    --c-exposed-border: #ff4d6d; --c-exposed-fill: #3a1620; --c-accent: #ff9900; --c-dim: 0.12;
+  }
+  :root {
+    /* Sizes are the same in both themes, so switching never changes the layout of the page. */
+    --radius: 5px; --fs: 13px; --bar-pad: 8px 14px;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --fs-small: 11px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  html, body { margin: 0; height: 100%; font: var(--fs)/1.45 var(--font); color: var(--text); background: var(--bg); }
   #app { display: flex; flex-direction: column; height: 100%; }
-  #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #ccc; background: #f6f6f6; }
-  #bar input[type=search] { width: 220px; padding: 3px 6px; }
-  #main { display: flex; flex: 1; min-height: 0; }
-  #cy { flex: 1; }
-  #details { width: 320px; overflow: auto; padding: 10px 12px; border-left: 1px solid #ccc; background: #fafafa; }
-  #details h2 { margin: 0 0 6px; font-size: 15px; }
-  #details h3 { margin: 12px 0 4px; font-size: 13px; }
-  #details ul { margin: 0; padding-left: 18px; }
-  .risky { color: #b00020; font-weight: bold; }
-  .muted { color: #666; }
-  #pathbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  #pathbar input { width: 150px; padding: 3px 6px; }
-  #pathbar #path-port { width: 110px; }
-  #legend span { margin-right: 10px; }
+  #bar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding: var(--bar-pad);
+         background: var(--chrome); border-bottom: 1px solid var(--border); }
+  #bar::before { content: "Security groups"; font-weight: 650; letter-spacing: .01em; margin-right: var(--space-2);
+                 padding-right: var(--space-3); border-right: 1px solid var(--border); }
+  input, button, select { font: inherit; color: var(--text); }
+  #bar input[type=search], #pathbar input, #bar select { background: var(--input-bg); border: 1px solid var(--border);
+         border-radius: var(--radius); padding: 5px 8px; outline: none; }
+  #bar input[type=search] { width: 200px; }
+  #bar input::placeholder { color: var(--muted); opacity: 1; }
+  input:focus-visible, button:focus-visible, select:focus-visible, #bar label:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #bar label { display: inline-flex; align-items: center; gap: 6px; }
+  #bar label.chip { padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; color: var(--muted); user-select: none; }
+  #bar label.chip:has(input:checked) { color: var(--text); border-color: var(--accent); background: var(--chip-on); }
+  #bar label.chip:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+  #bar input[type=checkbox] { accent-color: var(--accent); margin: 0; }
+  button { background: var(--btn-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button:disabled, input:disabled { opacity: .55; cursor: not-allowed; }
+  #theme[aria-pressed="true"] { border-color: var(--accent); background: var(--chip-on); }
+  #path-find { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  #pathbar { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 3px 3px 3px 0;
+         border: 1px solid var(--border); border-radius: calc(var(--radius) + 3px); background: var(--group-bg); }
+  #pathbar::before { content: "Path"; font-size: var(--fs-small); font-weight: 600; text-transform: uppercase;
+         letter-spacing: .08em; color: var(--muted); padding: 0 2px 0 10px; }
+  #pathbar input { width: 150px; }
+  #pathbar #path-port { width: 120px; }
+  #main { display: flex; flex: 1; min-height: 0; position: relative; }
+  #cy { flex: 1; background-color: var(--c-canvas); background-image: var(--grid); background-size: 24px 24px; }
+  #details { width: 340px; overflow: auto; padding: var(--space-4); border-left: 1px solid var(--border); background: var(--panel); }
+  #details h2 { margin: 0 0 var(--space-2); font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+  #details h3 { margin: var(--space-4) 0 var(--space-1); font-size: var(--fs-small); font-weight: 600; text-transform: uppercase;
+         letter-spacing: .08em; color: var(--muted); }
+  #details p { margin: 6px 0; }
+  #details ul { margin: 0; padding: 0; list-style: none; }
+  #details li { padding: 5px 0; border-bottom: 1px solid var(--hairline); font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+  .risky { color: var(--risky); font-weight: 600; }
+  .risky::before { content: "!"; display: inline-block; width: 14px; height: 14px; margin: 0 4px 0 6px; border-radius: 50%;
+         background: var(--risky); color: var(--panel); font: 700 10px/14px var(--font); text-align: center; vertical-align: 1px; }
+  .muted { color: var(--muted); }
+  #legend { position: absolute; left: var(--space-3); bottom: var(--space-3); z-index: 5; padding: 6px 12px; font-size: 12px; color: var(--text);
+         background: var(--panel); border: 1px solid var(--border); border-radius: calc(var(--radius) + 2px);
+         box-shadow: 0 2px 12px var(--shadow); max-width: 460px; }
+  #legend summary { cursor: pointer; font-weight: 600; color: var(--muted); padding: 2px 0; }
+  #legend[open] summary { margin-bottom: 4px; }
+  #legend .lg-grid { display: grid; grid-template-columns: auto auto; gap: 3px 18px; padding-bottom: 4px; }
+  #legend .lg-h { font-size: var(--fs-small); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  #legend .lg { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  #legend svg { flex: none; }
+  #legend .lg-note { grid-column: 1 / -1; color: var(--muted); font-size: var(--fs-small); margin-top: 4px; }
+  #legend .sg { fill: var(--c-group-fill); stroke: var(--c-group-border); stroke-width: 1.5; }
+  #legend .cidr { fill: var(--c-cidr-fill); stroke: var(--c-cidr-border); stroke-width: 1.5; }
+  #legend .cidr6 { fill: none; stroke: var(--c-cidr-border); stroke-width: 1; }
+  #legend .pl { fill: var(--c-pl-fill); stroke: var(--c-pl-border); stroke-width: 1.5; }
+  #legend .unused { fill: none; stroke: var(--c-unused-border); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  #legend .coll { fill: var(--c-coll-fill); stroke: var(--c-coll-border); stroke-width: 3; }
+  #legend .exposed { fill: var(--c-exposed-fill); stroke: var(--c-exposed-border); stroke-width: 2.5; }
+  #legend .e-in { stroke: var(--c-ingress); stroke-width: 2.2; }
+  #legend .e-in-head { fill: var(--c-ingress); }
+  #legend .e-eg { stroke: var(--c-egress); stroke-width: 1.1; }
+  #legend .e-eg-head { fill: none; stroke: var(--c-egress); stroke-width: 1.1; }
+  #legend .e-risky { stroke: var(--c-risky); stroke-width: 5; }
+  #legend .e-risky-head { fill: var(--c-risky); }
+  #legend .e-path { stroke: var(--c-path); stroke-width: 5; }
+  #legend .e-path-head { fill: var(--c-path); }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="bar">
     <input id="search" type="search" placeholder="Search groups" aria-label="Search groups">
-    <label><input id="ingress" type="checkbox" checked> Ingress</label>
-    <label><input id="egress" type="checkbox" checked> Egress</label>
-    <label><input id="risky-only" type="checkbox"> Risky only</label>
-    <label><input id="webgl" type="checkbox"> WebGL</label>
+    <label class="chip"><input id="ingress" type="checkbox" checked> Ingress</label>
+    <label class="chip"><input id="egress" type="checkbox" checked> Egress</label>
+    <label class="chip"><input id="risky-only" type="checkbox"> Risky only</label>
+    <label class="chip"><input id="webgl" type="checkbox"> WebGL</label>
     <label>Layout <select id="layout" aria-label="Layout">
       <option value="fcose">Force (fcose)</option>
       <option value="flow">Traffic flow</option>
@@ -49,10 +160,28 @@
     </span>
     <button id="expand-all" type="button">Expand all</button>
     <button id="collapse-all" type="button">Collapse all</button>
-    <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span style="color:#d6006f;font-weight:bold">thickest magenta: risky public ingress</span><span>grey dashed node: unused</span><span>double-click a VPC to collapse or expand it</span></span>
-  </div>
+    <button id="theme" type="button" aria-pressed="false" title="Switch between the light and dark theme">Dark</button>
+    </div>
   <div id="main">
     <div id="cy"></div>
+    <details id="legend"><summary>Legend</summary><div class="lg-grid">
+      <span class="lg-h">Nodes</span><span class="lg-h">Rules</span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="sg" x="3" y="3" width="28" height="10" rx="3"/></svg><span>Security group</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-in" d="M3 8 H26" fill="none"/><path class="e-in-head" d="M26 3.5 L32 8 L26 12.5 Z"/></svg><span>Ingress (thick, filled arrow)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="cidr" d="M7 3 H27 L31 8 L27 13 H7 L3 8 Z"/></svg><span>CIDR (cut corners)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-eg" d="M3 8 H26" fill="none"/><path class="e-eg-head" d="M26 4.5 L31 8 L26 11.5"/></svg><span>Egress (thin, open arrow)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="cidr" d="M7 3 H27 L31 8 L27 13 H7 L3 8 Z"/><path class="cidr6" d="M9 5 H26 L28 8 L26 11 H9 L7 8 Z"/></svg><span>IPv6 CIDR (double outline)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-risky" d="M3 8 H24" fill="none"/><path class="e-risky-head" d="M22 2.5 L32 8 L22 13.5 Z"/></svg><span><b>Risky</b> public ingress (thickest)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="pl" d="M3 3 H25 L31 8 L25 13 H3 Z"/></svg><span>Prefix list (tag)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><path class="e-path" d="M3 8 H25" fill="none"/><path class="e-path-head" d="M24 3 L32 8 L24 13 Z"/></svg><span>Path result (rest fades)</span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="unused" x="3" y="3" width="28" height="10" rx="3"/></svg><span><i>Unused group</i> (dashed)</span></span>
+      <span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="coll" x="3" y="3" width="28" height="10" rx="3"/></svg><span><b>Collapsed VPC</b> (n groups)</span></span>
+      <span></span>
+      <span class="lg"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect class="exposed" x="3" y="3" width="28" height="10" rx="3"/></svg><span>Takes risky ingress</span></span>
+      <span></span>
+      <span class="lg-note">Double-click a VPC to collapse or expand it. Edge labels name the ports.</span>
+    </div></details>
     <div id="details"><p class="muted">Click a group or an edge to see its details.</p></div>
   </div>
 </div>
@@ -86,6 +215,13 @@
     }
     return id;
   }
+  // Peers are told apart by their id: a CIDR holds a "/" (IPv6 also a ":"), a prefix list starts with "pl-". Reports made with
+  // --obfuscate hash the ids, so their peers are drawn like groups.
+  function peerClasses(id) {
+    var s = String(id);
+    if (s.indexOf("/") !== -1) return "cidr" + (s.indexOf(":") !== -1 ? " ipv6" : "") + (s === "0.0.0.0/0" || s === "::/0" ? " internet" : "");
+    return s.indexOf("pl-") === 0 ? "pl" : "";
+  }
   data.nodes.forEach(function (n) {
     var d = { id: n.id, label: n.label, kind: "group", unused: !!n.unused };
     var up = null;
@@ -96,20 +232,25 @@
       (vpcGroups[up] = vpcGroups[up] || []).push(n.id);
     }
     if (up) d.parent = up;
-    groupDefs[n.id] = { group: "nodes", data: d, classes: n.unused ? "unused" : "" };
+    groupDefs[n.id] = { group: "nodes", data: d, classes: (n.unused ? "unused " : "") + peerClasses(n.id) };
   });
   var realEdges = data.edges.map(function (e) {
     return { group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") };
   });
 
+  // Groups that take a risky ingress rule, and the VPCs that hold one, are drawn as exposed. The class is set in desired().
+  var exposed = {};
+  data.edges.forEach(function (e) { if (e.risky) exposed[e.target] = true; });
+  Object.keys(vpcGroups).forEach(function (v) { if (vpcGroups[v].some(function (id) { return exposed[id]; })) exposed[v] = true; });
+
   // Node sizes are measured here, not left to Cytoscape's "label" sizing: that is only known once the renderer has
   // drawn a label, and a layout that runs earlier would see zero-size nodes and leave elements invisible.
   var measure = document.createElement("canvas").getContext("2d");
   var FONT = "system-ui, sans-serif";
-  // Region and VPC labels are bold 12px, group and peer labels 11px; see STYLE.
-  function nodeSize(label, kind) {
+  // Region and VPC labels are bold 12px, group and peer labels 11px (bold for exposed groups and the internet); see buildStyle.
+  function nodeSize(label, kind, bold) {
     var parentKind = kind === "vpc" || kind === "region";
-    measure.font = (parentKind ? "bold 12px " : "11px ") + FONT;
+    measure.font = (parentKind ? "bold 12px " : (bold ? "bold 11px " : "11px ")) + FONT;
     return { w: Math.ceil(measure.measureText(String(label)).width) + 2, h: parentKind ? 15 : 14 };
   }
 
@@ -127,8 +268,10 @@
     // Cytoscape keeps the data object it is given, so every element gets its own copy.
     function copy(def, extra, classes) {
       var d = Object.assign({}, def.data, extra);
-      if (def.group === "nodes") Object.assign(d, nodeSize(d.label, d.kind));
-      return { group: def.group, data: d, classes: classes === undefined ? def.classes : classes };
+      var cls = classes === undefined ? def.classes : classes;
+      if (exposed[d.id] && (def.data.kind === "group" || collapsed[d.id])) cls += " exposed";
+      if (def.group === "nodes") Object.assign(d, nodeSize(d.label, d.kind, /\b(exposed|internet)\b/.test(cls)));
+      return { group: def.group, data: d, classes: cls };
     }
     Object.keys(parentDefs).forEach(function (id) {
       var def = parentDefs[id];
@@ -173,27 +316,47 @@
   cytoscape.use(cytoscapeDagre);
   var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, edgeElasticity: 1.5, padding: 30 };
 
-  var STYLE = [
-      { selector: "node", style: { label: "data(label)", "min-zoomed-font-size": 6, "font-family": FONT, "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "data(w)", height: "data(h)", padding: "8px" } },
-      { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
-      { selector: "node.vpc.collapsed", style: { "text-valign": "center", "background-opacity": 0.2, "border-style": "solid", "border-width": 2, padding: "12px", shape: "round-rectangle" } },
-      { selector: "node.unused", style: { "background-color": "#eee", "border-style": "dashed", "border-color": "#888", color: "#555" } },
-      { selector: "edge", style: { label: "", "min-zoomed-font-size": 6, "font-size": 9, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "text-background-color": "#fff", "text-background-opacity": 0.85, "text-background-padding": "1px" } },
-      { selector: "edge.ingress", style: { "line-color": "#1f5fbf", "target-arrow-color": "#1f5fbf" } },
-      { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
-      { selector: "edge.meta", style: { width: 3 } },
-      { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.6, "line-style": "dashed", "line-color": "#d6006f", "target-arrow-color": "#d6006f", color: "#b00060" } },
-            { selector: "edge.hover, edge.show-label, edge:selected, edge.path", style: { label: "data(label)", "min-zoomed-font-size": 0 } },
+  // The graph's colours are the --c-* tokens in the stylesheet, read here because Cytoscape cannot use CSS variables.
+  var TOKENS = ["canvas", "text", "muted", "label", "group-fill", "group-border", "cidr-fill", "cidr-border", "pl-fill", "pl-border", "unused-border", "unused-text", "box-fill", "box-opacity", "box-border", "box-text", "region-border", "coll-fill", "coll-border", "ingress", "egress", "risky", "risky-text", "path", "exposed-border", "exposed-fill", "accent", "dim"];
+  function palette() {
+    var css = getComputedStyle(document.documentElement), out = {};
+    TOKENS.forEach(function (t) { out[t] = css.getPropertyValue("--c-" + t).trim(); });
+    return out;
+  }
+  // Shapes, widths and arrow heads say what a node or an edge is; colour only backs that up. The WebGL renderer draws
+  // every arrow head the same and has no dashes, so width is what separates ingress, egress and risky there.
+  function buildStyle(c) {
+    var dim = parseFloat(c.dim);
+    return [
+      { selector: "node", style: { label: "data(label)", "min-zoomed-font-size": 6, "font-family": FONT, "font-size": 11, color: c.text, "text-valign": "center", "text-halign": "center", "background-color": c["group-fill"], "border-width": 1.5, "border-color": c["group-border"], shape: "round-rectangle", "corner-radius": 4, width: "data(w)", height: "data(h)", padding: "8px" } },
+      { selector: "node.cidr", style: { shape: "cut-rectangle", "background-color": c["cidr-fill"], "border-color": c["cidr-border"], padding: "9px" } },
+      { selector: "node.ipv6", style: { "border-style": "double", "border-width": 4.5 } },
+      { selector: "node.pl", style: { shape: "tag", "background-color": c["pl-fill"], "border-color": c["pl-border"], padding: "9px" } },
+      { selector: "node.unused", style: { "background-opacity": 0, "border-style": "dashed", "border-color": c["unused-border"], color: c["unused-text"], "font-style": "italic" } },
+      { selector: "node.region, node.vpc", style: { "text-valign": "top", "text-margin-y": -4, "background-color": c["box-fill"], "background-opacity": parseFloat(c["box-opacity"]), "border-width": 1, "border-color": c["box-border"], "border-style": "solid", padding: "16px", "font-weight": "bold", "font-size": 12, color: c["box-text"], shape: "round-rectangle", "corner-radius": 10 } },
+      { selector: "node.region", style: { "border-style": "dashed", "border-color": c["region-border"], "background-opacity": 0 } },
+      { selector: "node.vpc.collapsed", style: { "text-valign": "center", "text-margin-y": 0, "background-color": c["coll-fill"], "background-opacity": 1, "border-style": "solid", "border-width": 3.5, "border-color": c["coll-border"], padding: "14px", color: c.text } },
+      { selector: "node.internet", style: { "border-color": c.risky, "border-width": 2.5, "font-weight": "bold", "background-color": c["exposed-fill"] } },
+      { selector: "node.exposed", style: { "border-color": c["exposed-border"], "border-width": 2.5, "background-color": c["exposed-fill"], "background-opacity": 1, color: c.text, "font-weight": "bold" } },
+      { selector: "edge", style: { label: "", "min-zoomed-font-size": 6, "font-family": FONT, "font-size": 9, color: c.label, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "arrow-scale": 1, "text-background-color": c.canvas, "text-background-opacity": 0.9, "text-background-padding": "2px", "text-background-shape": "round-rectangle" } },
+      { selector: "edge.ingress", style: { width: 2.2, "arrow-scale": 1.1, "line-color": c.ingress, "target-arrow-color": c.ingress } },
+      { selector: "edge.egress", style: { width: 1.1, "arrow-scale": 0.8, "target-arrow-shape": "vee", "line-color": c.egress, "target-arrow-color": c.egress } },
+      { selector: "edge.meta", style: { width: 3.2 } },
+      { selector: "edge.meta.egress", style: { width: 2 } },
+      { selector: "edge.risky", style: { width: 5, "arrow-scale": 1.3, "target-arrow-shape": "triangle", "line-color": c.risky, "target-arrow-color": c.risky, color: c["risky-text"], "font-weight": "bold", "z-index": 5 } },
+      { selector: "edge.hover, edge.show-label, edge:selected, edge.path", style: { label: "data(label)", "min-zoomed-font-size": 0 } },
       { selector: "node.show-label, node:selected", style: { "min-zoomed-font-size": 0 } },
-      { selector: "node.path, node.pathvia", style: { "border-width": 3, "border-color": "#ff8c00" } },
-      { selector: "edge.path", style: { width: 6, "arrow-scale": 1.5, "line-color": "#ff8c00", "target-arrow-color": "#ff8c00", "z-index": 10 } },
-      { selector: ".dim", style: { opacity: 0.12, "text-opacity": 0.12, "text-background-opacity": 0.12 } },
-      { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
-      { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } },
+      { selector: "node.path, node.pathvia", style: { "border-width": 3.5, "border-color": c.path, "border-style": "solid", "underlay-color": c.path, "underlay-opacity": 0.18, "underlay-padding": 6 } },
+      { selector: "edge.path", style: { width: 6, "arrow-scale": 1.5, "line-color": c.path, "target-arrow-color": c.path, color: c.text, "font-weight": "bold", "z-index": 10 } },
+      { selector: ".dim", style: { opacity: dim, "text-opacity": dim, "text-background-opacity": dim, "underlay-opacity": 0 } },
+      { selector: ".match", style: { "border-width": 3, "border-color": c.accent, "underlay-color": c.accent, "underlay-opacity": 0.3, "underlay-padding": 6 } },
+      { selector: "node:selected", style: { "border-width": 3, "border-color": c.accent } },
+      { selector: ":selected", style: { "overlay-color": c.accent, "overlay-opacity": 0.18, "overlay-padding": 4 } },
       // Last, so nothing above (selection, match, dim) can draw a box the layout has no use for: the VPC and region
       // boxes of a layout that cannot respect them (exposure rings) are not there at all.
       { selector: "node.flat:parent", style: { label: "", "background-opacity": 0, "border-width": 0, "overlay-opacity": 0, "text-opacity": 0, events: "no" } }
-  ];
+    ];
+  }
 
   // Cytoscape's experimental WebGL renderer is much faster on thousands of elements. It is chosen when more
   // than this many elements are on the canvas, can be switched with the WebGL checkbox, and is skipped when
@@ -550,7 +713,7 @@
     cy.viewport({ zoom: 1, pan: { x: 0, y: 0 } });
     seeded(spec.run);
     unselectFlat();
-    cy.fit(undefined, 30);
+    fitView(undefined, 30);
     var box = document.getElementById("layout");
     if (box.value !== name) box.value = name;
   }
@@ -561,13 +724,62 @@
   });
 
   var cy;
+
+  // The legend sits over the bottom left of the canvas, so a fit leaves a strip of that height free along the bottom.
+  function legendStrip() {
+    var legend = document.getElementById("legend"), h = document.getElementById("cy").clientHeight;
+    return Math.min(legend.offsetHeight + 12, Math.round(h * 0.4));
+  }
+  // Fit `eles` (everything when empty) into the canvas above the legend, at most at zoom `maxZoom`.
+  function fitView(eles, pad, maxZoom) {
+    var set = eles && eles.nonempty() ? eles : cy.elements();
+    if (set.empty()) return;
+    var bb = set.boundingBox(), w = cy.width(), h = cy.height() - legendStrip();
+    var zoom = Math.min((w - 2 * pad) / Math.max(bb.w, 1), (h - 2 * pad) / Math.max(bb.h, 1), maxZoom || Infinity);
+    zoom = Math.max(cy.minZoom(), Math.min(cy.maxZoom(), zoom));
+    cy.viewport({ zoom: zoom, pan: { x: (w - zoom * (bb.x1 + bb.x2)) / 2, y: (h - zoom * (bb.y1 + bb.y2)) / 2 } });
+  }
+
+  // Light (Blueprint) or dark (Console): the user's choice from the toggle, else the browser's.
+  var themeChoice = null;
+  var darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  function themeName() { return themeChoice || (darkQuery.matches ? "dark" : "light"); }
+  // Colours only: re-style the graph in place. Nothing is laid out again and selection, collapse state, search and a shown
+  // path stay as they are.
+  function applyTheme() {
+    var pal = palette();
+    document.getElementById("cy").style.backgroundColor = pal.canvas;
+    var toggle = document.getElementById("theme");
+    toggle.setAttribute("aria-pressed", themeName() === "dark" ? "true" : "false");
+    if (!cy) return;
+    cy.style(buildStyle(pal));
+    // The WebGL renderer keeps its background colour from when it was created.
+    var drawing = cy.renderer().drawing;
+    if (webglOn && drawing && drawing.bgColor) {
+      drawing.bgColor = [1, 3, 5].map(function (i) { return parseInt(pal.canvas.substr(i, 2), 16); });
+    }
+    applyFilters();
+    cy.forceRender();
+  }
+  document.getElementById("theme").addEventListener("click", function () {
+    themeChoice = themeName() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", themeChoice);
+    applyTheme();
+  });
+  (darkQuery.addEventListener ? darkQuery.addEventListener.bind(darkQuery, "change") : darkQuery.addListener.bind(darkQuery))(function () {
+    if (!themeChoice) applyTheme();
+  });
+
   // Cytoscape fixes the renderer when it is created, so switching renderer means creating it again.
   function createCy(els, extra) {
+    var pal = palette();
+    // The WebGL renderer reads its background from the container's own style when it is created.
+    document.getElementById("cy").style.backgroundColor = pal.canvas;
     var opts = Object.assign({
       container: document.getElementById("cy"),
       elements: els,
       wheelSensitivity: 0.3,
-      style: STYLE
+      style: buildStyle(pal)
     }, extra);
     if (webglOn) {
       try {
@@ -583,9 +795,12 @@
     }
     cy = cytoscape(opts);
   }
+  // The legend covers part of the canvas, so it starts open only where the canvas is tall enough to spare the room.
+  document.getElementById("legend").open = document.getElementById("cy").clientHeight >= 700;
   createCy(elements, { layout: { name: "preset" } });
   applyLayout("fcose");
 
+  applyTheme();
   syncWebglBox();
   expose();
 
@@ -598,7 +813,7 @@
   function refit() {
     if (userMoved) return;
     cy.resize();
-    cy.fit(undefined, 30);
+    fitView(undefined, 30);
   }
   if (window.ResizeObserver) new ResizeObserver(refit).observe(document.getElementById("cy"));
   requestAnimationFrame(function () { requestAnimationFrame(refit); });
@@ -804,8 +1019,7 @@
     var pad = 40;
     if (b.x1 >= pad / 2 && b.y1 >= pad / 2 && b.x2 <= cy.width() - pad / 2 && b.y2 <= cy.height() - pad / 2) return;
     var zoom = cy.zoom();
-    cy.fit(v, pad);
-    if (cy.zoom() > zoom) { cy.zoom(zoom); cy.center(v); }
+    fitView(v, pad, zoom);
   }
   function bindCy() {
     cy.on("tap", "node, edge", onTapElement);
@@ -974,7 +1188,9 @@
       rings: ringOf,
       collapseThreshold: COLLAPSE_THRESHOLD,
       webglThreshold: WEBGL_THRESHOLD,
-      get renderer() { return webglOn ? "webgl" : "canvas"; }
+      get renderer() { return webglOn ? "webgl" : "canvas"; },
+      get theme() { return themeName(); },
+      palette: palette
     };
   }
   function setWebgl(on) {
@@ -1047,9 +1263,8 @@
     ids.forEach(function (id) { if (collapsed[vpcOf[id]]) hits = hits.union(cy.getElementById(vpcOf[id])); });
     hits.addClass("match");
     if (hits.length) {
-      cy.fit(hits, 80);
       // A single small match would otherwise fill the screen.
-      if (cy.zoom() > MAX_SEARCH_ZOOM) { cy.zoom(MAX_SEARCH_ZOOM); cy.center(hits); }
+      fitView(hits, 80, MAX_SEARCH_ZOOM);
     }
   }
   searchBox.addEventListener("input", function () { runSearch(false); });
@@ -1561,8 +1776,7 @@
     var on = markPath();
     pathState.render();
     userMoved = true;
-    cy.fit(on, 60);
-    if (cy.zoom() > MAX_SEARCH_ZOOM) { cy.zoom(MAX_SEARCH_ZOOM); cy.center(on); }
+    fitView(on, 60, MAX_SEARCH_ZOOM);
   }
   // Draw the path on whatever is on the canvas: a collapsed VPC stands in for the path groups inside it, and a merged
   // edge for the path rules it holds. Runs after every sync so the highlight and the dimming never fall out of step.
@@ -1612,7 +1826,7 @@
     clearFocus();
     cy.nodes().removeClass("match");
     document.getElementById("search").value = "";
-    cy.fit(undefined, 30);
+    fitView(undefined, 30);
   });
 })();
 </script>

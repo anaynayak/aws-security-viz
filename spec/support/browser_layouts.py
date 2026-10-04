@@ -87,15 +87,19 @@ STATE = """() => {
 }"""
 
 
+# Node fills of the light theme: group, CIDR, prefix list, collapsed VPC and exposed group.
+FILLS = [(255, 255, 255), (232, 245, 242), (251, 241, 227), (227, 236, 249), (253, 236, 239)]
+
+
 def pixels(png):
-    # Clearly coloured pixels are edges (blue, red, magenta); the pale blue node fill is counted on its own.
+    # Clearly coloured pixels are edges (blue, red); the node fills of the light theme are counted on their own.
     img = Image.open(io.BytesIO(png)).convert("RGB")
     raw = img.tobytes()
     edge = node = 0
     for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]):
         if max(r, g, b) - min(r, g, b) > 30 and min(r, g, b) < 235:
             edge += 1
-        elif abs(r - 232) < 6 and abs(g - 240) < 6 and b > 245:
+        elif any(abs(r - fr) <= 3 and abs(g - fg) <= 3 and abs(b - fb) <= 3 for fr, fg, fb in FILLS):
             node += 1
     return edge, node
 
@@ -108,6 +112,7 @@ with sync_playwright() as p:
     page.on("console", lambda m: out["console"].append(m.type + ": " + m.text) if m.type in ("error", "warning") else None)
     page.goto("file://" + report)
     page.wait_for_selector("canvas")
+    page.add_style_tag(content="#legend { visibility: hidden; }")  # the legend sits over the canvas and would count as ink
     # Fail with a message, not a timeout, when the viewer has no layout picker.
     out["picker"] = page.query_selector("#layout") is not None
     out["options"] = page.eval_on_selector_all("#layout option", "o => o.map(x => x.value)") if out["picker"] else []

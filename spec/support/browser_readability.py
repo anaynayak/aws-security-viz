@@ -13,11 +13,30 @@ report = sys.argv[1]
 out = {"errors": []}
 
 
-def grey(png):
-    # Label text is grey or black anti-aliased on white: neither coloured (edges, nodes) nor near white (backgrounds).
+def grey(png, tol=20):
+    # Label text is grey or black anti-aliased on white: neither coloured (edges, nodes) nor near white (backgrounds). Looking for
+    # labels that must be absent uses the tight tolerance; for labels that must be present, a selection's tint on them is allowed.
     img = Image.open(io.BytesIO(png)).convert("RGB")
     raw = img.tobytes()
-    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if max(r, g, b) - min(r, g, b) <= 20 and r < 200)
+    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if max(r, g, b) - min(r, g, b) <= tol and r < 200)
+
+
+def labels_only(page, on):
+    # Node borders are close to the label colour and thin edges are neutral grey, and both blur into label-like pixels when the graph
+    # is zoomed out, so the label count is taken with nodes without a border and edges hidden.
+    page.evaluate("""(on) => {
+      const cy = awsSecurityViz.cy;
+      if (on) { cy.nodes().style({'border-width': 0, 'background-opacity': 0}); cy.edges().style('display', 'none'); }
+      else { cy.nodes().removeStyle('border-width background-opacity'); cy.edges().removeStyle('display'); }
+    }""", on)
+    page.wait_for_timeout(100)
+
+
+def label_ink(page, tol=20):
+    labels_only(page, True)
+    n = grey(page.locator("#cy").screenshot(), tol)
+    labels_only(page, False)
+    return n
 
 
 with sync_playwright() as p:
@@ -26,13 +45,14 @@ with sync_playwright() as p:
     page.on("pageerror", lambda e: out["errors"].append(str(e)))
     page.goto("file://" + report)
     page.wait_for_selector("canvas")
+    page.add_style_tag(content="#legend { visibility: hidden; }")  # the legend sits over the canvas and would count as ink
     page.wait_for_timeout(500)
 
     def ev(js, arg=None):
         return page.evaluate("(arg) => { const r = (" + js + ")(arg); return r && r.cy ? null : r; }", arg)
 
     out["zoom_in"] = ev("() => awsSecurityViz.cy.zoom()")
-    out["grey_in"] = grey(page.locator("#cy").screenshot())
+    out["grey_in"] = label_ink(page)
 
     def find_spot():
         # An edge whose midpoint is clear of every node, so the pixels there can only be its label.
@@ -58,12 +78,12 @@ with sync_playwright() as p:
     page.mouse.move(spot["x"], spot["y"])
     page.wait_for_timeout(300)
     out["hovered"] = ev("() => awsSecurityViz.cy.edges('.hover').map(e => e.id())")
-    out["label_on_hover"] = grey(page.screenshot(clip=clip))
+    out["label_on_hover"] = grey(page.screenshot(clip=clip), 45)
     page.mouse.click(spot["x"], spot["y"])
     page.mouse.move(5, 5)
     page.wait_for_timeout(300)
     out["selected"] = ev("() => awsSecurityViz.cy.elements(':selected').map(e => e.id())")
-    out["label_selected"] = grey(page.screenshot(clip=clip))
+    out["label_selected"] = grey(page.screenshot(clip=clip), 45)
 
     # Select a node: the rest fades.
     page.click("#reset")
@@ -94,7 +114,7 @@ with sync_playwright() as p:
         page.wait_for_timeout(15)
     page.wait_for_timeout(300)
     out["zoom_out"] = ev("() => awsSecurityViz.cy.zoom()")
-    out["grey_out"] = grey(page.locator("#cy").screenshot())
+    out["grey_out"] = label_ink(page)
 
     # Zoomed out, an edge you hover or select, and the node you select with its neighbours, are still labelled.
     page.mouse.move(5, 5)
@@ -123,7 +143,7 @@ with sync_playwright() as p:
     page.mouse.move(5, 5)
     page.wait_for_timeout(300)
     out["out_selected"] = ev("() => awsSecurityViz.cy.elements(':selected').map(e => e.id())")
-    out["grey_out_selected"] = grey(page.locator("#cy").screenshot())
+    out["grey_out_selected"] = label_ink(page, 45)
     out["zoom_out_selected"] = ev("() => awsSecurityViz.cy.zoom()")
     browser.close()
 

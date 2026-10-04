@@ -31,14 +31,17 @@ server and no network access are needed.
 aws_security_viz -o security_groups.json -f viz.html
 ```
 
-![HTML viewer overview: five nodes and a dashed crimson edge from 0.0.0.0/0 to app](assets/viewer-overview.png)
+![HTML viewer overview in the light theme: three VPCs, the groups in them, the external peers on the left and a thick red edge from 0.0.0.0/0 to a bastion group](assets/viewer-overview.png)
+
+![The same viewer in the dark theme](assets/viewer-overview-dark.png)
 
 1. Search. Type in the search box to find and centre matching groups.
 2. Ingress, Egress and Risky only toggles. Risky only keeps the risky edges and hides the rest.
 3. Reset view clears the search and fits the whole graph.
 4. Click a group or an edge to see its details. For an edge the panel shows the direction, the ports, any rule
    descriptions, and a risk note.
-5. The legend under the toolbar explains the edge styles.
+5. The legend at the bottom left of the graph explains every node and edge style. It starts open when the window is tall
+   and closed otherwise; the graph is always fitted above it.
 6. Collapsing. Graphs with more than 150 security groups in VPCs (CIDR and other peers are not counted) open with
    every VPC collapsed into one node that shows its group count and how many rules stay inside it. Edges to other
    VPCs and peers are merged into one edge per direction, labelled with the number of rules; its details list the
@@ -50,14 +53,15 @@ aws_security_viz -o security_groups.json -f viz.html
    large account, the viewer switches to Cytoscape's experimental WebGL renderer, which draws large graphs much
    faster. The WebGL checkbox in the toolbar switches it on or off at any size; after you use it, the size rule no
    longer changes the renderer. The checkbox is disabled when the browser has no WebGL 2, and the viewer then keeps
-   the canvas renderer. The renderer switches on the elements that are showing, so the filter checkboxes can move it too. WebGL does not
-   draw dashed edges, so a risky edge is a thick solid line there; risky edges are magenta, thicker than every other
-   edge and have a larger arrowhead in both renderers, and the details panel still marks them as risky. If the browser
+   the canvas renderer. The renderer switches on the elements that are showing, so the filter checkboxes can move it too. WebGL draws every
+   arrowhead the same and has no dashed lines, so the width of an edge is what tells ingress, egress and risky edges
+   apart there; risky edges are the thickest, red and have a larger arrowhead in both renderers, and the details
+   panel still marks them as risky. If the browser
    takes the WebGL context away, the viewer carries on with the canvas renderer.
 8. Can X reach Y. Type a source and a target (a security group, CIDR or other peer, by name or id; the boxes suggest
    matches) and press Enter or Find path. The answer comes from the security group rules, the way AWS evaluates them,
    and not from the drawn edges, so the Ingress, Egress and Risky only toggles never change it (the path stays visible
-   whatever they say). The shortest path is drawn in orange and the rest dimmed; collapsed VPCs on the path are opened,
+   whatever they say). The shortest path is drawn in the theme's path colour (orange in the dark theme, black in the light one) and the rest dimmed; collapsed VPCs on the path are opened,
    the view is fitted to the path, and Clear path (or Reset view) puts back the collapsed VPCs, zoom and position.
    The exact rules:
    1. A hop from group A to group B is allowed only when A has an egress rule that allows B and B has an ingress rule
@@ -128,6 +132,18 @@ aws_security_viz -o security_groups.json -f viz.html
    labels at any zoom. Picking the force layout again draws the same picture as opening the report. A group's panel
    has a Collapse button for its VPC, in every layout. Selecting a group or edge fades everything
    outside its neighbourhood instead of hiding it.
+10. Themes. The viewer has a light theme (Blueprint: white chrome, a drafting grid and soft tinted VPC boxes) and a dark
+    theme (Console: squid-ink chrome and an orange accent). It follows the browser's `prefers-color-scheme`; the toolbar
+    button at the right ("Dark") switches by hand, and the choice is kept until the page is reloaded. Switching only
+    recolours the page: nothing is laid out again, and the zoom, selection, collapsed VPCs, search, toggles, a shown
+    path and the renderer stay as they are, with canvas and WebGL alike. Kinds are told apart by shape and width as
+    well as colour, and the legend lists them: security groups are rounded boxes, CIDRs have cut corners (IPv6 a
+    double outline), prefix lists are tags, unused groups are dashed and italic, a collapsed VPC has a thick border,
+    and groups that take a risky ingress rule (and the VPCs holding one) have a red outline on a red tint. Ingress
+    edges are thick with a filled arrowhead, egress edges thin with an open one, risky edges the thickest. Graph
+    colours keep a contrast of at least 3:1 against the canvas (4.5:1 for text). No web fonts are loaded: the page
+    uses the system font stack. A report made with `--obfuscate` hashes the ids, so its CIDRs and prefix lists are
+    drawn like security groups.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 

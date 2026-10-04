@@ -83,6 +83,33 @@ describe AwsSecurityViz::Renderer::Html do
     end
   end
 
+  describe "the page design" do
+    let(:page) { render }
+    let(:style) { page[%r{<style>.*?</style>}m] }
+
+    it "takes its colours, spacing and type from CSS custom properties and uses the system font stack" do
+      expect(style).to include("--bg:", "--text:", "--accent:", "--space-2:", "--font: system-ui")
+      expect(style).not_to match(/@font-face|@import|url\(/)
+    end
+
+    it "has a light theme, a dark theme for prefers-color-scheme, and a manual toggle that sets data-theme" do
+      expect(style).to include("@media (prefers-color-scheme: dark)", ':root[data-theme="dark"]', ':root:not([data-theme="light"])')
+      expect(page).to match(/<button id="theme"[^>]*aria-pressed/)
+    end
+
+    it "shows a legend that names every node and edge kind with a shape or width, not only a colour" do
+      legend = page[%r{<details id="legend".*?</details>}m]
+      expect(legend).to include("Security group", "CIDR (cut corners)", "IPv6 CIDR (double outline)", "Prefix list (tag)", "Unused group", "Collapsed VPC",
+        "Takes risky ingress", "Ingress (thick, filled arrow)", "Egress (thin, open arrow)", "public ingress (thickest)", "Path result")
+      expect(legend.scan("<svg").size).to be >= 11
+    end
+
+    it "marks exposed groups with a class and not with an id selector" do
+      expect(page).to include('"node.exposed"')
+      expect(page).not_to include("node[id = ")
+    end
+  end
+
   describe "in a headless browser" do
     let(:script) { File.expand_path("support/browser_check.py", __dir__) }
 
@@ -213,7 +240,7 @@ describe AwsSecurityViz::Renderer::Html do
           expect(risky["color"]).not_to eq(other["color"])
         end
         expect(risky["arrowScale"]).to be > 1
-        expect(r["legend"]).to match(/risky public ingress/)
+        expect(r["legend"]).to match(/risky public ingress/i)
         expect(r["legend"]).not_to include("thick dashed")
       end
 
@@ -450,6 +477,63 @@ describe AwsSecurityViz::Renderer::Html do
         expect(hovered["minZoomed"]).to eq(0)
         expect(r["out_selected"]).not_to be_empty
         expect(r["grey_out_selected"]).to be > 20, "a selected node and its neighbours have no labels at zoom #{r["zoom_out_selected"]}"
+      end
+    end
+
+    describe "the light and dark themes" do
+      def theme_report
+        file = "theme.html"
+        renderer = described_class.new(file, config)
+        2.times do |v|
+          8.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "svc-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          7.times { |i| renderer.add_edge("sg-#{v}-#{i}", "sg-#{v}-#{i + 1}", {color: :blue, label: "443"}) }
+          renderer.add_edge("sg-#{v}-0", "sg-#{1 - v}-3", {color: :red, label: "all"})
+        end
+        %w[0.0.0.0/0 10.0.0.0/8].each { |peer| renderer.add_node(peer, {label: peer}) }
+        renderer.add_edge("0.0.0.0/0", "sg-0-0", {color: :blue, label: "22", risky: true})
+        renderer.add_edge("10.0.0.0/8", "sg-1-2", {color: :blue, label: "22"})
+        renderer.output
+        JSON.parse(run_browser_script(File.expand_path("support/browser_theme.py", __dir__), File.expand_path(file)).lines.last)
+      end
+
+      it "follows prefers-color-scheme, switches with the toggle, and restyles in place on canvas and WebGL" do
+        r = theme_report
+        expect(r["toggle"]).to be(true), "the viewer has no #theme toggle"
+        expect(r["errors"]).to be_empty
+        expect(r["requests"].uniq).to eq(["file://" + File.expand_path("theme.html")])
+        expect(r["follows_browser"]).to eq("dark")
+        expect(r["keeps_choice"]).to eq("light")
+        expect(r["runs"].keys).to eq(%w[light-canvas light-webgl dark-canvas dark-webgl])
+        r["runs"].each do |name, run|
+          start = name.split("-").first
+          other = (start == "light") ? "dark" : "light"
+          expect(run["theme"]).to eq(start), "#{name}: opened in #{run["theme"]}"
+          expect(run["renderer"]).to eq(name.split("-").last)
+          expect(run["switched_to"]).to eq(other)
+          expect(run["data_theme"]).to eq(other)
+          expect(run["pressed_after"]).to eq((other == "dark") ? "true" : "false")
+          expect(run["corner_before"]).not_to eq(run["corner_after"]), "#{name}: the canvas background did not change"
+          expect(run["round_trip"]).to be(true), "#{name}: switching back did not restore the first look"
+          expect(run["probe_mismatch_before"]).to be_empty, "#{name}: #{run["probe_mismatch_before"]}"
+          expect(run["probe_mismatch_after"]).to be_empty, "#{name}: after the switch: #{run["probe_mismatch_after"]}"
+          # Nothing is laid out again or lost: positions, view, selection, collapse state, search and filters stay.
+          expect(run["max_moved"]).to eq(0), "#{name}: nodes moved by #{run["max_moved"]}"
+          expect(run["state_kept"].reject { |_, kept| kept }.keys).to be_empty, "#{name}: lost #{run["state_kept"].reject { |_, kept| kept }.keys}"
+          expect(run["selection"]).to eq(["sg-0-2"])
+          expect(run["legend_overlap"].values.flatten).to be_empty, "#{name}: the legend covers #{run["legend_overlap"]}"
+        end
+        expect(r["runs"]["light-canvas"]["corner_before"]).to eq([246, 248, 251])
+        expect(r["runs"]["dark-webgl"]["corner_before"]).to eq([15, 23, 32])
+      end
+
+      it "keeps graph colours at WCAG AA against the canvas and chrome text readable in both themes" do
+        r = theme_report
+        expect(r["toggle"]).to be(true)
+        r["runs"].each do |name, run|
+          %w[graph_contrast chrome_contrast graph_contrast_after chrome_contrast_after].each do |key|
+            expect(run[key]).to be_empty, "#{name} #{key}: #{run[key]}"
+          end
+        end
       end
     end
 

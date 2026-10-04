@@ -15,29 +15,34 @@ webgl = "--webgl" in sys.argv
 out = {"requests": [], "dialogs": [], "errors": [], "console": [], "queries": []}
 
 
+CANVAS = [15, 23, 32]  # the dark theme's canvas; the page runs in the dark scheme (see below)
+
+
 def dark(png):
-    # Label text is near-black; counts how much of it is drawn at full strength.
+    # Label text and borders are far from the canvas colour; counts how much of them is drawn at full strength. Dimmed
+    # elements are close to the canvas.
     img = Image.open(io.BytesIO(png)).convert("RGB")
     raw = img.tobytes()
-    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r < 90 and g < 90 and b < 90)
+    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if abs(r - CANVAS[0]) + abs(g - CANVAS[1]) + abs(b - CANVAS[2]) > 330)
 
 
 def orange(png):
-    # Exactly the path colour (#ff8c00); the match and selection colour (#f39c12) must not count.
+    # Exactly the path colour of the dark theme (#ffd23f); the match and selection colour (the orange accent) must not count.
     img = Image.open(io.BytesIO(png)).convert("RGB")
     raw = img.tobytes()
-    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r >= 250 and 134 <= g <= 146 and b <= 10)
+    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r >= 250 and 205 <= g <= 215 and 58 <= b <= 68)
 
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
-    page = browser.new_page(viewport={"width": 1440, "height": 900})
+    page = browser.new_page(viewport={"width": 1440, "height": 900}, color_scheme="dark")
     page.on("request", lambda r: out["requests"].append(r.url))
     page.on("dialog", lambda d: (out["dialogs"].append(d.message), d.dismiss()))
     page.on("console", lambda m: out["console"].append(m.type + ": " + m.text) if m.type in ("error", "warning") else None)
     page.on("pageerror", lambda e: out["errors"].append(str(e)))
     page.goto("file://" + report)
     page.wait_for_selector("canvas")
+    page.add_style_tag(content="#legend { visibility: hidden; }")  # the legend sits over the canvas and would count as ink
     page.wait_for_timeout(400)
     # Fail with a message, not a timeout, when the viewer has no path pickers.
     out["picker"] = page.query_selector("#path-from") is not None

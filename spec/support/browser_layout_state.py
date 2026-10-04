@@ -38,19 +38,20 @@ SNAPSHOT = """() => {
 
 
 def orange(png):
-    # Exactly the path colour (#ff8c00); the match and selection colour (#f39c12) must not count.
+    # Exactly the path colour of the dark theme (#ffd23f); the match and selection colour (the orange accent) must not count.
     img = Image.open(io.BytesIO(png)).convert("RGB")
     raw = img.tobytes()
-    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r >= 250 and 134 <= g <= 146 and b <= 10)
+    return sum(1 for r, g, b in zip(raw[0::3], raw[1::3], raw[2::3]) if r >= 250 and 205 <= g <= 215 and 58 <= b <= 68)
 
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
-    page = browser.new_page(viewport={"width": 1440, "height": 900})
+    page = browser.new_page(viewport={"width": 1440, "height": 900}, color_scheme="dark")
     page.on("pageerror", lambda e: out["errors"].append(str(e)))
     page.on("console", lambda m: out["console"].append(m.type + ": " + m.text) if m.type in ("error", "warning") else None)
     page.goto("file://" + report)
     page.wait_for_selector("canvas")
+    page.add_style_tag(content="#legend { visibility: hidden; }")  # the legend sits over the canvas and would count as ink
     out["picker"] = page.query_selector("#layout") is not None
     if not out["picker"]:
         browser.close()
