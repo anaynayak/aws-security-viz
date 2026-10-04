@@ -202,6 +202,15 @@ def run(browser, scheme, webgl):
     res["graph_contrast_after"] = graph_contrast(res["palette_after"])
     res["chrome_contrast_after"] = chrome_contrast(page)
     res["corner_after"] = corner_colour(page)
+    res["canvas_after"] = rgba(res["palette_after"]["canvas"])[:3]
+    if webgl:
+        # A renderer switch builds a new WebGL renderer, which must also start with the current theme's background.
+        page.uncheck("#webgl")
+        page.wait_for_timeout(300)
+        page.check("#webgl")
+        page.wait_for_timeout(400)
+        res["corner_after_switch"] = corner_colour(page)
+        res["renderer_after_switch"] = page.evaluate("awsSecurityViz.renderer")
     res["probe_mismatch_after"] = mismatches(page.evaluate(PROBE, ids), res["palette_after"])
     res["state_kept"] = {k: before[k] == after[k] for k in before}
     res["max_moved"] = max(abs(before["pos"][k][0] - after["pos"][k][0]) + abs(before["pos"][k][1] - after["pos"][k][1]) for k in before["pos"])

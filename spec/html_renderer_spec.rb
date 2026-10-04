@@ -514,6 +514,11 @@ describe AwsSecurityViz::Renderer::Html do
           expect(run["data_theme"]).to eq(other)
           expect(run["pressed_after"]).to eq((other == "dark") ? "true" : "false")
           expect(run["corner_before"]).not_to eq(run["corner_after"]), "#{name}: the canvas background did not change"
+          if name.end_with?("webgl")
+            expect(run["renderer_after_switch"]).to eq("webgl")
+            expect(run["corner_after"]).to eq(run["canvas_after"]), "#{name}: the WebGL background does not follow the theme"
+            expect(run["corner_after_switch"]).to eq(run["canvas_after"]), "#{name}: a new WebGL renderer starts with the wrong background"
+          end
           expect(run["round_trip"]).to be(true), "#{name}: switching back did not restore the first look"
           expect(run["probe_mismatch_before"]).to be_empty, "#{name}: #{run["probe_mismatch_before"]}"
           expect(run["probe_mismatch_after"]).to be_empty, "#{name}: after the switch: #{run["probe_mismatch_after"]}"

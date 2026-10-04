@@ -758,7 +758,10 @@
     toggle.setAttribute("aria-pressed", themeName() === "dark" ? "true" : "false");
     if (!cy) return;
     cy.style(buildStyle(pal));
-    // The WebGL renderer keeps its background colour from when it was created.
+    // Cytoscape 3.34 reads the WebGL background from the container's inline style once, when the renderer is created, and has no
+    // API to change it. Writing its private drawing.bgColor (0-255 RGB) is the only way to follow a theme change without
+    // rebuilding the instance (which would drop hover and mid-gesture state). A Cytoscape upgrade that moves it makes the
+    // theme spec's WebGL background check fail ("the WebGL background follows the theme"); then rebuild with setWebgl instead.
     var drawing = cy.renderer().drawing;
     if (webglOn && drawing && drawing.bgColor) {
       drawing.bgColor = [1, 3, 5].map(function (i) { return parseInt(pal.canvas.substr(i, 2), 16); });
