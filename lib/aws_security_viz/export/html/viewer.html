@@ -29,7 +29,9 @@
     <label><input id="egress" type="checkbox" checked> Egress</label>
     <label><input id="risky-only" type="checkbox"> Risky only</label>
     <button id="reset" type="button">Reset view</button>
-    <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span class="risky">thick dashed: risky public ingress</span><span>grey dashed node: unused</span></span>
+    <button id="expand-all" type="button">Expand all</button>
+    <button id="collapse-all" type="button">Collapse all</button>
+    <span id="legend" class="muted"><span style="color:#1f5fbf">blue: ingress</span><span style="color:#c0392b">red: egress</span><span class="risky">thick dashed: risky public ingress</span><span>grey dashed node: unused</span><span>double-click a VPC to collapse or expand it</span></span>
   </div>
   <div id="main">
     <div id="cy"></div>
@@ -48,15 +50,19 @@
   var nodeById = {};
   data.nodes.forEach(function (n) { nodeById[n.id] = n; });
 
+  // Graphs with more than this many security groups open with every VPC collapsed into one node.
+  var COLLAPSE_THRESHOLD = 150;
+
   // Compound parents: region (when several regions were queried) containing VPC.
-  var elements = [];
-  var seen = {};
+  var parentDefs = {};   // region and VPC node definitions; always on the canvas
+  var groupDefs = {};    // security group and peer node definitions
+  var vpcOf = {};        // group id -> id of the VPC node it sits in
+  var vpcGroups = {};    // VPC node id -> ids of its groups
   function parent(id, label, kind, parentId) {
-    if (!seen[id]) {
-      seen[id] = true;
-      var d = { id: id, label: label, kind: kind };
+    if (!parentDefs[id]) {
+      var d = { id: id, label: label, name: label, kind: kind };
       if (parentId) d.parent = parentId;
-      elements.push({ group: "nodes", data: d, classes: kind });
+      parentDefs[id] = { group: "nodes", data: d, classes: kind };
     }
     return id;
   }
@@ -64,15 +70,60 @@
     var d = { id: n.id, label: n.label, kind: "group", unused: !!n.unused };
     var up = null;
     if (n.region) up = parent("region:" + n.region, n.region, "region", null);
-    if (n.vpc) up = parent("vpc:" + (n.region || "") + "|" + n.vpc, n.vpc, "vpc", up);
+    if (n.vpc) {
+      up = parent("vpc:" + (n.region || "") + "|" + n.vpc, n.vpc, "vpc", up);
+      vpcOf[n.id] = up;
+      (vpcGroups[up] = vpcGroups[up] || []).push(n.id);
+    }
     if (up) d.parent = up;
-    elements.push({ group: "nodes", data: d, classes: n.unused ? "unused" : "" });
+    groupDefs[n.id] = { group: "nodes", data: d, classes: n.unused ? "unused" : "" };
   });
-  data.edges.forEach(function (e) {
-    elements.push({ group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") });
+  var realEdges = data.edges.map(function (e) {
+    return { group: "edges", data: { id: e.id, source: e.source, target: e.target, label: e.label || "", kind: e.kind, risky: !!e.risky }, classes: e.kind + (e.risky ? " risky" : "") };
   });
 
+  var collapsed = {};
+  if (data.nodes.length > COLLAPSE_THRESHOLD) Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = true; });
+
+  function collapsedLabel(id) { return parentDefs[id].data.name + " (" + vpcGroups[id].length + " groups)"; }
+
+  // Everything that should be on the canvas for the current collapsed set. Edges that touch a collapsed
+  // VPC are merged into one meta edge per (source, target, direction).
+  function desired() {
+    var out = { nodes: [], edges: [] };
+    Object.keys(parentDefs).forEach(function (id) {
+      var def = parentDefs[id];
+      if (collapsed[id]) def = { group: "nodes", data: Object.assign({}, def.data, { label: collapsedLabel(id) }), classes: def.classes + " collapsed" };
+      out.nodes.push(def);
+    });
+    Object.keys(groupDefs).forEach(function (id) {
+      if (!collapsed[vpcOf[id]]) out.nodes.push(groupDefs[id]);
+    });
+    var meta = {};
+    realEdges.forEach(function (def) {
+      var d = def.data;
+      var s = collapsed[vpcOf[d.source]] ? vpcOf[d.source] : d.source;
+      var t = collapsed[vpcOf[d.target]] ? vpcOf[d.target] : d.target;
+      if (s === d.source && t === d.target) { out.edges.push(def); return; }
+      if (s === t) return;
+      var key = "meta:" + s + ">" + t + "|" + d.kind;
+      var m = meta[key] = meta[key] || { group: "edges", data: { id: key, source: s, target: t, kind: d.kind, risky: false, meta: true, members: [] }, classes: "meta " + d.kind };
+      m.data.members.push(d.id);
+      if (d.risky) m.data.risky = true;
+    });
+    Object.keys(meta).forEach(function (key) {
+      var m = meta[key];
+      m.data.label = m.data.members.length + (m.data.members.length === 1 ? " rule" : " rules");
+      if (m.data.risky) m.classes += " risky";
+      out.edges.push(m);
+    });
+    return out;
+  }
+  var initial = desired();
+  var elements = initial.nodes.concat(initial.edges);
+
   cytoscape.use(cytoscapeFcose);
+  var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, padding: 30 };
 
   var cy = cytoscape({
     container: document.getElementById("cy"),
@@ -81,19 +132,22 @@
     style: [
       { selector: "node", style: { label: "data(label)", "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "label", height: "label", padding: "8px" } },
       { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
+      { selector: "node.vpc.collapsed", style: { "text-valign": "center", "background-opacity": 0.2, "border-style": "solid", "border-width": 2, padding: "12px", shape: "round-rectangle" } },
       { selector: "node.unused", style: { "background-color": "#eee", "border-style": "dashed", "border-color": "#888", color: "#555" } },
       { selector: "edge", style: { label: "data(label)", "font-size": 9, width: 1.5, "curve-style": "bezier", "target-arrow-shape": "triangle", "text-background-color": "#fff", "text-background-opacity": 0.85, "text-background-padding": "1px" } },
       { selector: "edge.ingress", style: { "line-color": "#1f5fbf", "target-arrow-color": "#1f5fbf" } },
       { selector: "edge.egress", style: { "line-color": "#c0392b", "target-arrow-color": "#c0392b" } },
       { selector: "edge.risky", style: { width: 4, "line-style": "dashed", "line-color": "#dc143c", "target-arrow-color": "#dc143c", color: "#b00020" } },
+      { selector: "edge.meta", style: { width: 3 } },
       { selector: ".dim", style: { opacity: 0.12 } },
       { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
       { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
     ],
-    layout: { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, padding: 30 }
+    // Collapsed VPC nodes are near-symmetric, which the deterministic spectral start can fold onto a line.
+    layout: Object.keys(collapsed).length ? Object.assign({}, LAYOUT, { randomize: true }) : LAYOUT
   });
 
-  window.awsSecurityViz = { cy: cy }; // read by the browser spec
+  window.awsSecurityViz = { cy: cy, collapseThreshold: COLLAPSE_THRESHOLD }; // read by the browser spec
 
   var details = document.getElementById("details");
 
@@ -133,8 +187,25 @@
   var edgeData = {};
   data.edges.forEach(function (e) { edgeData[e.id] = e; });
 
+  function nodeLabel(id) { return nodeById[id] ? nodeById[id].label : id; }
+
   function show(target) {
     details.textContent = "";
+    if (target.isEdge() && target.data("meta")) {
+      details.appendChild(el("h2", target.source().data("label") + " -> " + target.target().data("label")));
+      details.appendChild(field("Direction", target.data("kind")));
+      details.appendChild(field("Merged rules", String(target.data("members").length)));
+      if (target.data("risky")) details.appendChild(el("p", "Includes a risky public ingress rule", "risky"));
+      var list = el("ul");
+      target.data("members").forEach(function (id) {
+        var m = edgeData[id];
+        var li = el("li", nodeLabel(m.source) + " -> " + nodeLabel(m.target) + " : " + (m.label || "all"));
+        if (m.risky) li.appendChild(el("span", " (risky)", "risky"));
+        list.appendChild(li);
+      });
+      details.appendChild(list);
+      return;
+    }
     if (target.isEdge()) {
       var e = edgeData[target.id()];
       details.appendChild(el("h2", target.source().data("label") + " -> " + target.target().data("label")));
@@ -151,6 +222,14 @@
     if (!n) {
       details.appendChild(el("h2", target.data("label")));
       details.appendChild(field("Type", target.data("kind").toUpperCase()));
+      if (vpcGroups[target.id()]) {
+        details.appendChild(field("Groups", String(vpcGroups[target.id()].length)));
+        details.appendChild(el("p", collapsed[target.id()] ? "Collapsed: double-click to expand." : "Double-click to collapse.", "muted"));
+        if (collapsed[target.id()]) {
+          details.appendChild(describeEdges("Incoming", target.incomers("edge").toArray(), function (e) { return e.source(); }));
+          details.appendChild(describeEdges("Outgoing", target.outgoers("edge").toArray(), function (e) { return e.target(); }));
+        }
+      }
       return;
     }
     details.appendChild(el("h2", n.label));
@@ -160,7 +239,7 @@
     if (n.unused) details.appendChild(el("p", "Unused: no network interfaces attached", "muted"));
     details.appendChild(describeEdges("Incoming", target.incomers("edge").toArray(), function (e) { return e.source(); }));
     details.appendChild(describeEdges("Outgoing", target.outgoers("edge").toArray(), function (e) { return e.target(); }));
-    var withDescs = target.connectedEdges().toArray().filter(function (e) { var d = edgeData[e.id()].descriptions; return d && d.length; });
+    var withDescs = target.connectedEdges().toArray().filter(function (e) { var d = edgeData[e.id()] && edgeData[e.id()].descriptions; return d && d.length; });
     if (withDescs.length) {
       details.appendChild(el("h3", "Rule descriptions"));
       withDescs.forEach(function (e) {
@@ -204,13 +283,82 @@
     document.getElementById(id).addEventListener("change", applyFilters);
   });
 
+  // Bring the canvas in line with `collapsed`. Only the VPCs that were just expanded are laid out again, each
+  // on its own, and its groups start at the spot the collapsed node occupied; everything else keeps its place.
+  function sync() {
+    var want = desired();
+    var wanted = {};
+    want.nodes.concat(want.edges).forEach(function (def) { wanted[def.data.id] = true; });
+    var centres = {};
+    Object.keys(vpcGroups).forEach(function (id) {
+      var v = cy.getElementById(id);
+      if (v.nonempty()) centres[id] = Object.assign({}, v.position());
+    });
+    cy.remove(cy.elements().filter(function (x) { return !wanted[x.id()]; }));
+    var expanded = [];
+    want.nodes.forEach(function (def) {
+      var existing = cy.getElementById(def.data.id);
+      if (existing.nonempty()) {
+        if (vpcGroups[def.data.id]) {
+          var wasCollapsed = existing.hasClass("collapsed");
+          existing.data("label", def.data.label);
+          existing.toggleClass("collapsed", !!collapsed[def.data.id]);
+          if (!collapsed[def.data.id] && wasCollapsed) expanded.push(def.data.id);
+          else if (collapsed[def.data.id] && !wasCollapsed) existing.position(centres[def.data.id]);
+        }
+        return;
+      }
+      var at = vpcOf[def.data.id] && centres[vpcOf[def.data.id]];
+      cy.add(at ? Object.assign({}, def, { position: { x: at.x + Math.random() * 20, y: at.y + Math.random() * 20 } }) : def);
+    });
+    want.edges.forEach(function (def) {
+      if (cy.getElementById(def.data.id).empty()) cy.add(def);
+    });
+    expanded.forEach(function (id) { layoutVpc(id, centres[id]); });
+    clearFocus();
+    applyFilters();
+  }
+
+  function layoutVpc(id, centre) {
+    var v = cy.getElementById(id);
+    var eles = v.union(v.children());
+    var layout = eles.layout(Object.assign({}, LAYOUT, { randomize: true, fit: false, packComponents: false }));
+    layout.one("layoutstop", function () {
+      var now = v.position();
+      v.children().shift({ x: centre.x - now.x, y: centre.y - now.y });
+    });
+    layout.run();
+  }
+
+  function setAll(state) {
+    Object.keys(vpcGroups).forEach(function (id) { collapsed[id] = state; });
+    if (state) { sync(); return; }
+    // Expanding everything is the whole graph again, so lay it all out once.
+    sync();
+    cy.layout(Object.assign({}, LAYOUT, { randomize: true })).run();
+  }
+  document.getElementById("expand-all").addEventListener("click", function () { setAll(false); });
+  document.getElementById("collapse-all").addEventListener("click", function () { setAll(true); });
+
+  cy.on("dbltap", "node.vpc", function (evt) {
+    var id = evt.target.id();
+    collapsed[id] = !collapsed[id];
+    sync();
+  });
+
   document.getElementById("search").addEventListener("input", function (evt) {
     var q = evt.target.value.trim().toLowerCase();
     cy.nodes().removeClass("match");
     if (!q) return;
-    var hits = cy.nodes().filter(function (n) {
-      return !n.isParent() && (String(n.data("label")).toLowerCase().indexOf(q) !== -1 || String(n.id()).toLowerCase().indexOf(q) !== -1);
+    var ids = Object.keys(groupDefs).filter(function (id) {
+      return String(groupDefs[id].data.label).toLowerCase().indexOf(q) !== -1 || id.toLowerCase().indexOf(q) !== -1;
     });
+    var changed = false;
+    ids.forEach(function (id) {
+      if (collapsed[vpcOf[id]]) { collapsed[vpcOf[id]] = false; changed = true; }
+    });
+    if (changed) sync();
+    var hits = cy.nodes().filter(function (n) { return ids.indexOf(n.id()) !== -1; });
     hits.addClass("match");
     if (hits.length) cy.animate({ fit: { eles: hits, padding: 80 }, duration: 0 });
   });

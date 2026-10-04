@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- The HTML viewer opens graphs of more than 150 security groups with every VPC collapsed into one node with merged edges; double-click, Expand all and Collapse all open them up, search expands the VPC holding a hit, and only the expanded VPC is laid out again
 - Documentation site at https://anaynayak.github.io/aws-security-viz/ (MkDocs Material, built strictly in CI and deployed from `main`); the README is now a short summary that links to it
 - `SECURITY.md`: supported versions, private vulnerability reporting, scope, disclosure timeline, data handling and release verification
 - Releases attest SLSA build provenance for the gem and the GHCR image, attach a CycloneDX SBOM and the provenance bundle (`.intoto.jsonl`) to the GitHub release, and create that release from this changelog

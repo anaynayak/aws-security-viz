@@ -113,5 +113,74 @@ describe AwsSecurityViz::Renderer::Html do
       expect(r["egress_visible"]).to be(true)
       expect(r["matches"]).to eq(["sg-evil"])
     end
+
+    it "opens small graphs fully expanded" do
+      render
+      r = browser_report(File.expand_path("report.html"))
+      expect(r["collapsed"]).to be_empty
+      expect(r["nodes"].count { |n| n["kind"] == "group" }).to be < r["threshold"]
+    end
+
+    describe "a graph over the collapse threshold" do
+      let(:vpcs) { 12 }
+      let(:per_vpc) { 15 }
+
+      def render_large(file = "large.html")
+        renderer = described_class.new(file, config)
+        vpcs.times do |v|
+          per_vpc.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "app-#{v}-#{i}", vpc_id: "vpc-#{v}", region: "eu-west-1"}) }
+          renderer.add_edge("sg-#{v}-0", "sg-#{v}-1", {color: :blue, label: "443"})
+          renderer.add_edge("sg-#{v}-1", "sg-#{(v + 1) % vpcs}-0", {color: :blue, label: "5432"})
+          renderer.add_edge("sg-#{v}-2", "sg-#{(v + 1) % vpcs}-3", {color: :blue, label: "22"})
+        end
+        renderer.add_node("0.0.0.0/0", {label: "0.0.0.0/0"})
+        renderer.add_edge("0.0.0.0/0", "sg-0-0", {color: :blue, label: "22", risky: true})
+        renderer.output
+        file
+      end
+
+      def collapse_report(file)
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
+          File.expand_path("support/browser_collapse.py", __dir__), File.expand_path(file), "vpc:eu-west-1|vpc-3", "app-3-7")
+        raise "browser check failed: #{err}" unless status.success?
+        JSON.parse(out.lines.last)
+      end
+
+      it "starts with every VPC collapsed and expands, collapses and searches on demand" do
+        r = collapse_report(render_large)
+        expect(vpcs * per_vpc + 1).to be > r["threshold"]
+        expect(r["requests"]).to eq(["file://" + File.expand_path("large.html")])
+        expect(r["errors"]).to be_empty
+        expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
+        expect(r["dialogs"]).to be_empty
+
+        expect(r["initial"]).to include("groups" => 1, "vpcs" => vpcs)
+        expect(r["initial"]["collapsed"].size).to eq(vpcs)
+        expect(r["initial"]["labels"]).to include("vpc-3 (15 groups)")
+        expect(r["initial"]["meta"]).to eq(vpcs + 1)
+        expect(r["meta_edge_label"]).to match(/\A\d+ rules?\z/)
+        expect(r["meta_risky"]).to eq(1)
+        expect(r["overlaps"]).to be_empty
+        expect(r["collapsed_details"]).to include("vpc-3", "Groups: 15", "Collapsed")
+        expect(r["meta_details"]).to include("Merged rules")
+
+        expect(r["after_expand"]["collapsed"].size).to eq(vpcs - 1)
+        expect(r["after_expand"]["groups"]).to eq(per_vpc + 1)
+        expect(r["expanded_children"]).to eq(per_vpc)
+        expect(r["others_moved"]).to be_empty
+        expect(r["expanded_details"]).to include("Double-click to collapse")
+        expect(r["group_details"]).to include("Id: sg-3-")
+        expect(r["after_recollapse"]["collapsed"].size).to eq(vpcs)
+        expect(r["ingress_hidden"]).to be(true)
+
+        expect(r["search_matches"]).to eq(["sg-3-7"])
+        expect(r["search_vpc_collapsed"]).to be(false)
+
+        expect(r["all_expanded"]).to include("collapsed" => [], "meta" => 0)
+        expect(r["all_expanded"]["groups"]).to eq(vpcs * per_vpc + 1)
+        expect(r["expanded_overlaps"]).to be_empty
+        expect(r["all_collapsed"]["collapsed"].size).to eq(vpcs)
+      end
+    end
   end
 end
