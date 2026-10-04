@@ -1,5 +1,5 @@
 # Checks details-panel refresh, fitting an expanded VPC, label sizing and re-fitting on resize in headless Chromium.
-# Run: uv run --with playwright python spec/support/browser_followup.py REPORT.html VPC_ID
+# Run: uv run --locked --group browser python3 spec/support/browser_followup.py REPORT.html VPC_ID
 import json
 import sys
 

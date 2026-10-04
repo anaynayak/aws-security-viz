@@ -134,8 +134,7 @@ describe AwsSecurityViz::Renderer::Html do
       10.times { |v| 15.times { |i| renderer.add_node("sg-#{v}-#{i}", {label: "g", vpc_id: "vpc-#{v}", region: "eu-west-1"}) } }
       20.times { |i| renderer.add_node("10.0.#{i}.0/24", {label: "10.0.#{i}.0/24"}) }
       renderer.output
-      out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python", File.expand_path("support/browser_state.py", __dir__), File.expand_path("peers.html"))
-      raise "browser check failed: #{err}" unless status.success?
+      out = run_browser_script(File.expand_path("support/browser_state.py", __dir__), File.expand_path("peers.html"))
       r = JSON.parse(out.lines.last)
       expect(r["threshold"]).to eq(150)
       expect(r["collapsed"]).to eq(0)
@@ -143,9 +142,7 @@ describe AwsSecurityViz::Renderer::Html do
 
     describe "drawing" do
       def visible_report(file, vpc)
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
-          File.expand_path("support/browser_visible.py", __dir__), File.expand_path(file), vpc)
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_visible.py", __dir__), File.expand_path(file), vpc)
         JSON.parse(out.lines.last)
       end
 
@@ -205,9 +202,7 @@ describe AwsSecurityViz::Renderer::Html do
 
       it "makes risky edges look different from merged egress edges and says so in the legend" do
         render
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
-          File.expand_path("support/browser_style.py", __dir__), File.expand_path("report.html"), "web")
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_style.py", __dir__), File.expand_path("report.html"), "web")
         r = JSON.parse(out.lines.last)
         expect(r["errors"]).to be_empty
         risky = r["styles"]["risky"]
@@ -221,9 +216,7 @@ describe AwsSecurityViz::Renderer::Html do
       end
 
       def followup_report(file, vpc)
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
-          File.expand_path("support/browser_followup.py", __dir__), File.expand_path(file), vpc)
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_followup.py", __dir__), File.expand_path(file), vpc)
         JSON.parse(out.lines.last)
       end
 
@@ -279,9 +272,7 @@ describe AwsSecurityViz::Renderer::Html do
 
       it "keeps a single search match at a readable zoom" do
         render
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
-          File.expand_path("support/browser_style.py", __dir__), File.expand_path("report.html"), "sg-db")
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_style.py", __dir__), File.expand_path("report.html"), "sg-db")
         r = JSON.parse(out.lines.last)
         expect(r["search_matches"]).to eq(1)
         expect(r["search_zoom"]).to be <= 1.5
@@ -324,9 +315,7 @@ describe AwsSecurityViz::Renderer::Html do
       end
 
       def layout_report(file, vpc)
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
-          File.expand_path("support/browser_layouts.py", __dir__), File.expand_path(file), vpc)
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_layouts.py", __dir__), File.expand_path(file), vpc)
         JSON.parse(out.lines.last).tap do |r|
           expect(r["picker"]).to be(true), "the viewer has no #layout picker"
           expect(r["options"]).to eq(layouts)
@@ -400,9 +389,7 @@ describe AwsSecurityViz::Renderer::Html do
 
       it "hides labels when zoomed out, shows an edge's port label on hover and while selected, and fades what a selection leaves out" do
         file = small_shape
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
-          File.expand_path("support/browser_readability.py", __dir__), File.expand_path(file))
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_readability.py", __dir__), File.expand_path(file))
         r = JSON.parse(out.lines.last)
         expect(r["errors"]).to be_empty
         expect(r["grey_in"]).to be > 500
@@ -423,9 +410,7 @@ describe AwsSecurityViz::Renderer::Html do
 
     describe "the WebGL renderer" do
       def webgl_report(file, *flags)
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
-          File.expand_path("support/browser_webgl.py", __dir__), File.expand_path(file), *flags)
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_webgl.py", __dir__), File.expand_path(file), *flags)
         JSON.parse(out.lines.last)
       end
 
@@ -522,9 +507,7 @@ describe AwsSecurityViz::Renderer::Html do
       let(:fixture) { File.expand_path("fixtures/path_semantics.json", __dir__) }
 
       def path_report(file, queries, *flags)
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
-          File.expand_path("support/browser_path.py", __dir__), File.expand_path(file), JSON.generate(queries), *flags)
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_path.py", __dir__), File.expand_path(file), JSON.generate(queries), *flags)
         JSON.parse(out.lines.last).tap { |r| expect(r["picker"]).to be(true), "the viewer has no #path-from picker" }
       end
 
@@ -759,9 +742,7 @@ describe AwsSecurityViz::Renderer::Html do
       end
 
       def collapse_report(file)
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
-          File.expand_path("support/browser_collapse.py", __dir__), File.expand_path(file), "vpc:eu-west-1|vpc-3", "app-3-7")
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_collapse.py", __dir__), File.expand_path(file), "vpc:eu-west-1|vpc-3", "app-3-7")
         JSON.parse(out.lines.last)
       end
 
@@ -794,9 +775,7 @@ describe AwsSecurityViz::Renderer::Html do
       end
 
       def path_report(queries, *flags)
-        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
-          File.expand_path("support/browser_path.py", __dir__), File.expand_path(render_chain), JSON.generate(queries), *flags)
-        raise "browser check failed: #{err}" unless status.success?
+        out = run_browser_script(File.expand_path("support/browser_path.py", __dir__), File.expand_path(render_chain), JSON.generate(queries), *flags)
         JSON.parse(out.lines.last).tap { |r| expect(r["picker"]).to be(true), "the viewer has no #path-from picker" }
       end
 
@@ -852,9 +831,7 @@ describe AwsSecurityViz::Renderer::Html do
       it "draws the same picture every time the same report is opened" do
         file = render_large
         positions = 2.times.map {
-          out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
-            File.expand_path("support/browser_positions.py", __dir__), File.expand_path(file))
-          raise "browser check failed: #{err}" unless status.success?
+          out = run_browser_script(File.expand_path("support/browser_positions.py", __dir__), File.expand_path(file))
           JSON.parse(out.lines.last)
         }
         expect(positions[0]["load"].size).to be > 12
@@ -918,9 +895,7 @@ describe AwsSecurityViz::Renderer::Html do
         let(:kept) { %w[collapsed selected matches hidden details search toggles dimmed] }
 
         def state_report
-          out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "--with", "pillow", "python",
-            File.expand_path("support/browser_layout_state.py", __dir__), File.expand_path(render_chain), "app-5-3", "sg-5-3", "app-0-0", "app-2-1")
-          raise "browser check failed: #{err}" unless status.success?
+          out = run_browser_script(File.expand_path("support/browser_layout_state.py", __dir__), File.expand_path(render_chain), "app-5-3", "sg-5-3", "app-0-0", "app-2-1")
           JSON.parse(out.lines.last).tap { |r| expect(r["picker"]).to be(true), "the viewer has no #layout picker" }
         end
 

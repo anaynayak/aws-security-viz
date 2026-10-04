@@ -2,7 +2,7 @@
 # each picture is really drawn: every element visible, fitted in the view, no overlaps, edges and nodes on screen
 # pixels, and the structure the layout promises (flow along the rules, tier rows, rings by distance). Mouse input is
 # real. Prints a JSON summary.
-# Run: uv run --with playwright --with pillow python spec/support/browser_layouts.py REPORT.html VPC_ID
+# Run: uv run --locked --group browser python3 spec/support/browser_layouts.py REPORT.html VPC_ID
 import io
 import json
 import sys

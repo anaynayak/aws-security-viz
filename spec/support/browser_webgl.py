@@ -1,5 +1,5 @@
 # Drives a generated .html report through the WebGL renderer switch in headless Chromium and prints a JSON summary.
-# Run: uv run --with playwright python spec/support/browser_webgl.py REPORT.html [--no-webgl] [--expand-all] [--churn] [--webgl-throws] [--lose-context] [--screenshot FILE]
+# Run: uv run --locked --group browser python3 spec/support/browser_webgl.py REPORT.html [--no-webgl] [--expand-all] [--churn] [--webgl-throws] [--lose-context] [--screenshot FILE]
 import json
 import sys
 

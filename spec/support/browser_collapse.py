@@ -1,5 +1,5 @@
 # Drives a generated .html report with collapsible VPCs in headless Chromium and prints a JSON summary.
-# Run: uv run --with playwright python spec/support/browser_collapse.py REPORT.html VPC_ID GROUP_LABEL
+# Run: uv run --locked --group browser python3 spec/support/browser_collapse.py REPORT.html VPC_ID GROUP_LABEL
 import json
 import sys
 

@@ -1,6 +1,6 @@
 # Checks, in headless Chromium, that every element the viewer shows is really drawn after each way of changing
 # the graph, and prints a JSON summary.
-# Run: uv run --with playwright --with pillow python spec/support/browser_visible.py REPORT.html VPC_ID
+# Run: uv run --locked --group browser python3 spec/support/browser_visible.py REPORT.html VPC_ID
 import io
 import json
 import sys

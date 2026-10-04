@@ -1,5 +1,5 @@
 # Reads viewer styles and the search zoom in headless Chromium and prints a JSON summary.
-# Run: uv run --with playwright python spec/support/browser_style.py REPORT.html SEARCH_TEXT
+# Run: uv run --locked --group browser python3 spec/support/browser_style.py REPORT.html SEARCH_TEXT
 import json
 import sys
 

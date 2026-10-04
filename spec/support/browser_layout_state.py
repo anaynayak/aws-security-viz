@@ -1,7 +1,7 @@
 # Checks, in headless Chromium with real mouse and keyboard input, that switching layout keeps what the user set up:
 # collapse state, the selected node and the details panel, search hits, the Ingress/Egress/Risky toggles and a path
 # query, on the canvas and the WebGL renderer. Prints a JSON summary.
-# Run: uv run --with playwright --with pillow python spec/support/browser_layout_state.py REPORT.html SEARCH CLICK_ID FROM TO
+# Run: uv run --locked --group browser python3 spec/support/browser_layout_state.py REPORT.html SEARCH CLICK_ID FROM TO
 import io
 import json
 import sys

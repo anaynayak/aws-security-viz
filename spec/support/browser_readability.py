@@ -1,7 +1,7 @@
 # Checks, in headless Chromium with real mouse input and screenshot pixels, that labels are hidden when the graph is
 # zoomed out, an edge's port label appears on hover and while selected, and selecting a node fades (not hides) the rest.
 # Prints a JSON summary.
-# Run: uv run --with playwright --with pillow python spec/support/browser_readability.py REPORT.html
+# Run: uv run --locked --group browser python3 spec/support/browser_readability.py REPORT.html
 import io
 import json
 import sys

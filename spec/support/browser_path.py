@@ -1,7 +1,7 @@
 # Drives the "can X reach Y" path query of a generated .html report with real keyboard and mouse input in headless
 # Chromium and prints a JSON summary. Every query is typed into the pickers, run, inspected (model state plus
 # screenshot pixels) and cleared again.
-# Run: uv run --with playwright --with pillow python spec/support/browser_path.py REPORT.html QUERIES_JSON [--webgl]
+# Run: uv run --locked --group browser python3 spec/support/browser_path.py REPORT.html QUERIES_JSON [--webgl]
 # QUERIES_JSON is a list of {"from": text, "to": text, "port": text}; an entry may also be {"toggle": "#ingress"}.
 import io
 import json

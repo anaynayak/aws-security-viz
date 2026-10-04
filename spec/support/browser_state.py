@@ -1,5 +1,5 @@
 # Opens a generated .html report in headless Chromium and prints which nodes start collapsed.
-# Run: uv run --with playwright python spec/support/browser_state.py REPORT.html
+# Run: uv run --locked --group browser python3 spec/support/browser_state.py REPORT.html
 import json
 import sys
 

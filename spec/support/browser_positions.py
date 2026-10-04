@@ -1,6 +1,6 @@
 # Loads a generated .html report, then runs Expand all and Collapse all, and prints the node positions after each step.
 # Two loads of the same report must print the same positions.
-# Run: uv run --with playwright python spec/support/browser_positions.py REPORT.html
+# Run: uv run --locked --group browser python3 spec/support/browser_positions.py REPORT.html
 import json
 import sys
 
