@@ -475,6 +475,7 @@ describe AwsSecurityViz::Renderer::Html do
         expect(hovered["label"]).to eq(hovered["data"])
         expect(hovered["label"]).not_to be_empty
         expect(hovered["minZoomed"]).to eq(0)
+        expect(hovered["opacity"]).to be > 0
         expect(r["out_selected"]).not_to be_empty
         expect(r["grey_out_selected"]).to be > 20, "a selected node and its neighbours have no labels at zoom #{r["zoom_out_selected"]}"
       end
