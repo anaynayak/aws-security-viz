@@ -79,7 +79,7 @@ def main():
                 page.wait_for_selector("canvas")
                 page.wait_for_timeout(800)
                 page.evaluate(
-                    "() => { const cy = window.awsSecurityViz.cy; window.awsSecurityViz.fit(cy.nodes('.vpc').filter(n => n.data('name') === 'vpc-dev').union(cy.nodes('.cidr').filter(n => n.data('name') === '0.0.0.0/0')), 20); }"
+                    "() => { const cy = window.awsSecurityViz.cy; window.awsSecurityViz.fit(cy.nodes('.vpc').filter(n => n.data('name') === 'vpc-dev').union(cy.nodes('.cidr').filter(n => n.data('name') === '0.0.0.0/0')), 60); }"
                 )
                 page.wait_for_timeout(400)
                 # The details panel is empty here, and the toolbar is cropped, so leave them out.

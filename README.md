@@ -12,8 +12,8 @@ security group configuration from the AWS API, or from the JSON written by `aws 
 it as a graph.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/anaynayak/aws-security-viz/raw/main/docs/assets/viewer-overview-dark.png">
-  <img alt="HTML viewer: three VPCs, their groups, the external peers and a thick red edge from 0.0.0.0/0 to a bastion group" src="https://github.com/anaynayak/aws-security-viz/raw/main/docs/assets/viewer-overview.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/anaynayak/aws-security-viz/raw/main/docs/assets/viewer-hero-dark.png">
+  <img alt="HTML viewer: three VPCs, their groups, the external peers and a thick red edge from 0.0.0.0/0 to a bastion group" src="https://github.com/anaynayak/aws-security-viz/raw/main/docs/assets/viewer-hero.png">
 </picture>
 
 ![Security group graph](https://github.com/anaynayak/aws-security-viz/raw/main/images/sample.png)
