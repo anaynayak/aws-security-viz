@@ -15,7 +15,7 @@ docs = [
 # `uv run --group browser playwright install chromium`; the pin keeps the driver and the browser build in step.
 browser = [
     "playwright==1.55.0",
-    "pillow==11.3.0",
+    "pillow==12.3.0",
 ]
 
 [tool.uv]
