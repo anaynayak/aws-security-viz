@@ -31,7 +31,9 @@ module AwsSecurityViz
       peer_names = {}
       @security_groups.each { |group|
         peer_names.merge!(@security_groups.peer_names(group))
-        g.add_node(group.id, {label: group.name, vpc_id: group.vpc_id, region: group.region, group_id: group.id}.merge(group.unused ? {unused: true} : {}))
+        g.add_node(group.id, {label: group.name, vpc_id: group.vpc_id, region: group.region, group_id: group.id}
+          .merge(group.unused ? {unused: true} : {})
+          .merge(@config.obfuscate? ? {} : {rules: @security_groups.path_rules(group)}))
         @security_groups.traffic(group).each { |traffic|
           edge = {color: traffic.ingress ? :blue : :red, label: traffic.port_range}
           edge[:risky] = true if traffic.risky
