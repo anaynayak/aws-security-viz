@@ -15,11 +15,25 @@ See which security groups can reach which, and which are open to the internet, i
 aws-security-viz reads the EC2 security group configuration from the AWS API, or from the JSON written by
 `aws ec2 describe-security-groups`, and draws it as a graph.
 
+## The HTML viewer
+
+![HTML viewer in the light theme: three VPCs, their groups, the external peers and a thick red edge from 0.0.0.0/0 to a bastion group](assets/viewer-overview.png#only-light)
+![HTML viewer in the dark theme, zoomed to the dev VPC and the external peers](assets/viewer-overview-dark.png#only-dark)
+
+The default output is one HTML page you can open from disk, explore and search, and share.
+
+1. [Collapsed VPCs](outputs.md#html-viewer) keep a large account readable: big graphs open with each VPC as one node.
+2. [Can X reach Y](outputs.md#html-viewer) answers from the security group rules, the way AWS evaluates them.
+3. [Layouts](outputs.md#html-viewer) include force, traffic flow and exposure rings.
+4. [Risky ingress](outputs.md#html-viewer) on a sensitive port is highlighted, and Risky only hides the rest.
+5. [Light and dark themes](outputs.md#html-viewer) follow the browser, with a toggle.
+6. [One offline file](outputs.md#html-viewer): no server and no CDN.
+
 ![Security group graph rendered with Graphviz: a risky 0.0.0.0/0 edge into the app group](assets/sample.png)
 
 <div class="grid cards" markdown>
 
-1. **HTML viewer.** One self-contained page with search, a "can X reach Y" path query, ingress and egress toggles and a details panel. Large graphs open with each VPC collapsed into one node, and a WebGL renderer takes over for very large ones. No server, no CDN. See [Outputs](outputs.md#html-viewer).
+1. **HTML viewer.** The default output, described above. See [Outputs](outputs.md#html-viewer).
 2. **Risky ingress highlighting.** `0.0.0.0/0` or `::/0` on a sensitive port is drawn as a dashed crimson edge, and `--fail-on-risk` turns it into a failing exit code. See [Filtering and risk checks](filtering-and-risk-checks.md).
 3. **Runs anywhere.** Install the gem, or run the published container image with Ruby and Graphviz built in. See [Installation](installation.md).
 
