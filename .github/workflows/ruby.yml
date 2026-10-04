@@ -110,6 +110,8 @@ jobs:
       - name: Install Chromium
         run: uv run --locked --group browser playwright install --with-deps chromium
       - name: Run the browser specs
+        env:
+          BROWSER_SPECS: required
         run: bundle exec rspec spec/html_renderer_spec.rb --format documentation --fail-fast
 
   docs:

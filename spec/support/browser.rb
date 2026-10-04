@@ -1,8 +1,8 @@
 require "open3"
 
 # Runs a Playwright script from spec/support under the locked `browser` uv group (pinned playwright, pillow).
-# Locally a missing uv or Chromium makes the example pending; with CI set it fails, so a broken install cannot
-# turn the browser job green with everything skipped.
+# Locally a missing uv or Chromium makes the example pending. With BROWSER_SPECS=required (set only in the CI
+# browser job) it fails instead, so a broken install cannot turn that job green with everything skipped.
 module BrowserHelper
   ROOT = File.expand_path("../..", __dir__)
 
@@ -15,10 +15,10 @@ module BrowserHelper
   end
 
   # Returns :skip, :raise or :run for the given environment.
-  def self.policy(uv_installed:, stderr: "", ci: ENV["CI"])
+  def self.policy(uv_installed:, stderr: "", required: ENV["BROWSER_SPECS"] == "required")
     return :run if stderr.empty? && uv_installed
     return :run unless !uv_installed || missing_tool?(stderr)
-    ci ? :raise : :skip
+    required ? :raise : :skip
   end
 
   def run_browser_script(script, *args)
