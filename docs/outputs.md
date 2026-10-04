@@ -36,13 +36,13 @@ aws_security_viz -o security_groups.json -f viz.html
 ![The same viewer in the dark theme, zoomed to the dev VPC and the external peers](assets/viewer-overview-dark.png)
 
 1. Search. Type in the search box to find and centre matching groups.
-2. Ingress, Egress and Risky only toggles. Risky only keeps the risky edges and hides the rest.
+2. <span id="viewer-risky"></span>Ingress, Egress and Risky only toggles. Risky only keeps the risky edges and hides the rest.
 3. Reset view clears the search and fits the whole graph.
 4. Click a group or an edge to see its details. For an edge the panel shows the direction, the ports, any rule
    descriptions, and a risk note.
 5. The legend at the bottom left of the graph explains every node and edge style. It starts open when the window is tall
    and closed otherwise; the graph is always fitted above it.
-6. Collapsing. Graphs with more than 150 security groups in VPCs (CIDR and other peers are not counted) open with
+6. <span id="viewer-collapsing"></span>Collapsing. Graphs with more than 150 security groups in VPCs (CIDR and other peers are not counted) open with
    every VPC collapsed into one node that shows its group count and how many rules stay inside it. Edges to other
    VPCs and peers are merged into one edge per direction, labelled with the number of rules; its details list the
    ports and rule descriptions. Double-click a VPC to expand or collapse it, or use Expand all and Collapse all. Only
@@ -58,7 +58,7 @@ aws_security_viz -o security_groups.json -f viz.html
    apart there; risky edges are the thickest, red and have a larger arrowhead in both renderers, and the details
    panel still marks them as risky. If the browser
    takes the WebGL context away, the viewer carries on with the canvas renderer.
-8. Can X reach Y. Type a source and a target (a security group, CIDR or other peer, by name or id; the boxes suggest
+8. <span id="viewer-path"></span>Can X reach Y. Type a source and a target (a security group, CIDR or other peer, by name or id; the boxes suggest
    matches) and press Enter or Find path. The answer comes from the security group rules, the way AWS evaluates them,
    and not from the drawn edges, so the Ingress, Egress and Risky only toggles never change it (the path stays visible
    whatever they say). The shortest path is drawn in the theme's path colour (yellow in the dark theme, black in the light one) and the rest dimmed; collapsed VPCs on the path are opened,
@@ -102,7 +102,7 @@ aws_security_viz -o security_groups.json -f viz.html
    reachable answer means the security groups do not stop it. Groups left out of the report (by the `exclude` list or
    by `--source-filter` and `--target-filter`) are not seen, and a report written with `--obfuscate` has no rules, so its path boxes are disabled.
 
-9. Layouts. The Layout menu in the toolbar redraws the whole graph; collapse state, the selected group, search hits,
+9. <span id="viewer-layouts"></span>Layouts. The Layout menu in the toolbar redraws the whole graph; collapse state, the selected group, search hits,
    the toggles and a path on screen stay as they are, with either renderer. The layouts are deterministic: the same
    report always draws the same picture. Boxes are never drawn over each other, and every layout fits the graph in the
    view. Rules point the way traffic is allowed to flow, so a group's tier is its hop count from the outside:
@@ -132,7 +132,7 @@ aws_security_viz -o security_groups.json -f viz.html
    labels at any zoom. Picking the force layout again draws the same picture as opening the report. A group's panel
    has a Collapse button for its VPC, in every layout. Selecting a group or edge fades everything
    outside its neighbourhood instead of hiding it.
-10. Themes. The viewer has a light theme (Blueprint: white chrome, a drafting grid and soft tinted VPC boxes) and a dark
+10. <span id="viewer-themes"></span>Themes. The viewer has a light theme (Blueprint: white chrome, a drafting grid and soft tinted VPC boxes) and a dark
     theme (Console: squid-ink chrome and an orange accent). It follows the browser's `prefers-color-scheme`; the toolbar
     button at the right ("Dark") switches by hand, and the choice is kept until the page is reloaded. Switching only
     recolours the page: nothing is laid out again, and the zoom, selection, collapsed VPCs, search, toggles, a shown

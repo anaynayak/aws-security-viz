@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uv run --group browser python3
-"""Regenerate the viewer screenshots and the social card in docs/assets from spec/integration/docs_vpcs.json (two environment VPCs and a shared one).
+"""Regenerate the viewer screenshots, the home page hero shots and the social card in docs/assets from spec/integration/docs_vpcs.json (two environment VPCs and a shared one).
 
 Needs headless Chromium: uv run --group browser playwright install chromium
 Usage: script/docs-screenshots
@@ -71,6 +71,22 @@ def main():
             )
             light.wait_for_timeout(300)
             light.screenshot(path=str(ASSETS / "viewer-details.png"))
+
+            def hero(scheme, name):
+                # Cropped to the graph and zoomed on the dev VPC and the public peer, so labels stay readable at content width.
+                page = browser.new_page(viewport={"width": 1000, "height": 560}, color_scheme=scheme)
+                page.goto(page_file.as_uri())
+                page.wait_for_selector("canvas")
+                page.wait_for_timeout(800)
+                page.evaluate(
+                    "() => { const cy = window.awsSecurityViz.cy; window.awsSecurityViz.fit(cy.nodes('.vpc').filter(n => n.data('name') === 'vpc-dev').union(cy.nodes('.cidr').filter(n => n.data('name') === '0.0.0.0/0')), 20); }"
+                )
+                page.wait_for_timeout(400)
+                # The details panel is empty here, and the toolbar is cropped, so leave them out.
+                page.screenshot(path=str(ASSETS / name), clip={"x": 0, "y": 134, "width": 626, "height": 426})
+
+            hero("light", "viewer-hero.png")
+            hero("dark", "viewer-hero-dark.png")
 
             page = open_page("dark")
             zoom_in(page)
