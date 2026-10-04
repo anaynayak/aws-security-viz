@@ -74,16 +74,25 @@ def main():
 
             def hero(scheme, name):
                 # Cropped to the graph and zoomed on the dev VPC and the public peer, so labels stay readable at content width.
-                page = browser.new_page(viewport={"width": 1000, "height": 560}, color_scheme=scheme)
+                page = browser.new_page(viewport={"width": 1000, "height": 560}, color_scheme=scheme, device_scale_factor=2)
                 page.goto(page_file.as_uri())
                 page.wait_for_selector("canvas")
                 page.wait_for_timeout(800)
+                # Only the dev VPC and the public peers are drawn, so no other VPC box or edge fan is cut by the crop.
                 page.evaluate(
-                    "() => { const cy = window.awsSecurityViz.cy; window.awsSecurityViz.fit(cy.nodes('.vpc').filter(n => n.data('name') === 'vpc-dev').union(cy.nodes('.cidr').filter(n => n.data('name') === '0.0.0.0/0')), 60); }"
+                    """() => {
+                        const cy = window.awsSecurityViz.cy;
+                        const dev = cy.nodes('.vpc').filter(n => n.data('name') === 'vpc-dev');
+                        const peers = cy.nodes('.internet');
+                        const shown = dev.union(dev.descendants()).union(peers);
+                        const visible = shown.union(shown.ancestors());
+                        cy.elements().not(visible).not(shown.edgesWith(shown)).style('display', 'none');
+                        window.awsSecurityViz.fit(shown.nodes(), 40);
+                    }"""
                 )
                 page.wait_for_timeout(400)
                 # The details panel is empty here, and the toolbar is cropped, so leave them out.
-                page.screenshot(path=str(ASSETS / name), clip={"x": 0, "y": 134, "width": 626, "height": 426})
+                page.screenshot(path=str(ASSETS / name), clip={"x": 110, "y": 170, "width": 510, "height": 350})
 
             hero("light", "viewer-hero.png")
             hero("dark", "viewer-hero-dark.png")

@@ -17,10 +17,10 @@ aws-security-viz reads the EC2 security group configuration from the AWS API, or
 
 ## The HTML viewer
 
-![HTML viewer in the light theme: three VPCs, their groups, the external peers and a thick red edge from 0.0.0.0/0 to a bastion group](assets/viewer-hero.png#only-light)
-![HTML viewer in the dark theme, zoomed to the dev VPC and the external peers](assets/viewer-hero-dark.png#only-dark)
+![HTML viewer in the light theme: the dev VPC and its groups, the public peers 0.0.0.0/0 and ::/0, and a thick red edge from 0.0.0.0/0 to the dev-bastion group](assets/viewer-hero.png#only-light)
+![HTML viewer in the dark theme: the dev VPC and its groups, the public peers 0.0.0.0/0 and ::/0, and a thick red edge from 0.0.0.0/0 to the dev-bastion group](assets/viewer-hero-dark.png#only-dark)
 
-The default output is one HTML page you can open from disk, explore and search, and share.
+The default output is an interactive page for exploring, searching and sharing the graph.
 
 1. [Collapsed VPCs](outputs.md#viewer-collapsing) keep a large account readable: big graphs open with each VPC as one node.
 2. [Can X reach Y](outputs.md#viewer-path) answers from the security group rules, the way AWS evaluates them.
@@ -31,9 +31,8 @@ The default output is one HTML page you can open from disk, explore and search, 
 
 <div class="grid cards" markdown>
 
-1. **HTML viewer.** The default output, described above. See [Outputs](outputs.md#html-viewer).
-2. **Risky ingress highlighting.** `0.0.0.0/0` or `::/0` on a sensitive port is drawn as a dashed crimson edge, and `--fail-on-risk` turns it into a failing exit code. See [Filtering and risk checks](filtering-and-risk-checks.md).
-3. **Runs anywhere.** Install the gem, or run the published container image with Ruby and Graphviz built in. See [Installation](installation.md).
+1. **Fail the build on risk.** `--fail-on-risk` turns risky public ingress into a failing exit code. See [Filtering and risk checks](filtering-and-risk-checks.md).
+2. **Runs anywhere.** Install the gem, or run the published container image with Ruby and Graphviz built in. See [Installation](installation.md).
 
 </div>
 

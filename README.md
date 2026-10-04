@@ -13,15 +13,17 @@ it as a graph.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/anaynayak/aws-security-viz/raw/main/docs/assets/viewer-hero-dark.png">
-  <img alt="HTML viewer: three VPCs, their groups, the external peers and a thick red edge from 0.0.0.0/0 to a bastion group" src="https://github.com/anaynayak/aws-security-viz/raw/main/docs/assets/viewer-hero.png">
+  <img alt="HTML viewer: the dev VPC and its groups, the public peers 0.0.0.0/0 and ::/0, and a thick red edge from 0.0.0.0/0 to the dev-bastion group" src="https://github.com/anaynayak/aws-security-viz/raw/main/docs/assets/viewer-hero.png">
 </picture>
-
-![Security group graph](https://github.com/anaynayak/aws-security-viz/raw/main/images/sample.png)
 
 1. Output formats: a self-contained HTML viewer (the default; offline, with collapsed VPCs, "can X reach Y" queries, several layouts and light and dark themes, see the [viewer tour](https://anaynayak.github.io/aws-security-viz/outputs/#html-viewer)), JSON, Mermaid, DOT, and any image format Graphviz supports.
 2. One region, several regions, or all regions in a single graph.
 3. Risky public ingress (`0.0.0.0/0` or `::/0` on a sensitive port) is drawn as a dashed crimson edge, and
    `--fail-on-risk` turns it into exit status 2 for CI.
+
+Other formats such as DOT, PNG, SVG and Mermaid are covered in the documentation. Graphviz draws this one:
+
+![Security group graph](https://github.com/anaynayak/aws-security-viz/raw/main/images/sample.png)
 
 Documentation: https://anaynayak.github.io/aws-security-viz/
 
