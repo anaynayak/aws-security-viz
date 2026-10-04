@@ -36,7 +36,8 @@ with sync_playwright() as p:
     out["risky_edges"] = page.evaluate("awsSecurityViz.cy.edges('.risky').map(e => e.id())")
 
     def tap(selector_js):
-        page.evaluate("awsSecurityViz.cy.%s.emit('tap')" % selector_js)
+        # emit returns the Cytoscape collection, which Playwright cannot serialise (it exhausts memory), so return null.
+        page.evaluate("(() => { awsSecurityViz.cy.%s.emit('tap'); return null; })()" % selector_js)
         return page.evaluate("document.getElementById('details').textContent")
 
     out["node_details"] = tap("getElementById('sg-web')")
