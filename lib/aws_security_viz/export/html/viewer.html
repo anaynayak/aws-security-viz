@@ -654,6 +654,14 @@
 
   function nodeLabel(id) { return nodeById[id] ? nodeById[id].label : id; }
 
+  // The way to close a VPC where its box cannot be double-clicked (exposure rings), and a plain button elsewhere.
+  function collapseButton(vpcId) {
+    var close = el("button", "Collapse " + parentDefs[vpcId].data.name);
+    close.type = "button";
+    close.addEventListener("click", function () { if (!collapsed[vpcId]) toggleVpc(vpcId); });
+    return close;
+  }
+
   var shownId = null;   // element whose details are on the panel
   function show(target) {
     shownId = target.id();
@@ -693,7 +701,13 @@
       details.appendChild(field("Type", target.data("kind").toUpperCase()));
       if (vpcGroups[target.id()]) {
         details.appendChild(field("Groups", String(vpcGroups[target.id()].length)));
-        details.appendChild(el("p", collapsed[target.id()] ? "Collapsed: double-click to expand." : "Double-click to collapse.", "muted"));
+        if (collapsed[target.id()]) {
+          details.appendChild(el("p", "Collapsed: double-click to expand.", "muted"));
+        } else {
+          // Double-click needs a box that takes events; the exposure rings draw none, so only the button works there.
+          if (!LAYOUTS[layoutName].flat) details.appendChild(el("p", "Double-click to collapse.", "muted"));
+          details.appendChild(collapseButton(target.id()));
+        }
         if (collapsed[target.id()]) {
           details.appendChild(field("Internal rules", String(target.data("internal"))));
           if (target.data("internalRisky")) details.appendChild(el("p", target.data("internalRisky") + " internal rule(s) are risky", "risky"));
@@ -708,11 +722,7 @@
     details.appendChild(field("Id", n.id));
     if (n.vpc) details.appendChild(field("VPC", n.vpc));
     if (vpcOf[n.id]) {
-      // The way to close a VPC where its box cannot be double-clicked (exposure rings), and a plain button elsewhere.
-      var close = el("button", "Collapse " + n.vpc);
-      close.type = "button";
-      close.addEventListener("click", function () { var id = vpcOf[n.id]; if (!collapsed[id]) toggleVpc(id); });
-      details.appendChild(close);
+      details.appendChild(collapseButton(vpcOf[n.id]));
     }
     if (n.region) details.appendChild(field("Region", n.region));
     if (n.unused) details.appendChild(el("p", "Unused: no network interfaces attached", "muted"));

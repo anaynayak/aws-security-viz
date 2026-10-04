@@ -324,6 +324,23 @@ describe AwsSecurityViz::Renderer::Html do
         end
       end
 
+      it "gives an opened VPC's panel a working Collapse button in every layout and the double-click hint only where it works" do
+        file = small_shape
+        out = run_browser_script(File.expand_path("support/browser_vpc_panel.py", __dir__), File.expand_path(file), "vpc:eu-west-1|vpc-0")
+        r = JSON.parse(out.lines.last)
+        expect(r["errors"]).to be_empty
+        layouts.each do |l|
+          step = r["layouts"][l]
+          expect(step["buttons"]).to eq(["Collapse vpc-0"]), "#{l}: the VPC panel offers #{step["buttons"]}"
+          expect(step["collapsed_after"]).to be(true), "#{l}: the Collapse button did not collapse the VPC"
+          if l == "rings"
+            expect(step["details"]).not_to include("Double-click to collapse"), "rings: the panel promises a double-click that cannot work"
+          else
+            expect(step["details"]).to include("Double-click to collapse"), "#{l}: no double-click hint"
+          end
+        end
+      end
+
       # What every layout owes: all of it drawn, fitted, not overlapping, on screen as pixels, from file:// only.
       def expect_laid_out(r, file)
         expect(r["requests"]).to eq(["file://" + File.expand_path(file)])
