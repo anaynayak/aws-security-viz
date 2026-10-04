@@ -137,6 +137,72 @@ describe AwsSecurityViz::Renderer::Html do
       expect(r["collapsed"]).to eq(0)
     end
 
+    describe "the WebGL renderer" do
+      def webgl_report(file, *flags)
+        out, err, status = Open3.capture3("uv", "run", "--quiet", "--with", "playwright", "python",
+          File.expand_path("support/browser_webgl.py", __dir__), File.expand_path(file), *flags)
+        raise "browser check failed: #{err}" unless status.success?
+        JSON.parse(out.lines.last)
+      end
+
+      def expect_clean(r, file)
+        expect(r["requests"]).to eq(["file://" + File.expand_path(file)])
+        expect(r["errors"]).to be_empty
+        expect(r["console"].grep(/Content Security Policy|Refused to/)).to be_empty
+        expect(r["dialogs"]).to be_empty
+      end
+
+      # One VPC of 160 groups starts collapsed (a single node) and has about 2,200 elements once expanded.
+      def render_dense(file = "dense.html")
+        renderer = described_class.new(file, config)
+        160.times { |i| renderer.add_node("sg-#{i}", {label: "g#{i}", vpc_id: "vpc-1", region: "eu-west-1"}) }
+        160.times { |i| 13.times { |k| renderer.add_edge("sg-#{i}", "sg-#{(i + k + 1) % 160}", {color: k.odd? ? :red : :blue, label: (1000 + k).to_s}) } }
+        renderer.output
+        file
+      end
+
+      it "starts on canvas for a small graph and the checkbox switches renderer without losing the view" do
+        render
+        r = webgl_report("report.html")
+        expect_clean(r, "report.html")
+        expect(r["initial"]).to include("renderer" => "canvas", "checked" => false, "disabled" => false)
+        expect(r["toggled_on"]).to include("renderer" => "webgl", "checked" => true, "elements" => r["initial"]["elements"])
+        expect(r["post_toggle_positions"]).to eq(r["pre_toggle_positions"])
+        expect(r["details_after_switch"]).to include("Id: sg-")
+        expect(r["ingress_hidden"]).to be(true)
+        expect(r["toggled_off"]).to include("renderer" => "canvas", "checked" => false)
+      end
+
+      it "falls back to canvas without errors when the browser has no WebGL" do
+        render
+        r = webgl_report("report.html", "--no-webgl")
+        expect_clean(r, "report.html")
+        expect(r["initial"]).to include("renderer" => "canvas", "checked" => false, "disabled" => true)
+        expect(r["final"]).to include("renderer" => "canvas")
+      end
+
+      it "turns WebGL on by itself once more than the threshold of elements are on the canvas" do
+        render_dense
+        r = webgl_report("dense.html", "--expand-all")
+        expect_clean(r, "dense.html")
+        expect(r["threshold"]).to eq(2000)
+        expect(r["initial"]).to include("renderer" => "canvas")
+        expect(r["initial"]["elements"]).to be <= r["threshold"]
+        expect(r["after_expand_all"]).to include("renderer" => "webgl", "checked" => true)
+        expect(r["after_expand_all"]["elements"]).to be > r["threshold"]
+        expect(r["toggled_on"]).to include("renderer" => "canvas", "checked" => false)
+        expect(r["details_after_switch"]).to include("Id: sg-")
+      end
+
+      it "stays on canvas past the threshold when WebGL is missing" do
+        render_dense
+        r = webgl_report("dense.html", "--expand-all", "--no-webgl")
+        expect_clean(r, "dense.html")
+        expect(r["after_expand_all"]["elements"]).to be > r["threshold"]
+        expect(r["after_expand_all"]).to include("renderer" => "canvas", "disabled" => true)
+      end
+    end
+
     describe "a graph over the collapse threshold" do
       let(:vpcs) { 12 }
       let(:per_vpc) { 15 }

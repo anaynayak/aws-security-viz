@@ -28,6 +28,7 @@
     <label><input id="ingress" type="checkbox" checked> Ingress</label>
     <label><input id="egress" type="checkbox" checked> Egress</label>
     <label><input id="risky-only" type="checkbox"> Risky only</label>
+    <label><input id="webgl" type="checkbox"> WebGL</label>
     <button id="reset" type="button">Reset view</button>
     <button id="expand-all" type="button">Expand all</button>
     <button id="collapse-all" type="button">Collapse all</button>
@@ -139,11 +140,7 @@
   cytoscape.use(cytoscapeFcose);
   var LAYOUT = { name: "fcose", animate: false, quality: "proof", randomize: false, nodeDimensionsIncludeLabels: true, packComponents: true, nodeSeparation: 150, nestingFactor: 0.1, nodeRepulsion: 20000, idealEdgeLength: 120, padding: 30 };
 
-  var cy = cytoscape({
-    container: document.getElementById("cy"),
-    elements: elements,
-    wheelSensitivity: 0.3,
-    style: [
+  var STYLE = [
       { selector: "node", style: { label: "data(label)", "font-size": 11, "text-valign": "center", "text-halign": "center", "background-color": "#e8f0fe", "border-width": 1, "border-color": "#5b7bd5", shape: "round-rectangle", width: "label", height: "label", padding: "8px" } },
       { selector: "node.region, node.vpc", style: { "text-valign": "top", "background-opacity": 0.06, "background-color": "#555", "border-color": "#999", "border-style": "dashed", padding: "14px", "font-weight": "bold", "font-size": 12 } },
       { selector: "node.vpc.collapsed", style: { "text-valign": "center", "background-opacity": 0.2, "border-style": "solid", "border-width": 2, padding: "12px", shape: "round-rectangle" } },
@@ -156,12 +153,47 @@
       { selector: ".dim", style: { opacity: 0.12 } },
       { selector: ".match", style: { "border-width": 3, "border-color": "#f39c12" } },
       { selector: ":selected", style: { "overlay-color": "#f39c12", "overlay-opacity": 0.25 } }
-    ],
+  ];
+
+  // Cytoscape's experimental WebGL renderer is much faster on thousands of elements. It is chosen when more
+  // than this many elements are on the canvas, can be switched with the WebGL checkbox, and is skipped when
+  // the browser has no WebGL 2 (headless CI, locked-down browsers): the canvas renderer is used then.
+  var WEBGL_THRESHOLD = 2000;
+  function webglAvailable() {
+    try { return !!document.createElement("canvas").getContext("webgl2"); } catch (e) { return false; }
+  }
+  var webglSupported = webglAvailable();
+  var webglOn = webglSupported && elements.length > WEBGL_THRESHOLD;
+  var webglManual = false;   // true once the user has used the checkbox; the size rule then stays out of the way
+
+  var cy;
+  // Cytoscape fixes the renderer when it is created, so switching renderer means creating it again.
+  function createCy(els, extra) {
+    var opts = Object.assign({
+      container: document.getElementById("cy"),
+      elements: els,
+      wheelSensitivity: 0.3,
+      style: STYLE
+    }, extra);
+    if (webglOn) {
+      try {
+        cy = cytoscape(Object.assign({}, opts, { webgl: true }));
+        return;
+      } catch (e) {
+        webglOn = false;
+        webglSupported = false;
+        document.getElementById("cy").textContent = "";
+      }
+    }
+    cy = cytoscape(opts);
+  }
+  createCy(elements, {
     // Collapsed VPC nodes are near-symmetric, which the deterministic spectral start can fold onto a line.
     layout: Object.keys(collapsed).length ? Object.assign({}, LAYOUT, { randomize: true }) : LAYOUT
   });
 
-  window.awsSecurityViz = { cy: cy, collapseThreshold: COLLAPSE_THRESHOLD }; // read by the browser spec
+  syncWebglBox();
+  expose();
 
   var details = document.getElementById("details");
 
@@ -301,19 +333,31 @@
     cy.elements().not(keep).addClass("dim");
   }
 
-  cy.on("tap", "node, edge", function (evt) {
+  function onTapElement(evt) {
     var t = evt.target;
     if (t.isNode() && t.isParent()) { show(t); return; }
     show(t);
     focus(t);
-  });
-  cy.on("tap", function (evt) {
+  }
+  function onTapBackground(evt) {
     if (evt.target === cy) {
       clearFocus();
       details.textContent = "";
       details.appendChild(el("p", "Click a group or an edge to see its details.", "muted"));
     }
-  });
+  }
+  function onDoubleTapVpc(evt) {
+    var id = evt.target.id();
+    collapsed[id] = !collapsed[id];
+    searchSnapshot = null;
+    sync();
+  }
+  function bindCy() {
+    cy.on("tap", "node, edge", onTapElement);
+    cy.on("tap", onTapBackground);
+    cy.on("dbltap", "node.vpc", onDoubleTapVpc);
+  }
+  bindCy();
 
   function applyFilters() {
     var ingress = document.getElementById("ingress").checked;
@@ -367,6 +411,7 @@
     if (!skipLayout) expanded.forEach(function (id) { layoutVpc(id, centres[id]); });
     clearFocus();
     applyFilters();
+    autoRenderer();
   }
 
   function layoutVpc(id, centre) {
@@ -391,11 +436,40 @@
   document.getElementById("expand-all").addEventListener("click", function () { setAll(false); });
   document.getElementById("collapse-all").addEventListener("click", function () { setAll(true); });
 
-  cy.on("dbltap", "node.vpc", function (evt) {
-    var id = evt.target.id();
-    collapsed[id] = !collapsed[id];
-    searchSnapshot = null;
-    sync();
+  function syncWebglBox() {
+    var box = document.getElementById("webgl");
+    box.checked = webglOn;
+    box.disabled = !webglSupported;
+    box.title = webglSupported ? "Faster drawing for large graphs (experimental)" : "WebGL 2 is not available in this browser";
+  }
+  function expose() {
+    // Read by the browser spec.
+    window.awsSecurityViz = {
+      get cy() { return cy; },
+      collapseThreshold: COLLAPSE_THRESHOLD,
+      webglThreshold: WEBGL_THRESHOLD,
+      get renderer() { return webglOn ? "webgl" : "canvas"; }
+    };
+  }
+  function setWebgl(on) {
+    if (on === webglOn || (on && !webglSupported)) return;
+    var json = cy.elements().jsons();
+    var view = { zoom: cy.zoom(), pan: cy.pan() };
+    cy.destroy();
+    webglOn = on;
+    createCy(json, { layout: { name: "preset" }, zoom: view.zoom, pan: view.pan });
+    bindCy();
+    syncWebglBox();
+    applyFilters();
+  }
+  // Until the checkbox has been used, the renderer follows the number of elements on the canvas.
+  function autoRenderer() {
+    if (!webglManual) setWebgl(webglSupported && cy.elements().length > WEBGL_THRESHOLD);
+  }
+  document.getElementById("webgl").addEventListener("change", function (evt) {
+    webglManual = true;
+    setWebgl(evt.target.checked);
+    syncWebglBox();
   });
 
   // Collapsed set before a search opened VPCs; put back when the search is cleared.

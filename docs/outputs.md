@@ -46,6 +46,12 @@ aws_security_viz -o security_groups.json -f viz.html
    the VPC you expand is laid out again. Press Enter in the search box to open the VPCs holding a match (a single
    match opens its VPC straight away); clearing the search restores the previous view. Smaller graphs open fully
    expanded.
+7. WebGL. When more than 2,000 elements (nodes and edges) are on the canvas, for instance after Expand all on a
+   large account, the viewer switches to Cytoscape's experimental WebGL renderer, which draws large graphs much
+   faster. The WebGL checkbox in the toolbar switches it on or off at any size; after you use it, the size rule no
+   longer changes the renderer. The checkbox is disabled when the browser has no WebGL 2, and the viewer then keeps
+   the canvas renderer. WebGL does not draw dashed edges, so a risky edge is a thick solid crimson line there; the
+   details panel and the legend text still mark it as risky.
 
 ![Risky only toggle: the 22/tcp edge from 0.0.0.0/0 to app](assets/viewer-risky-only.png)
 
