@@ -54,6 +54,19 @@ with sync_playwright() as p:
 
     page.fill("#search", "evil")
     out["matches"] = page.evaluate("awsSecurityViz.cy.nodes('.match').map(n => n.id())")
+
+    # Risky only also trims the plain edges listed for a group.
+    page.click("#risky-only")
+    out["risky_only_group_details"] = tap("getElementById('sg-web')")
+    page.click("#risky-only")
+
+    # A VPC that starts expanded keeps its name through collapse and expand.
+    def toggle_vpc():
+        page.evaluate("(() => { awsSecurityViz.cy.getElementById('vpc:eu-west-1|vpc-1').emit('dbltap'); return null; })()")
+        return page.evaluate("awsSecurityViz.cy.getElementById('vpc:eu-west-1|vpc-1').data('label')")
+
+    out["vpc_label_collapsed"] = toggle_vpc()
+    out["vpc_label_expanded"] = toggle_vpc()
     browser.close()
 
 print(json.dumps(out))

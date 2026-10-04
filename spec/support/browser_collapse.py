@@ -102,6 +102,7 @@ with sync_playwright() as p:
     out["search_vpc_collapsed"] = ev("awsSecurityViz.cy.getElementById(%s).hasClass('collapsed')" % json.dumps(vpc_id))
     page.fill("#search", "")
 
+    page.click("#collapse-all")
     ev("(window.layouts = 0, awsSecurityViz.cy.on('layoutstart', () => window.layouts++), 0)")
     page.click("#expand-all")
     out["expand_all_layouts"] = ev("window.layouts")

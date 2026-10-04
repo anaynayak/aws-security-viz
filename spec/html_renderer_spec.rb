@@ -112,6 +112,10 @@ describe AwsSecurityViz::Renderer::Html do
       expect(r["ingress_hidden"]).to be(true)
       expect(r["egress_visible"]).to be(true)
       expect(r["matches"]).to eq(["sg-evil"])
+      expect(r["risky_only_group_details"]).to include("0.0.0.0/0")
+      expect(r["risky_only_group_details"]).not_to include("5432", "db :")
+      expect(r["vpc_label_collapsed"]).to eq("vpc-1 (2 groups)")
+      expect(r["vpc_label_expanded"]).to eq("vpc-1")
     end
 
     it "opens small graphs fully expanded" do
@@ -196,7 +200,9 @@ describe AwsSecurityViz::Renderer::Html do
         expect(r["peer_meta_label"]).to eq("2 rules")
         expect(r["risky_only_label"]).to eq("1 rule")
         expect(r["risky_only_visible"]).to eq(["meta:0.0.0.0/0>vpc:eu-west-1|vpc-0|ingress"])
-        expect(r["risky_only_details"]).to include("22") & satisfy { |t| !t.include?("sg-0-1") }
+        expect(r["risky_only_details"]).to include("22")
+        expect(r["risky_only_details"]).not_to include("app-0-1", ": 80")
+        expect(r["collapsed_details"]).to include("Rule descriptions", "db from 2", "db from 3")
 
         expect(r["broad_search_collapsed"]).to eq(vpcs)
         expect(r["enter_search_collapsed"]).to eq(0)

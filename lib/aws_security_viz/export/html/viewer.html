@@ -255,8 +255,9 @@
         if (collapsed[target.id()]) {
           details.appendChild(field("Internal rules", String(target.data("internal"))));
           if (target.data("internalRisky")) details.appendChild(el("p", target.data("internalRisky") + " internal rule(s) are risky", "risky"));
-          details.appendChild(describeEdges("Incoming", target.incomers("edge").toArray(), function (e) { return e.source(); }));
-          details.appendChild(describeEdges("Outgoing", target.outgoers("edge").toArray(), function (e) { return e.target(); }));
+          details.appendChild(describeEdges("Incoming", riskyFilter(target.incomers("edge").toArray()), function (e) { return e.source(); }));
+          details.appendChild(describeEdges("Outgoing", riskyFilter(target.outgoers("edge").toArray()), function (e) { return e.target(); }));
+          appendDescriptions(descriptionIds(target));
         }
       }
       return;
@@ -266,11 +267,20 @@
     if (n.vpc) details.appendChild(field("VPC", n.vpc));
     if (n.region) details.appendChild(field("Region", n.region));
     if (n.unused) details.appendChild(el("p", "Unused: no network interfaces attached", "muted"));
-    details.appendChild(describeEdges("Incoming", target.incomers("edge").toArray(), function (e) { return e.source(); }));
-    details.appendChild(describeEdges("Outgoing", target.outgoers("edge").toArray(), function (e) { return e.target(); }));
+    details.appendChild(describeEdges("Incoming", riskyFilter(target.incomers("edge").toArray()), function (e) { return e.source(); }));
+    details.appendChild(describeEdges("Outgoing", riskyFilter(target.outgoers("edge").toArray()), function (e) { return e.target(); }));
+    appendDescriptions(descriptionIds(target));
+  }
+
+  // With Risky only on, the lists in the details panel leave out the edges the canvas hides.
+  function riskyFilter(edges) {
+    return document.getElementById("risky-only").checked ? edges.filter(function (e) { return e.data("risky"); }) : edges;
+  }
+  // Real edges behind everything connected to a node, merged edges included.
+  function descriptionIds(target) {
     var ids = [];
-    target.connectedEdges().toArray().forEach(function (e) { ids = ids.concat(e.data("meta") ? shownMembers(e) : [e.id()]); });
-    appendDescriptions(ids);
+    riskyFilter(target.connectedEdges().toArray()).forEach(function (e) { ids = ids.concat(e.data("meta") ? shownMembers(e) : [e.id()]); });
+    return ids;
   }
 
   // Rule descriptions of the given real edges, each under its own source -> target heading.
